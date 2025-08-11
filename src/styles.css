@@ -445,3 +445,237 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* Salary Slip Specific Styles */
+.salary-slip-filters {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    margin-bottom: 0.5rem;
+}
+
+.filter-group select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 14px;
+}
+
+.employee-salary-list {
+    margin-bottom: 2rem;
+}
+
+.employee-salary-list h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+#salary-employees-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.employee-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1.5rem;
+    transition: all 0.3s;
+}
+
+.employee-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.employee-card h4 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.employee-card p {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+}
+
+.view-salary-slip {
+    margin-top: 1rem;
+    width: 100%;
+}
+
+/* Salary Slip Preview */
+#salary-slip-preview {
+    margin-top: 2rem;
+    border-top: 3px solid #3498db;
+    padding-top: 2rem;
+}
+
+.salary-slip-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.salary-slip-header h2 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    border: none;
+    padding: 0;
+}
+
+.employee-info, .attendance-summary, .salary-breakdown {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.employee-info h3, .attendance-summary h3, .salary-breakdown h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #3498db;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.info-grid div {
+    padding: 0.5rem 0;
+}
+
+.salary-table {
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+.salary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.salary-row:last-child {
+    border-bottom: none;
+}
+
+.salary-row:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.total-deduction {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107;
+}
+
+.net-salary {
+    background-color: #d1edff !important;
+    border-left: 4px solid #007bff;
+    font-size: 1.1em;
+}
+
+.salary-slip-actions {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid #ecf0f1;
+    text-align: center;
+}
+
+.salary-slip-actions .btn, .salary-slip-actions button {
+    margin: 0 10px;
+    min-width: 120px;
+}
+
+/* Button Styles for Salary Slip */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    margin: 5px;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #229954;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
+/* Responsive Design for Salary Slips */
+@media (max-width: 768px) {
+    .salary-slip-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    #salary-employees-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .salary-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .salary-slip-actions .btn, .salary-slip-actions button {
+        width: 100%;
+        margin: 5px 0;
+    }
+}

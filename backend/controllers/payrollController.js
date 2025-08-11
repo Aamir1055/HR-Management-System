@@ -714,15 +714,16 @@ const getEmployeePayrollDetails = async (req, res) => {
 const savePayroll = async (p) => {
   const sql = `
     INSERT INTO payroll (employeeId, month, year, present_days, half_days, late_days,
-                        leaves, excess_leaves, deductions_amount, net_salary,
+                        leaves, excess_leaves, approved_leaves, deductions_amount, net_salary,
                         created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     ON DUPLICATE KEY UPDATE
       present_days=VALUES(present_days),
       half_days=VALUES(half_days),
       late_days=VALUES(late_days),
       leaves=VALUES(leaves),
       excess_leaves=VALUES(excess_leaves),
+      approved_leaves=VALUES(approved_leaves),
       deductions_amount=VALUES(deductions_amount),
       net_salary=VALUES(net_salary),
       updated_at=NOW()
@@ -730,7 +731,7 @@ const savePayroll = async (p) => {
   await db.query(sql, [
     p.employeeId, p.month, p.year,
     p.present_days, p.half_days, p.late_days,
-    p.leaves, p.excess_leaves,
+    p.leaves, p.excess_leaves, p.approved_leaves,
     p.deductions_amount, p.net_salary
   ]);
 };
@@ -876,14 +877,15 @@ const getPayrollReports = async (req, res) => {
         
         const salaryData = calculateSalaryAndDeductions(employee, metrics, workingDays, workingDaysArray, empApprovedLeaves);
 
-        // Save payroll data
+        // Save payroll data with proper leave breakdown
         await savePayroll({
           employeeId: id,
           present_days: metrics.presentDays,
           half_days: metrics.halfDays,
           late_days: metrics.lateDays,
-          leaves: salaryData.totalDisplayAbsentDays,
+          leaves: salaryData.actualAbsentDays, // Only actual absent days (invalid punch)
           excess_leaves: metrics.excessLeaves,
+          approved_leaves: metrics.approvedLeaveDays, // Store approved leaves separately
           deductions_amount: salaryData.totalDeductions,
           net_salary: salaryData.netSalary,
           month,

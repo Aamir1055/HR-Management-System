@@ -6,9 +6,14 @@ const getAuthHeaders = () => {
   };
 };
 
+const getFullUrl = (url: string) => {
+  const baseUrl = 'http://localhost:5000/api';
+  return url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+};
+
 export const api = {
   get: async (url: string) => {
-    const response = await fetch(url, {
+    const response = await fetch(getFullUrl(url), {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
@@ -19,7 +24,7 @@ export const api = {
   },
 
   post: async (url: string, body: any) => {
-    const response = await fetch(url, {
+    const response = await fetch(getFullUrl(url), {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(body)
@@ -32,7 +37,7 @@ export const api = {
   },
 
   put: async (url: string, body: any) => {
-    const response = await fetch(url, {
+    const response = await fetch(getFullUrl(url), {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(body)
@@ -45,7 +50,7 @@ export const api = {
   },
 
   delete: async (url: string) => {
-    const response = await fetch(url, {
+    const response = await fetch(getFullUrl(url), {
       method: 'DELETE',
       headers: getAuthHeaders()
     });

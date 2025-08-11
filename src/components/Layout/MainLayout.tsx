@@ -5,7 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  title: string;
+  title?: string;
   subtitle?: string;
 }
 

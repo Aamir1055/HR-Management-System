@@ -14,6 +14,7 @@
                 <ul>
                     <li><a href="#" id="dashboard-link">Dashboard</a></li>
                     <li><a href="#" id="employees-link">Employees</a></li>
+                    <li><a href="#" id="salary-slip-link">Salary Slips</a></li>
                     <li><a href="#" id="import-sample-link">Import/Sample Data</a></li>
                 </ul>
             </nav>
@@ -43,6 +44,37 @@
                         <!-- Dynamically loaded employee data will go here -->
                     </tbody>
                 </table>
+            </section>
+            <section id="salary-slips" class="hidden">
+                <h2>Salary Slips</h2>
+                
+                <div class="salary-slip-filters">
+                    <div class="filter-group">
+                        <label for="period-select">Select Period:</label>
+                        <select id="period-select">
+                            <option value="">Select Month/Year</option>
+                        </select>
+                    </div>
+                    <button id="filter-employees" class="btn btn-primary">Filter Employees</button>
+                </div>
+                
+                <div class="employee-salary-list">
+                    <h3>Employees</h3>
+                    <div id="salary-employees-list">
+                        <!-- Employee list will be populated here -->
+                    </div>
+                </div>
+                
+                <div id="salary-slip-preview" class="hidden">
+                    <h3>Salary Slip Preview</h3>
+                    <div id="salary-slip-content">
+                        <!-- Salary slip content will be displayed here -->
+                    </div>
+                    <div class="salary-slip-actions">
+                        <button id="download-pdf" class="btn btn-success">Download PDF</button>
+                        <button id="close-preview" class="btn btn-secondary">Close</button>
+                    </div>
+                </div>
             </section>
             <section id="import-sample" class="hidden">
                 <h2>Import / Sample Data</h2>

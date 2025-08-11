@@ -16,6 +16,8 @@ import { RoleManagement } from './pages/RoleManagement';
 import AttendanceUpload from './pages/AttendanceUpload';
 import FlushDB from './pages/FlushDB';
 import MasterData from './pages/MasterData';
+import AdvanceSalary from './pages/AdvanceSalary';
+import { SalarySlips } from './pages/SalarySlips';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -164,6 +166,17 @@ const AppRoutes: React.FC = () => {
       />
       {/* === END ATTENDANCE UPLOAD ROUTE === */}
       
+      {/* === ADVANCE SALARY ROUTE === */}
+      <Route
+        path="/advance-salary"
+        element={
+          <ProtectedRoute>
+            <AdvanceSalary />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END ADVANCE SALARY ROUTE === */}
+      
       {/* === FLUSH DB ROUTE - ADMIN ONLY WITH PROTECTION === */}
       <Route
         path="/flush-db"
@@ -191,6 +204,16 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* === SALARY SLIPS ROUTE === */}
+      <Route
+        path="/salary-slips"
+        element={
+          <ProtectedRoute permission="manage_payroll">
+            <SalarySlips />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END SALARY SLIPS ROUTE === */}
       <Route
         path="/api/holidays"
         element={

@@ -35,10 +35,15 @@ const masterRoutes = require('./routes/masterRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const flushRoutes = require('./routes/flushRoutes'); // NEW
 const approvedLeaveRoutes = require('./routes/approvedLeaveRoutes'); // NEW
+const advanceSalaryRoutes = require('./routes/advanceSalaryRoutes'); // NEW
+const salarySlipRoutes = require('./routes/salarySlipRoutes'); // NEW
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:5173' // Vite dev server
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -83,6 +88,8 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/masters', masterRoutes);
 app.use('/api/flush', verifyToken,  flushRoutes); // NEW - ADMIN ONLY
 app.use('/api/approved-leaves', approvedLeaveRoutes); // NEW - APPROVED LEAVES
+app.use('/api/advance-salary', advanceSalaryRoutes); // NEW - ADVANCE SALARY
+app.use('/api/salary-slips', salarySlipRoutes); // NEW - SALARY SLIPS
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -131,6 +138,8 @@ app.listen(PORT, () => {
     console.log('📊 Reports: /api/reports/* (manager+ required)');
     console.log('🗑️ Flush DB: /api/flush/* (admin required)'); // NEW
     console.log('✅ Approved Leaves: /api/approved-leaves/* (auth required)'); // NEW
+    console.log('💵 Advance Salary: /api/advance-salary/* (manager+ required)'); // NEW
+    console.log('📄 Salary Slips: /api/salary-slips/* (auth required)'); // NEW
     console.log('\n⚙️ Setup: node migrate.js');
   }
 });

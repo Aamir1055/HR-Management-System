@@ -102,3 +102,14 @@ export interface ApprovedLeave {
   created_at: string;
   updated_at: string;
 }
+
+export interface AdvanceSalaryRecord {
+  id: number;
+  employee_id: string;
+  employee_name?: string;
+  office_name?: string;
+  month_year: string;
+  amount: number;
+  uploaded_date: string;
+  uploaded_by: string;
+}

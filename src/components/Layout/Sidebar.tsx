@@ -10,7 +10,8 @@ import {
   User,
   Settings,
   Trash2,
-  UserCog
+  UserCog,
+  FileText
 } from 'lucide-react';
 
 const navigation = [
@@ -18,6 +19,8 @@ const navigation = [
   { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
   { name: 'Employees', href: '/employees', icon: Users },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
+  { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
+  { name: 'Advance Salary', href: '/advance-salary', icon: DollarSign },
   { name: 'Holidays', href: '/api/holidays', icon: Calendar },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
@@ -66,6 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return hasPermission('manage_employees');
       case '/payroll':
         return hasPermission('manage_payroll');
+      case '/salary-slips':
+        return hasPermission('manage_payroll'); // Same permission as payroll
       case '/flush-db':
         return user?.role === 'admin';
       default:
