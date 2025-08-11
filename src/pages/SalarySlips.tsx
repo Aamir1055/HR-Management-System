@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { DirhamIcon } from '../components/Icons/DirhamIcon';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import SalarySlipDataTable from '../components/SalarySlips/SalarySlipDataTable';
 import { 
   FileText, 
   Download, 
@@ -288,27 +289,45 @@ export const SalarySlips: React.FC = () => {
     });
   }, [employees, filters]);
 
-  // Memoized filtered positions based on selected office
+  // Memoized filtered positions based on selected office with deduplication
   const filteredPositions = useMemo(() => {
-    if (!filters.selectedOffice || employees.length === 0) {
-      return positions;
-    }
-
-    const positionsInOffice = [...new Set(employees
-      .filter(emp => emp.office_name === filters.selectedOffice)
-      .map(emp => emp.position_title)
-      .filter(Boolean)
-    )];
+    let basePositions = positions;
     
-    return positions.filter(pos => {
-      const positionName = typeof pos === 'object' 
-        ? (pos.position_name || pos.position_title || pos.title || pos.name)
-        : String(pos);
-      return positionsInOffice.includes(positionName);
-    });
+    // If office is selected, filter positions based on employees in that office
+    if (filters.selectedOffice && employees.length > 0) {
+      const positionsInOffice = [...new Set(employees
+        .filter(emp => emp.office_name === filters.selectedOffice)
+        .map(emp => emp.position_title)
+        .filter(Boolean)
+      )];
+      
+      basePositions = positions.filter(pos => {
+        const positionName = typeof pos === 'object' 
+          ? (pos.position_name || pos.position_title || pos.title || pos.name)
+          : String(pos);
+        return positionsInOffice.includes(positionName);
+      });
+    }
+    
+    // Deduplicate positions by name
+    const uniquePositions = [];
+    const seenNames = new Set();
+    
+    for (const position of basePositions) {
+      const positionName = typeof position === 'object' 
+        ? (position.position_name || position.position_title || position.title || position.name)
+        : String(position);
+      
+      if (!seenNames.has(positionName)) {
+        seenNames.add(positionName);
+        uniquePositions.push(position);
+      }
+    }
+    
+    return uniquePositions;
   }, [filters.selectedOffice, positions, employees]);
 
-  // Memoized pagination
+  // Memoized pagination for both employees and salary slips
   const paginationData = useMemo(() => {
     const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -316,6 +335,19 @@ export const SalarySlips: React.FC = () => {
     
     return { totalPages, startIndex, paginatedEmployees };
   }, [filteredEmployees, itemsPerPage, currentPage]);
+
+  // Memoized pagination for salary slips
+  const salarySlipsPaginationData = useMemo(() => {
+    if (!simplifiedSalarySlips || simplifiedSalarySlips.length === 0) {
+      return { totalPages: 0, startIndex: 0, paginatedSlips: [] };
+    }
+    
+    const totalPages = Math.ceil(simplifiedSalarySlips.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedSlips = simplifiedSalarySlips.slice(startIndex, startIndex + itemsPerPage);
+    
+    return { totalPages, startIndex, paginatedSlips };
+  }, [simplifiedSalarySlips, itemsPerPage, currentPage]);
 
   // Effect to reset page when filters change
   useEffect(() => {
@@ -328,6 +360,22 @@ export const SalarySlips: React.FC = () => {
       updateFilter('selectedPosition', '');
     }
   }, [filters.selectedOffice, updateFilter]);
+
+  // Combined effect to handle auto-generation when filters or month/year change
+  useEffect(() => {
+    // Always clear existing salary slips data when any filter changes
+    setSimplifiedSalarySlips(null);
+    setAllSalarySlips(null);
+    setSalarySlip(null);
+    
+    // Auto-generate salary slips if both month and year are selected and we have filtered employees
+    if (filters.month && filters.year && filteredEmployees.length > 0) {
+      // Small delay to ensure state is cleared first
+      setTimeout(() => {
+        handleGenerateAllSlips();
+      }, 150);
+    }
+  }, [filters.month, filters.year, filters.searchTerm, filters.selectedOffice, filters.selectedPosition, filteredEmployees.length]);
 
   // Loading state helper
   const setLoadingState = useCallback((key: keyof LoadingState, value: boolean) => {
@@ -384,21 +432,28 @@ export const SalarySlips: React.FC = () => {
 
     setLoadingState('all', true);
     try {
-      // Use the new simplified endpoint for better table display
-      console.log('Generating salary slips for:', {
+      // Build query parameters including filters
+      const queryParams = new URLSearchParams({
         year: filters.year,
-        month: filters.month,
-        employeeCount: filteredEmployees.length
+        month: filters.month
       });
       
+      // ALWAYS send filtered employee IDs to ensure backend uses correct set
+      if (filteredEmployees.length > 0) {
+        const employeeIds = filteredEmployees.map(emp => emp.employeeId).join(',');
+        queryParams.append('employeeIds', employeeIds);
+      }
+      
+      // Also add individual filter parameters for debugging
+      if (filters.searchTerm) queryParams.append('search', filters.searchTerm);
+      if (filters.selectedOffice) queryParams.append('office', filters.selectedOffice);
+      if (filters.selectedPosition) queryParams.append('position', filters.selectedPosition);
+      
       const response = await api.get(
-        `/salary-slips/simplified/generate-all?year=${filters.year}&month=${filters.month}`
+        `/salary-slips/simplified/generate-all?${queryParams.toString()}`
       );
       
-      console.log('API Response:', response.data);
-      
       const slipsData = response.data.data || response.data || [];
-      console.log('Processed slips data:', slipsData);
       
       setSimplifiedSalarySlips(slipsData);
       // Clear legacy state
@@ -406,9 +461,14 @@ export const SalarySlips: React.FC = () => {
       setSalarySlip(null);
       
       if (slipsData.length === 0) {
-        toast.warning(`No salary slips were generated. This could be due to:\n- No active employees found\n- No attendance data for ${monthNames[filters.month - 1]} ${filters.year}\n- Database connection issues`);
+        toast.warning(`No salary slips generated - No payroll data found for ${monthNames[filters.month - 1]} ${filters.year}`);
       } else {
-        toast.success(`Generated ${slipsData.length} salary slips successfully`);
+        const expectedCount = filteredEmployees.length;
+        if (slipsData.length !== expectedCount) {
+          toast.info(`Generated ${slipsData.length} of ${expectedCount} salary slips (${expectedCount - slipsData.length} employees missing payroll data)`);
+        } else {
+          toast.success(`Generated ${slipsData.length} salary slips for ${monthNames[filters.month - 1]} ${filters.year}`);
+        }
       }
     } catch (error: any) {
       console.error('Error generating all salary slips:', error);
@@ -423,7 +483,7 @@ export const SalarySlips: React.FC = () => {
     } finally {
       setLoadingState('all', false);
     }
-  }, [filters.year, filters.month, validateSlipGeneration, setLoadingState, filteredEmployees.length]);
+  }, [filters.year, filters.month, filters.searchTerm, filters.selectedOffice, filters.selectedPosition, validateSlipGeneration, setLoadingState, filteredEmployees, employees]);
 
   // Export handlers
   const exportToPDF = useCallback((slip: SalarySlipData) => {
@@ -502,13 +562,21 @@ export const SalarySlips: React.FC = () => {
               text-align: right; 
               font-weight: 500;
             }
-            .total-row { 
+            .gross-salary-row { 
               font-weight: bold; 
-              background-color: #e0f2fe; 
+              background-color: #dcfce7;
+              color: #166534;
+            }
+            .total-deduction-row {
+              font-weight: bold;
+              background-color: #fef2f2;
+              color: #dc2626;
             }
             .net-salary-row {
-              background-color: #dcfce7;
+              background-color: #dbeafe;
+              color: #1d4ed8;
               font-size: 16px;
+              font-weight: bold;
             }
             .deduction-row {
               background-color: #fef2f2;
@@ -579,7 +647,7 @@ export const SalarySlips: React.FC = () => {
                 <td>Basic Salary</td>
                 <td class="amount">${slip.salary.baseSalary.toFixed(2)}</td>
               </tr>
-              <tr class="total-row">
+              <tr class="gross-salary-row">
                 <td><strong>Gross Salary</strong></td>
                 <td class="amount"><strong>${slip.salary.grossSalary.toFixed(2)}</strong></td>
               </tr>
@@ -593,7 +661,7 @@ export const SalarySlips: React.FC = () => {
               ${slip.deductions.excessLeaveDeduction > 0 ? `<tr class="deduction-row"><td>Excess Leave Deduction (2x)</td><td class="amount">${slip.deductions.excessLeaveDeduction.toFixed(2)}</td></tr>` : ''}
               ${slip.deductions.missingDayDeduction > 0 ? `<tr class="deduction-row"><td>Missing Day Deduction</td><td class="amount">${slip.deductions.missingDayDeduction.toFixed(2)}</td></tr>` : ''}
               ${slip.deductions.advanceDeduction > 0 ? `<tr class="deduction-row"><td>Advance Salary Deduction</td><td class="amount">${slip.deductions.advanceDeduction.toFixed(2)}</td></tr>` : ''}
-              <tr class="total-row">
+              <tr class="total-deduction-row">
                 <td><strong>Total Deductions</strong></td>
                 <td class="amount"><strong>${slip.salary.totalDeductions.toFixed(2)}</strong></td>
               </tr>
@@ -604,12 +672,6 @@ export const SalarySlips: React.FC = () => {
             </tbody>
           </table>
 
-          <div class="metadata">
-            <p><strong>Generated:</strong> ${new Date(slip.metadata?.generatedAt || new Date()).toLocaleDateString('en-AE')} by ${slip.metadata?.generatedBy || 'System'}</p>
-            ${slip.metadata?.timezone ? `<p><strong>Timezone:</strong> ${slip.metadata.timezone}</p>` : ''}
-            <p>This is a computer-generated document and does not require a signature.</p>
-            <p style="font-style: italic;">Payroll Management System - Confidential</p>
-          </div>
         </body>
         </html>
       `;
@@ -719,8 +781,22 @@ export const SalarySlips: React.FC = () => {
               color: #374151;
             }
             .amount { text-align: right; font-weight: 500; }
-            .total-row { font-weight: bold; background-color: #e0f2fe; }
-            .net-salary-row { background-color: #dcfce7; font-size: 16px; }
+            .gross-salary-row { 
+              font-weight: bold; 
+              background-color: #dcfce7;
+              color: #166534;
+            }
+            .total-deduction-row {
+              font-weight: bold;
+              background-color: #fef2f2;
+              color: #dc2626;
+            }
+            .net-salary-row {
+              background-color: #dbeafe;
+              color: #1d4ed8;
+              font-size: 16px;
+              font-weight: bold;
+            }
             .deduction-row { background-color: #fef2f2; }
             .metadata {
               margin-top: 30px;
@@ -765,7 +841,7 @@ export const SalarySlips: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              <tr class="total-row">
+              <tr class="gross-salary-row">
                 <td><strong>Gross Salary</strong></td>
                 <td class="amount"><strong>${safeToFixed(slip.grossSalary)}</strong></td>
               </tr>
@@ -776,7 +852,7 @@ export const SalarySlips: React.FC = () => {
               ${(Number(slip.absentDeduction) || 0) > 0 ? `<tr class="deduction-row"><td>Absent Days Deduction</td><td class="amount">${safeToFixed(slip.absentDeduction)}</td></tr>` : ''}
               ${(Number(slip.excessLeaves) || 0) > 0 ? `<tr class="deduction-row"><td>Excess Leave Deduction (${slip.excessLeaves} days, 2x penalty)</td><td class="amount">${safeToFixed((Number(slip.grossSalary) || 0) / (Number(slip.workingDays) || 22) * (Number(slip.excessLeaves) || 0) * 2)}</td></tr>` : ''}
               ${(Number(slip.advanceSalary) || 0) > 0 ? `<tr class="deduction-row"><td>Advance Salary Deduction</td><td class="amount">${safeToFixed(slip.advanceSalary)}</td></tr>` : ''}
-              <tr class="total-row">
+              <tr class="total-deduction-row">
                 <td><strong>Total Deductions</strong></td>
                 <td class="amount"><strong>${safeToFixed(slip.totalDeduction)}</strong></td>
               </tr>
@@ -787,11 +863,6 @@ export const SalarySlips: React.FC = () => {
             </tbody>
           </table>
 
-          <div class="metadata">
-            <p><strong>Generated:</strong> ${new Date().toLocaleDateString('en-AE')} by System</p>
-            <p>This is a computer-generated document and does not require a signature.</p>
-            <p style="font-style: italic;">Payroll Management System - Confidential</p>
-          </div>
         </body>
         </html>
       `;
@@ -912,7 +983,7 @@ export const SalarySlips: React.FC = () => {
             Generate Salary Slips
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
               <select
@@ -941,44 +1012,6 @@ export const SalarySlips: React.FC = () => {
                 max="2030"
               />
             </div>
-            
-            <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
-              <input
-                type="text"
-                placeholder="Enter Employee ID"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-              {employeeId && selectedEmployeeForSlip && (
-                <div className="mt-1 text-sm text-green-600">
-                  ✓ {selectedEmployeeForSlip.name}
-                </div>
-              )}
-              {employeeId && !selectedEmployeeForSlip && (
-                <div className="mt-1 text-sm text-red-600">
-                  ✗ Employee not found
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-col justify-end">
-              <button 
-                onClick={handleGenerateSlip} 
-                disabled={loading.single || !employeeId || !selectedEmployeeForSlip || !filters.month || !filters.year}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors h-10"
-              >
-                {loading.single ? (
-                  <>
-                    <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Single Slip'
-                )}
-              </button>
-            </div>
           </div>
           
           <div className="flex justify-center">
@@ -995,7 +1028,7 @@ export const SalarySlips: React.FC = () => {
               ) : (
                 <>
                   <Users className="mr-2 h-5 w-5" />
-                  Generate All Employees ({filteredEmployees.length})
+                  Generate Salary Slips {simplifiedSalarySlips ? `(${simplifiedSalarySlips.length} generated)` : `(${filteredEmployees.length} employees)`}
                 </>
               )}
             </button>
@@ -1007,7 +1040,7 @@ export const SalarySlips: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <Users className="mr-2 h-5 w-5" />
-              Employee Filters ({filteredEmployees.length} found)
+              Employee Filters ({filteredEmployees.length} employees{simplifiedSalarySlips ? `, ${simplifiedSalarySlips.length} with payroll data` : ''})
             </h2>
             {(filters.searchTerm || filters.selectedOffice || filters.selectedPosition) && (
               <button
@@ -1344,176 +1377,40 @@ export const SalarySlips: React.FC = () => {
           </div>
         )}
 
-        {/* Salary Slips Tabular Display */}
+        {/* Export All to Excel Button */}
         {simplifiedSalarySlips && simplifiedSalarySlips.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            {/* Header with Export Button */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <span className="text-lg font-semibold text-gray-900">
-                    Salary Slips for {monthNames[Number(filters.month) - 1]} {filters.year}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    ({simplifiedSalarySlips.length} employees)
-                  </span>
-                </div>
-                <button
-                  onClick={exportAllToExcel}
-                  disabled={loading.export}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading.export ? (
-                    <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Export All to Excel
-                </button>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      Employee Details
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      Attendance
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      Earnings
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      Deductions
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      Net Salary
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {simplifiedSalarySlips.map((slip) => {
-                    const uniqueKey = `salaryslip-${slip.employeeId}-${slip.name?.replace(/\s+/g, '-')}`;
-                    return (
-                      <tr key={uniqueKey} className="hover:bg-gray-50 transition-colors">
-                        {/* Employee Details */}
-                        <td className="px-4 py-4">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                              {slip.name?.charAt(0).toUpperCase() || 'N'}
-                            </div>
-                            <div className="ml-3 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">{slip.name}</div>
-                              <div className="text-sm text-gray-500">{slip.employeeId}</div>
-                              <div className="text-xs text-gray-400 truncate">{slip.position || 'N/A'}</div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Attendance */}
-                        <td className="px-3 py-4">
-                          <div className="text-sm text-gray-900 space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Working:</span>
-                              <span className="font-medium">{slip.workingDays}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Absent:</span>
-                              <span className="font-medium text-red-600">{slip.absentDays}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Late:</span>
-                              <span className="font-medium text-orange-600">{slip.latePunchIn}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Excess:</span>
-                              <span className="font-medium text-pink-600">{slip.excessLeaves}</span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Earnings */}
-                        <td className="px-3 py-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            <div className="text-green-600 font-bold">
-                              {formatCurrency(slip.grossSalary)}
-                            </div>
-                            <div className="text-xs text-gray-500">Gross Salary</div>
-                          </div>
-                        </td>
-
-                        {/* Deductions */}
-                        <td className="px-3 py-4">
-                          <div className="text-sm text-gray-900">
-                            <div className="text-red-600 font-medium">
-                              {formatCurrency(slip.totalDeduction)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {slip.absentDeduction > 0 && (
-                                <div>Absent: -{formatCurrency(slip.absentDeduction)}</div>
-                              )}
-                              {slip.advanceSalary > 0 && (
-                                <div>Advance: -{formatCurrency(slip.advanceSalary)}</div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Net Salary */}
-                        <td className="px-3 py-4">
-                          <div className="text-lg font-bold text-blue-600">
-                            {formatCurrency(slip.netSalary)}
-                          </div>
-                          <div className="text-xs text-gray-500">Net Pay</div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-3 py-4 text-center">
-                          <button
-                            onClick={() => exportSingleSlipToPDF(slip)}
-                            className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-50 transition-colors"
-                            title="Export PDF"
-                            disabled={loading.export}
-                          >
-                            {loading.export ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4" />
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <div className="flex items-center space-x-4">
-                  <span>Total Employees: {simplifiedSalarySlips.length}</span>
-                  <span>Total Gross: {formatCurrency(simplifiedSalarySlips.reduce((sum, slip) => sum + slip.grossSalary, 0))}</span>
-                  <span>Total Deductions: {formatCurrency(simplifiedSalarySlips.reduce((sum, slip) => sum + slip.totalDeduction, 0))}</span>
-                  <span className="font-semibold text-blue-600">
-                    Total Net: {formatCurrency(simplifiedSalarySlips.reduce((sum, slip) => sum + slip.netSalary, 0))}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400">
-                  Generated on {new Date().toLocaleDateString('en-AE')}
-                </div>
-              </div>
+          <div className="mb-6">
+            <div className="flex justify-end">
+              <button
+                onClick={exportAllToExcel}
+                disabled={loading.export}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading.export ? (
+                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Export All to Excel
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Salary Slips Data Table */}
+        {simplifiedSalarySlips && (
+          <SalarySlipDataTable
+            data={simplifiedSalarySlips}
+            loading={loading.all}
+            exportLoading={loading.export}
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}
+            totalPages={salarySlipsPaginationData.totalPages}
+            onExportPDF={exportSingleSlipToPDF}
+            onPageChange={setCurrentPage}
+            filters={filters}
+            totalEmployees={filteredEmployees.length}
+          />
         )}
       </div>
     </MainLayout>

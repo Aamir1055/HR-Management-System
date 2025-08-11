@@ -543,9 +543,18 @@ const getAvailablePeriods = async (req, res) => {
 // Generate simplified salary slips for all employees
 const generateAllSimplifiedSalarySlips = async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, search, office, position, employeeIds } = req.query;
     
-    console.log(`Generating all simplified salary slips for ${month}/${year}`);
+    console.log(`=== GENERATING SALARY SLIPS FOR ${month}/${year} ===`);
+    console.log('RAW req.query object:', JSON.stringify(req.query, null, 2));
+    console.log('Filter parameters received:', { 
+      search: search || 'NONE', 
+      office: office || 'NONE', 
+      position: position || 'NONE', 
+      employeeIds: employeeIds || 'NONE',
+      employeeIdsLength: employeeIds ? employeeIds.split(',').length : 0,
+      employeeIdsArray: employeeIds ? employeeIds.split(',').map(id => id.trim()) : []
+    });
     
     // Validate inputs
     if (!month || !year) {
@@ -578,9 +587,8 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
     
     console.log('Employee check:', employeeCheck[0]);
 
-    // Get all employees with payroll data for the specified month/year
-    // Simplified approach: just get anyone with payroll data
-    const [employeeRows] = await req.db.query(`
+    // Build query with filters
+    let query = `
       SELECT DISTINCT 
         pr.employeeId,
         COALESCE(e.name, CONCAT('Employee ', pr.employeeId)) as name, 
@@ -593,8 +601,53 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
       LEFT JOIN positions p ON e.position_id = p.id
       LEFT JOIN offices o ON e.office_id = o.id
       WHERE pr.month = ? AND pr.year = ?
-      ORDER BY pr.employeeId
-    `, [monthNum, yearNum]);
+    `;
+    
+    const queryParams = [monthNum, yearNum];
+    
+    // Apply filters if provided
+    if (employeeIds) {
+      // If specific employee IDs are provided, use them
+      const idsArray = employeeIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (idsArray.length > 0) {
+        const placeholders = idsArray.map(() => '?').join(',');
+        query += ` AND pr.employeeId IN (${placeholders})`;
+        queryParams.push(...idsArray);
+        console.log(`Filtering by employee IDs: ${idsArray.join(', ')}`);
+      }
+    } else {
+      // Apply individual filters if no specific employee IDs are provided
+      if (search) {
+        query += ` AND (
+          e.name LIKE ? OR 
+          pr.employeeId LIKE ? OR 
+          e.email LIKE ? OR 
+          e.phone LIKE ?
+        )`;
+        const searchPattern = `%${search}%`;
+        queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        console.log(`Filtering by search term: ${search}`);
+      }
+      
+      if (office) {
+        query += ` AND o.name = ?`;
+        queryParams.push(office);
+        console.log(`Filtering by office: ${office}`);
+      }
+      
+      if (position) {
+        query += ` AND p.title = ?`;
+        queryParams.push(position);
+        console.log(`Filtering by position: ${position}`);
+      }
+    }
+    
+    query += ` ORDER BY pr.employeeId`;
+    
+    console.log('Final query:', query);
+    console.log('Query parameters:', queryParams);
+    
+    const [employeeRows] = await req.db.query(query, queryParams);
     
     console.log(`Found ${employeeRows.length} employees with payroll data:`);
     if (employeeRows.length > 0) {
