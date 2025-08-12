@@ -118,6 +118,51 @@ const generateSalarySlipData = async (req, res) => {
     `, [employeeId, monthYearStr]);
 
     const advanceAmount = parseFloat(advanceSalaryRows[0]?.advance_amount || 0);
+    
+    // SIMPLE LOAN DEDUCTION - Just check employee_loans table
+    console.log(`\n💰 CHECKING LOANS FOR ${employeeId}`);
+    
+    const [loanRows] = await req.db.query(`
+      SELECT 
+        id,
+        title,
+        monthly_deduction,
+        remaining_amount
+      FROM employee_loans 
+      WHERE employee_id = ?
+        AND status = 'active'
+        AND remaining_amount > 0
+    `, [employeeId]);
+    
+    console.log(`Found ${loanRows.length} active loans for ${employeeId}:`);
+    
+    // Calculate total loan deductions - SIMPLE
+    let totalLoanDeductions = 0;
+    const loanDetails = [];
+    
+    for (const loan of loanRows) {
+      const deductionAmount = parseFloat(loan.monthly_deduction);
+      totalLoanDeductions += deductionAmount;
+      loanDetails.push({
+        id: loan.id,
+        title: loan.title,
+        deduction: deductionAmount,
+        remainingAfter: loan.remaining_amount - deductionAmount
+      });
+      console.log(`  "${loan.title}": Monthly Deduction AED ${deductionAmount}`);
+    }
+    
+    console.log(`TOTAL LOAN DEDUCTIONS: AED ${totalLoanDeductions}`);
+    console.log(`LOAN DETAILS COUNT: ${loanDetails.length}`);
+    
+    if (employeeId === 'EMP-018') {
+      console.log(`\n🚨 EMP-018 SPECIFIC DEBUG:`);
+      console.log(`Active loans found: ${loanRows.length}`);
+      console.log(`Total loan deductions: AED ${totalLoanDeductions}`);
+      loanRows.forEach((loan, i) => {
+        console.log(`  ${i+1}. "${loan.title}" - Monthly: AED ${loan.monthly_deduction}, Remaining: AED ${loan.remaining_amount}`);
+      });
+    }
 
     // Calculate working days in the month
     const totalWorkingDays = await getWorkingDaysInMonth(yearNum, monthNum);
@@ -166,7 +211,7 @@ const generateSalarySlipData = async (req, res) => {
     const attendanceDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction + excessLeaveDeduction;
     
     // Total deductions
-    const totalDeductions = attendanceDeduction + advanceAmount;
+    const totalDeductions = attendanceDeduction + advanceAmount + totalLoanDeductions;
     
     // Net salary
     const netSalary = Math.max(0, grossSalary - totalDeductions);
@@ -215,7 +260,9 @@ const generateSalarySlipData = async (req, res) => {
         halfDayDeduction: parseFloat(halfDayDeduction.toFixed(2)),
         excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
         missingDayDeduction: 0,
-        advanceDeduction: parseFloat(advanceAmount.toFixed(2))
+        advanceDeduction: parseFloat(advanceAmount.toFixed(2)),
+        loanDeductions: parseFloat(totalLoanDeductions.toFixed(2)),
+        loanDetails: loanDetails
       },
       metadata: {
         generatedAt: new Date().toISOString(),
@@ -231,6 +278,19 @@ const generateSalarySlipData = async (req, res) => {
       'Pragma': 'no-cache',
       'Expires': '0'
     });
+    
+    console.log(`\n🚀 SENDING RESPONSE TO FRONTEND:`);
+    console.log(`💰 Loan Deductions in Response: AED ${salarySlipData.deductions.loanDeductions}`);
+    console.log(`📊 Total Deductions in Response: AED ${salarySlipData.salary.totalDeductions}`);
+    console.log(`🔢 Loan Details Count in Response: ${salarySlipData.deductions.loanDetails?.length || 0}`);
+    if (salarySlipData.deductions.loanDetails?.length > 0) {
+      console.log(`📝 Loan Details in Response:`);
+      salarySlipData.deductions.loanDetails.forEach((loan, index) => {
+        console.log(`    ${index + 1}. "${loan.title}": AED ${loan.deduction}`);
+      });
+    }
+    console.log(`🕰️ Response Timestamp: ${new Date().toISOString()}`);
+    console.log(`🏁 RESPONSE SENT TO FRONTEND!\n`);
     
     res.json({
       success: true,
@@ -306,6 +366,42 @@ const generateSalarySlipPDF = async (req, res) => {
     `, [employeeId, monthYearStr]);
 
     const advanceAmount = parseFloat(advanceSalaryRows[0]?.advance_amount || 0);
+    
+    // Get active loans for PDF
+    const [loanRowsPDF] = await req.db.query(`
+      SELECT 
+        el.id,
+        el.title,
+        el.monthly_deduction,
+        el.remaining_amount,
+        CASE 
+          WHEN lp.loan_id IS NOT NULL THEN TRUE
+          ELSE FALSE
+        END as already_paid_this_month
+      FROM employee_loans el
+      LEFT JOIN loan_payments lp ON el.id = lp.loan_id AND lp.payroll_month = ?
+      WHERE el.employee_id = ?
+        AND el.status = 'active'
+        AND el.remaining_amount > 0
+        AND el.start_date <= CONCAT(?, '-31')  -- Loan starts before or during the month
+        AND el.end_date >= CONCAT(?, '-01')    -- Loan ends after or during the month
+      ORDER BY el.start_date ASC
+    `, [monthYearStr, employeeId, monthYearStr, monthYearStr]);
+    
+    // Calculate total loan deductions for PDF
+    let totalLoanDeductionsPDF = 0;
+    const loanDetailsPDF = [];
+    
+    for (const loan of loanRowsPDF) {
+      if (!loan.already_paid_this_month) {
+        const deductionAmount = Math.min(loan.monthly_deduction, loan.remaining_amount);
+        totalLoanDeductionsPDF += deductionAmount;
+        loanDetailsPDF.push({
+          title: loan.title,
+          deduction: deductionAmount
+        });
+      }
+    }
 
     // Calculate data same as above
     // Calculate working days and get attendance data from payroll table (FIXED for PDF)
@@ -336,7 +432,7 @@ const generateSalarySlipPDF = async (req, res) => {
     // Combined absent/half/approved deduction for PDF display
     const absentHalfApprovedDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction;
     
-    const totalDeductions = absentHalfApprovedDeduction + excessLeaveDeduction + advanceAmount;
+    const totalDeductions = absentHalfApprovedDeduction + excessLeaveDeduction + advanceAmount + totalLoanDeductionsPDF;
     const netSalary = Math.max(0, grossSalary - totalDeductions);
 
     // Debug logging for PDF generation - especially for EMP-018
@@ -355,6 +451,8 @@ const generateSalarySlipPDF = async (req, res) => {
     console.log(`Absent+Half+Approved Deduction: ${absentHalfApprovedDeduction}`);
     console.log(`Excess Leave Deduction (${excessLeaves} * 2 * ${perDayRate}): ${excessLeaveDeduction}`);
     console.log(`Advance Amount: ${advanceAmount}`);
+    console.log(`Total Loan Deductions: ${totalLoanDeductionsPDF}`);
+    console.log(`Loan Details:`, loanDetailsPDF);
     console.log(`Total Deductions: ${totalDeductions}`);
     console.log(`Net Salary: ${netSalary}`);
     console.log(`=== End Debug ===`);
@@ -441,6 +539,20 @@ const generateSalarySlipPDF = async (req, res) => {
     // Advance Salary deduction in Red
     doc.text('  Advance Salary:', 70);
     doc.text(`AED ${advanceAmount.toFixed(2)}`, rightCol, doc.y - 14);
+    
+    // Loan deductions in Red
+    if (totalLoanDeductionsPDF > 0) {
+      doc.text('  Loan Deductions:', 70);
+      doc.text(`AED ${totalLoanDeductionsPDF.toFixed(2)}`, rightCol, doc.y - 14);
+      
+      // Add loan details as sub-items
+      for (const loan of loanDetailsPDF) {
+        doc.fontSize(10);
+        doc.text(`    - ${loan.title}:`, 90);
+        doc.text(`AED ${loan.deduction.toFixed(2)}`, rightCol, doc.y - 12);
+        doc.fontSize(12);
+      }
+    }
     
     // Reset to black for total deductions
     doc.fillColor('#000000');
@@ -686,6 +798,35 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
         `, [employee.employeeId, monthYearStr]);
 
         const advanceAmount = parseFloat(advanceSalaryRows[0]?.advance_amount || 0);
+        
+        // SIMPLE loan check - just get active loans with remaining balance
+        const [loanRowsSimplified] = await req.db.query(`
+          SELECT 
+            id,
+            title,
+            monthly_deduction,
+            remaining_amount
+          FROM employee_loans 
+          WHERE employee_id = ?
+            AND status = 'active'
+            AND remaining_amount > 0
+        `, [employee.employeeId]);
+        
+        // Calculate loan deductions - SIMPLE
+        let totalLoanDeductionsSimplified = 0;
+        for (const loan of loanRowsSimplified) {
+          totalLoanDeductionsSimplified += parseFloat(loan.monthly_deduction);
+        }
+        
+        // Debug logging for EMP-018 specifically
+        if (employee.employeeId === 'EMP-018') {
+          console.log(`\n🔍 SIMPLIFIED SALARY SLIP - EMP-018 LOAN DEBUG:`);
+          console.log(`Found ${loanRowsSimplified.length} loans for EMP-018:`);
+          loanRowsSimplified.forEach((loan, index) => {
+            console.log(`  ${index + 1}. "${loan.title}": AED ${loan.monthly_deduction} (Remaining: AED ${loan.remaining_amount})`);
+          });
+          console.log(`Total Loan Deductions: AED ${totalLoanDeductionsSimplified}`);
+        }
 
         // FIXED: Calculate attendance metrics using the same logic as main controller
         const presentDays = payroll.present_days || 0;
@@ -714,11 +855,22 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
         // Combined absent/half/approved deduction for table display
         const totalAbsentRelatedDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction;
         
-        // Total deductions
-        const totalDeduction = totalAbsentRelatedDeduction + excessLeaveDeduction + advanceAmount;
+        // Total deductions INCLUDING LOANS
+        const totalDeduction = totalAbsentRelatedDeduction + excessLeaveDeduction + advanceAmount + totalLoanDeductionsSimplified;
         
         // Net salary
         const netSalary = Math.max(0, grossSalary - totalDeduction);
+        
+        // Debug logging for EMP-018 total calculation
+        if (employee.employeeId === 'EMP-018') {
+          console.log(`\n💰 EMP-018 TOTAL DEDUCTION CALCULATION:`);
+          console.log(`  Absent/Half/Approved: AED ${totalAbsentRelatedDeduction.toFixed(2)}`);
+          console.log(`  Excess Leaves: AED ${excessLeaveDeduction.toFixed(2)}`);
+          console.log(`  Advance: AED ${advanceAmount.toFixed(2)}`);
+          console.log(`  Loan Deductions: AED ${totalLoanDeductionsSimplified.toFixed(2)}`);
+          console.log(`  TOTAL DEDUCTIONS: AED ${totalDeduction.toFixed(2)}`);
+          console.log(`  Net Salary: AED ${netSalary.toFixed(2)}`);
+        }
 
         // Add to results
         salarySlips.push({
@@ -733,7 +885,8 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
           absentDeduction: parseFloat(totalAbsentRelatedDeduction.toFixed(2)), // FIXED: use combined absent/half/approved deduction
           excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
           advanceSalary: parseFloat(advanceAmount.toFixed(2)),
-          totalDeduction: parseFloat(totalDeduction.toFixed(2)),
+          loanDeductions: parseFloat(totalLoanDeductionsSimplified.toFixed(2)), // ADD LOAN DEDUCTIONS COLUMN
+          totalDeduction: parseFloat(totalDeduction.toFixed(2)), // NOW INCLUDES LOANS
           netSalary: parseFloat(netSalary.toFixed(2))
         });
 

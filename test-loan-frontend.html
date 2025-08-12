@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Loan Management - API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            background: #3b82f6;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2563eb;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .loans-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .loans-table th, .loans-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .loans-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-completed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-suspended {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏦 Employee Loan Management System</h1>
+        <p>Test interface for the Employee Loan Management API</p>
+    </div>
+
+    <div class="container">
+        <h2>📊 Loan Statistics</h2>
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="grid">
+        <div class="container">
+            <h2>➕ Create New Loan</h2>
+            <form id="loanForm">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="employeeSelect" required>
+                        <option value="">Loading employees...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Loan Title</label>
+                    <input type="text" id="loanTitle" placeholder="e.g., Personal Loan" required>
+                </div>
+                <div class="form-group">
+                    <label>Total Amount (AED)</label>
+                    <input type="number" id="totalAmount" step="0.01" min="0" placeholder="5000.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Deduction (AED)</label>
+                    <input type="number" id="monthlyDeduction" step="0.01" min="0" placeholder="500.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <textarea id="description" placeholder="Optional loan description..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-success">Create Loan</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>🔍 Quick Actions</h2>
+            <button class="btn" onclick="loadLoans()">📋 Load All Loans</button>
+            <button class="btn" onclick="loadEmployees()">👥 Load Employees</button>
+            <button class="btn" onclick="testSalarySlip()">💰 Test Salary Slip</button>
+            <button class="btn btn-danger" onclick="clearResults()">🗑️ Clear Results</button>
+            
+            <h3>API Testing</h3>
+            <div class="form-group">
+                <label>Employee ID for Testing</label>
+                <input type="text" id="testEmployeeId" placeholder="EMP-196" value="EMP-196">
+            </div>
+            <div class="form-group">
+                <label>Month for Testing (YYYY-MM)</label>
+                <input type="text" id="testMonth" placeholder="2025-08" value="2025-08">
+            </div>
+            <button class="btn" onclick="testActiveLoans()">🔍 Get Active Loans</button>
+            <button class="btn" onclick="testLoanSummary()">📊 Get Loan Summary</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Current Loans</h2>
+        <div id="loansContainer">
+            <p>Click "Load All Loans" to view existing loans</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🖥️ API Response</h2>
+        <div id="result" class="result">API responses will appear here...</div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('token');
+        
+        // Set default date to today
+        document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+
+        // API Helper Functions
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authToken ? `Bearer ${authToken}` : ''
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(`http://localhost:5000${endpoint}`, options);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.error || 'Unknown error'}`);
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showResult(`Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        function showResult(data, type = 'success') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            resultDiv.style.backgroundColor = type === 'error' ? '#fef2f2' : '#f0f9ff';
+            resultDiv.style.color = type === 'error' ? '#dc2626' : '#1e40af';
+        }
+
+        // Load Functions
+        async function loadEmployees() {
+            try {
+                const data = await apiCall('/api/employees');
+                const employees = Array.isArray(data) ? data : (data.employees || []);
+                
+                const select = document.getElementById('employeeSelect');
+                select.innerHTML = '<option value="">Select an employee</option>';
+                
+                employees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.employeeId;
+                    option.textContent = `${emp.employeeId} - ${emp.name}`;
+                    select.appendChild(option);
+                });
+
+                showResult(`Loaded ${employees.length} employees`);
+            } catch (error) {
+                showResult(`Failed to load employees: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadLoans() {
+            try {
+                const data = await apiCall('/api/loans');
+                displayLoans(data);
+                updateStats(data);
+                showResult(`Loaded ${data.length} loans`);
+            } catch (error) {
+                showResult(`Failed to load loans: ${error.message}`, 'error');
+            }
+        }
+
+        function displayLoans(loans) {
+            const container = document.getElementById('loansContainer');
+            
+            if (!loans || loans.length === 0) {
+                container.innerHTML = '<p>No loans found.</p>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.className = 'loans-table';
+            
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Employee</th>
+                        <th>Title</th>
+                        <th>Total Amount</th>
+                        <th>Monthly</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${loans.map(loan => `
+                        <tr>
+                            <td>${loan.id}</td>
+                            <td>${loan.employee_name || loan.employee_id}</td>
+                            <td>${loan.title}</td>
+                            <td>AED ${parseFloat(loan.total_amount).toFixed(2)}</td>
+                            <td>AED ${parseFloat(loan.monthly_deduction).toFixed(2)}</td>
+                            <td>AED ${parseFloat(loan.remaining_amount).toFixed(2)}</td>
+                            <td><span class="status-badge status-${loan.status}">${loan.status}</span></td>
+                            <td>
+                                <button class="btn" onclick="viewLoan(${loan.id})">View</button>
+                                <button class="btn btn-danger" onclick="deleteLoan(${loan.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        function updateStats(loans) {
+            const statsContainer = document.getElementById('stats');
+            
+            if (!loans || loans.length === 0) {
+                statsContainer.innerHTML = '<div class="stat-card"><div class="stat-value">0</div><div>Total Loans</div></div>';
+                return;
+            }
+
+            const totalLoans = loans.length;
+            const activeLoans = loans.filter(l => l.status === 'active').length;
+            const completedLoans = loans.filter(l => l.status === 'completed').length;
+            const totalOutstanding = loans
+                .filter(l => l.status === 'active')
+                .reduce((sum, l) => sum + parseFloat(l.remaining_amount || 0), 0);
+
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalLoans}</div>
+                    <div>Total Loans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${activeLoans}</div>
+                    <div>Active Loans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${completedLoans}</div>
+                    <div>Completed Loans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">AED ${totalOutstanding.toFixed(2)}</div>
+                    <div>Outstanding Amount</div>
+                </div>
+            `;
+        }
+
+        // Action Functions
+        async function viewLoan(loanId) {
+            try {
+                const data = await apiCall(`/api/loans/${loanId}`);
+                showResult(data);
+            } catch (error) {
+                showResult(`Failed to load loan: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteLoan(loanId) {
+            if (!confirm('Are you sure you want to delete this loan?')) return;
+            
+            try {
+                await apiCall(`/api/loans/${loanId}`, 'DELETE');
+                showResult('Loan deleted successfully');
+                loadLoans(); // Refresh the list
+            } catch (error) {
+                showResult(`Failed to delete loan: ${error.message}`, 'error');
+            }
+        }
+
+        // Test Functions
+        async function testActiveLoans() {
+            const employeeId = document.getElementById('testEmployeeId').value;
+            const month = document.getElementById('testMonth').value;
+            
+            if (!employeeId || !month) {
+                alert('Please enter Employee ID and Month');
+                return;
+            }
+            
+            try {
+                const data = await apiCall(`/api/loans/employee/${employeeId}/active?payroll_month=${month}`);
+                showResult(data);
+            } catch (error) {
+                showResult(`Failed to get active loans: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoanSummary() {
+            const employeeId = document.getElementById('testEmployeeId').value;
+            
+            if (!employeeId) {
+                alert('Please enter Employee ID');
+                return;
+            }
+            
+            try {
+                const data = await apiCall(`/api/loans/employee/${employeeId}/summary`);
+                showResult(data);
+            } catch (error) {
+                showResult(`Failed to get loan summary: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSalarySlip() {
+            const employeeId = document.getElementById('testEmployeeId').value;
+            const month = document.getElementById('testMonth').value;
+            
+            if (!employeeId || !month) {
+                alert('Please enter Employee ID and Month');
+                return;
+            }
+            
+            const [year, monthNum] = month.split('-');
+            
+            try {
+                const data = await apiCall(`/api/salary-slips/${employeeId}/${monthNum}/${year}`);
+                showResult(data);
+            } catch (error) {
+                showResult(`Failed to generate salary slip: ${error.message}`, 'error');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('result').textContent = 'API responses will appear here...';
+            document.getElementById('result').style.backgroundColor = '#f8f9fa';
+            document.getElementById('result').style.color = '#333';
+        }
+
+        // Form Submission
+        document.getElementById('loanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                employee_id: document.getElementById('employeeSelect').value,
+                title: document.getElementById('loanTitle').value,
+                total_amount: parseFloat(document.getElementById('totalAmount').value),
+                monthly_deduction: parseFloat(document.getElementById('monthlyDeduction').value),
+                start_date: document.getElementById('startDate').value,
+                description: document.getElementById('description').value
+            };
+
+            try {
+                const data = await apiCall('/api/loans', 'POST', formData);
+                showResult(data);
+                document.getElementById('loanForm').reset();
+                document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+                loadLoans(); // Refresh the list
+            } catch (error) {
+                showResult(`Failed to create loan: ${error.message}`, 'error');
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEmployees();
+            loadLoans();
+            
+            // Check if we have an auth token
+            if (!authToken) {
+                showResult('⚠️  Warning: No authentication token found. Some features may not work.\nPlease log in to the main application first.', 'error');
+            } else {
+                showResult('✅ Authentication token found. You can test the loan management features.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ interface SimplifiedSalarySlip {
   grossSalary: number;
   absentDeduction: number;
   advanceSalary: number;
+  loanDeductions?: number; // Changed from loanDeduction to loanDeductions to match backend
   totalDeduction: number;
   netSalary: number;
 }
@@ -194,7 +195,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
           <thead className="bg-gray-50">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center justify-start">
@@ -202,7 +203,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
                   {renderSortIcon('name')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-1 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div className="flex items-center space-x-4">
                   <button 
                     className="flex items-center hover:bg-gray-100 px-2 py-1 rounded transition-colors"
@@ -258,7 +259,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
             {sortedData.map((slip, index) => (
               <tr key={`${slip.employeeId}-${index}`} className="hover:bg-gray-50">
                 {/* Employee Details */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-2 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {slip.name?.charAt(0).toUpperCase() || 'N'}
@@ -272,7 +273,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
                 </td>
 
                 {/* Attendance Summary */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-1 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                       <div className="flex justify-between">
@@ -317,6 +318,9 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
                     )}
                     {slip.excessLeaves > 0 && (
                       <div>Excess Leaves: -{formatCurrency((slip.grossSalary / slip.workingDays) * slip.excessLeaves * 2)}</div>
+                    )}
+                    {slip.loanDeductions && slip.loanDeductions > 0 && (
+                      <div>Loans: -{formatCurrency(slip.loanDeductions)}</div>
                     )}
                   </div>
                 </td>

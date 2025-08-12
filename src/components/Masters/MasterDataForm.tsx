@@ -3,11 +3,12 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useOffices } from '../../hooks/useOffices';
+import { useEmployees } from '../../hooks/useEmployees';
 
 interface MasterDataFormProps {
   isOpen: boolean;
   mode: 'add' | 'edit' | 'view';
-  dataType: 'office' | 'position' | 'visaType' | 'platform';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan';
   data: any;
   onSubmit: (data: any) => void;
   onClose: () => void;
@@ -17,7 +18,9 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({ isOpen, mode, dataType,
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   // Only fetch offices for position forms
   const { offices, loading: officesLoading, error: officesError } = useOffices();
+  const { employees, loading: employeesLoading, error: employeesError } = useEmployees();
   const watchedOffice = watch('office_name');
+  const watchedEmployeeId = watch('employee_id');
   
 
   useEffect(() => {
@@ -27,6 +30,20 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({ isOpen, mode, dataType,
       if (dataType === 'position' && data.position_name && !data.title) {
         formData.title = data.position_name;
       }
+      
+      // Format dates for loan forms - HTML date inputs expect YYYY-MM-DD format
+      if (dataType === 'loan' && formData.start_date) {
+        // Convert date to YYYY-MM-DD format without timezone conversion
+        const dateValue = new Date(formData.start_date);
+        if (!isNaN(dateValue.getTime())) {
+          // Use local date to avoid timezone issues
+          const year = dateValue.getFullYear();
+          const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+          const day = String(dateValue.getDate()).padStart(2, '0');
+          formData.start_date = `${year}-${month}-${day}`;
+        }
+      }
+      
       reset(formData);
     } else {
       reset({});
@@ -39,7 +56,8 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({ isOpen, mode, dataType,
     office: 'Office',
     position: 'Position',
     visaType: 'Visa Type',
-    platform: 'Platform'
+    platform: 'Platform',
+    loan: 'Employee Loan'
   };
 
   const renderFormFields = () => {
@@ -159,6 +177,94 @@ case 'position':
             </div>
           </>
         );
+      case 'loan':
+        return (
+          <>
+            <div className="mb-4">
+              <label htmlFor="employee_id" className="block text-sm font-medium text-gray-700">Employee ID</label>
+              <input
+                type="text"
+                id="employee_id"
+                {...register('employee_id', { required: mode !== 'view' })}
+                disabled={mode === 'view'}
+                placeholder="Enter Employee ID (e.g., EMP-001)"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700">Loan Title</label>
+              <input
+                type="text"
+                id="title"
+                {...register('title', { required: mode !== 'view' })}
+                disabled={mode === 'view'}
+                placeholder="e.g., Personal Loan, Car Loan, etc."
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="total_amount" className="block text-sm font-medium text-gray-700">Total Amount (AED)</label>
+                <input
+                  type="number"
+                  id="total_amount"
+                  step="0.01"
+                  min="0"
+                  {...register('total_amount', { required: mode !== 'view' })}
+                  disabled={mode === 'view'}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                />
+              </div>
+              <div>
+                <label htmlFor="monthly_deduction" className="block text-sm font-medium text-gray-700">Monthly Deduction (AED)</label>
+                <input
+                  type="number"
+                  id="monthly_deduction"
+                  step="0.01"
+                  min="0"
+                  {...register('monthly_deduction', { required: mode !== 'view' })}
+                  disabled={mode === 'view'}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">Start Date</label>
+              <input
+                type="date"
+                id="start_date"
+                {...register('start_date', { required: mode !== 'view' })}
+                disabled={mode === 'view'}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+            </div>
+            {mode === 'edit' && (
+              <div className="mb-4">
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+                <select
+                  id="status"
+                  {...register('status')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            )}
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                id="description"
+                {...register('description')}
+                disabled={mode === 'view'}
+                rows={3}
+                placeholder="Optional loan description..."
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              ></textarea>
+            </div>
+          </>
+        );
       default:
         return null;
     }
@@ -185,12 +291,14 @@ case 'position':
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
-            >
-              Save
-            </button>
+            {mode !== 'view' && (
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+              >
+                Save
+              </button>
+            )}
           </div>
         </form>
       </div>

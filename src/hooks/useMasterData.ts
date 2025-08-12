@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-type DataType = 'office' | 'position' | 'visaType' | 'platform';
+type DataType = 'office' | 'position' | 'visaType' | 'platform' | 'loan';
 
 interface UseMasterDataReturn {
   data: any[];
@@ -36,6 +36,8 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         return '/api/masters/visa-types';
 case 'platform':
         return '/api/masters/platforms';
+      case 'loan':
+        return '/api/loans';
       default:
         return '';
     }

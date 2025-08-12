@@ -49,6 +49,7 @@ interface SimplifiedSalarySlip {
   absentDeduction: number; // deduction for absent and half days
   excessLeaveDeduction?: number; // deduction for excess leaves (calculated from excessLeaves * perDayRate)
   advanceSalary: number;
+  loanDeductions?: number; // loan deduction amount (plural to match backend)
   totalDeduction: number;
   netSalary: number;
 }
@@ -98,6 +99,13 @@ interface SalarySlipData {
     excessLeaveDeduction: number;
     missingDayDeduction: number;
     advanceDeduction: number;
+    loanDeductions: number;
+    loanDetails?: Array<{
+      id: number;
+      title: string;
+      deduction: number;
+      remainingAfter: number;
+    }>;
   };
   metadata?: {
     generatedAt: string;
@@ -460,16 +468,7 @@ export const SalarySlips: React.FC = () => {
       setAllSalarySlips(null);
       setSalarySlip(null);
       
-      if (slipsData.length === 0) {
-        toast.warning(`No salary slips generated - No payroll data found for ${monthNames[filters.month - 1]} ${filters.year}`);
-      } else {
-        const expectedCount = filteredEmployees.length;
-        if (slipsData.length !== expectedCount) {
-          toast.info(`Generated ${slipsData.length} of ${expectedCount} salary slips (${expectedCount - slipsData.length} employees missing payroll data)`);
-        } else {
-          toast.success(`Generated ${slipsData.length} salary slips for ${monthNames[filters.month - 1]} ${filters.year}`);
-        }
-      }
+      // Salary slips generated silently without notifications
     } catch (error: any) {
       console.error('Error generating all salary slips:', error);
       console.error('Full error details:', {
@@ -852,6 +851,7 @@ export const SalarySlips: React.FC = () => {
               ${(Number(slip.absentDeduction) || 0) > 0 ? `<tr class="deduction-row"><td>Absent Days Deduction</td><td class="amount">${safeToFixed(slip.absentDeduction)}</td></tr>` : ''}
               ${(Number(slip.excessLeaves) || 0) > 0 ? `<tr class="deduction-row"><td>Excess Leave Deduction (${slip.excessLeaves} days, 2x penalty)</td><td class="amount">${safeToFixed((Number(slip.grossSalary) || 0) / (Number(slip.workingDays) || 22) * (Number(slip.excessLeaves) || 0) * 2)}</td></tr>` : ''}
               ${(Number(slip.advanceSalary) || 0) > 0 ? `<tr class="deduction-row"><td>Advance Salary Deduction</td><td class="amount">${safeToFixed(slip.advanceSalary)}</td></tr>` : ''}
+              ${(Number(slip.loanDeductions) || 0) > 0 ? `<tr class="deduction-row"><td>Loan Deduction</td><td class="amount">${safeToFixed(slip.loanDeductions)}</td></tr>` : ''}
               <tr class="total-deduction-row">
                 <td><strong>Total Deductions</strong></td>
                 <td class="amount"><strong>${safeToFixed(slip.totalDeduction)}</strong></td>
@@ -917,6 +917,7 @@ export const SalarySlips: React.FC = () => {
           'Absent Deduction (AED)': Number(slip.absentDeduction).toFixed(2),
           'Excess Leave Deduction (AED)': excessLeaveDeduction.toFixed(2),
           'Advance Salary (AED)': Number(slip.advanceSalary).toFixed(2),
+          'Loan Deduction (AED)': Number(slip.loanDeductions || 0).toFixed(2),
           'Total Deduction (AED)': Number(slip.totalDeduction).toFixed(2),
           'Net Salary (AED)': Number(slip.netSalary).toFixed(2),
           'Period': `${monthNames[Number(filters.month) - 1]} ${filters.year}`
@@ -1335,6 +1336,25 @@ export const SalarySlips: React.FC = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Advance Salary</span>
                       <span className="text-red-600">{formatCurrency(salarySlip.deductions.advanceDeduction)}</span>
+                    </div>
+                  )}
+                  {salarySlip.deductions.loanDeductions > 0 && (
+                    <div className="space-y-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                      <div className="flex justify-between">
+                        <span className="text-gray-700 font-semibold flex items-center">
+                          💰 Loan Deductions
+                        </span>
+                        <span className="text-red-700 font-bold text-lg">{formatCurrency(salarySlip.deductions.loanDeductions)}</span>
+                      </div>
+                      {salarySlip.deductions.loanDetails && salarySlip.deductions.loanDetails.map((loan, index) => (
+                        <div key={loan.id || index} className="flex justify-between ml-4 p-2 bg-white rounded border border-red-100">
+                          <div className="flex flex-col">
+                            <span className="text-gray-700 text-sm font-medium">• {loan.title}</span>
+                            <span className="text-gray-500 text-xs">Remaining: {formatCurrency(loan.remainingAfter || 0)}</span>
+                          </div>
+                          <span className="text-red-600 font-semibold">{formatCurrency(loan.deduction)}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                   <div className="border-t pt-2">

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Building, Briefcase, FileText, TrendingUp, Monitor } from 'lucide-react';
+import { Building, Briefcase, FileText, TrendingUp, Monitor, CreditCard, DollarSign } from 'lucide-react';
 
 interface MasterDataStatsProps {
-  dataType: 'office' | 'position' | 'visaType' | 'platform';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan';
   data: any[];
   loading: boolean;
 }
@@ -81,6 +81,34 @@ const MasterDataStats: React.FC<MasterDataStatsProps> = ({ dataType, data, loadi
           }
         ];
       
+      case 'loan':
+        const activeLoans = data.filter(item => item.status === 'active').length;
+        const completedLoans = data.filter(item => item.status === 'completed').length;
+        const totalOutstanding = data
+          .filter(item => item.status === 'active')
+          .reduce((sum, item) => sum + parseFloat(item.remaining_amount || 0), 0);
+        
+        return [
+          {
+            title: 'Total Loans',
+            value: total,
+            icon: CreditCard,
+            color: 'blue'
+          },
+          {
+            title: 'Active Loans',
+            value: activeLoans,
+            icon: TrendingUp,
+            color: 'green'
+          },
+          {
+            title: 'Outstanding Amount',
+            value: `AED ${totalOutstanding.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`,
+            icon: DollarSign,
+            color: 'orange'
+          }
+        ];
+      
       default:
         return [];
     }
@@ -113,7 +141,9 @@ const MasterDataStats: React.FC<MasterDataStatsProps> = ({ dataType, data, loadi
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {typeof stat.value === 'string' ? stat.value : stat.value.toLocaleString()}
+                </p>
               </div>
             </div>
           </div>

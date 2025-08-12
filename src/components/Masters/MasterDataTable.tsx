@@ -2,7 +2,7 @@ import React from 'react';
 import { Edit, Trash2, Eye } from 'lucide-react';
 
 interface MasterDataTableProps {
-  dataType: 'office' | 'position' | 'visaType' | 'platform';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan';
   data: any[];
   loading: boolean;
   onEdit: (item: any) => void;
@@ -34,10 +34,10 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-4">
-            No {dataType === 'office' ? 'offices' : dataType === 'position' ? 'positions' : dataType === 'visaType' ? 'visa types' : 'platforms'} found.
+            No {dataType === 'office' ? 'offices' : dataType === 'position' ? 'positions' : dataType === 'visaType' ? 'visa types' : dataType === 'platform' ? 'platforms' : 'loans'} found.
           </div>
           <p className="text-gray-400">
-            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : dataType === 'position' ? 'position' : dataType === 'visaType' ? 'visa type' : 'platform'}.
+            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : dataType === 'position' ? 'position' : dataType === 'visaType' ? 'visa type' : dataType === 'platform' ? 'platform' : 'loan'}.
           </p>
         </div>
       </div>
@@ -69,6 +69,17 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
         return [
           { key: 'id', label: 'Platform ID' },
           { key: 'platform_name', label: 'Platform Name' }
+        ];
+      case 'loan':
+        return [
+          { key: 'id', label: 'Loan ID' },
+          { key: 'employee_id', label: 'Employee ID' },
+          { key: 'employee_name', label: 'Employee Name' },
+          { key: 'title', label: 'Loan Title' },
+          { key: 'total_amount', label: 'Total Amount (AED)' },
+          { key: 'monthly_deduction', label: 'Monthly Deduction (AED)' },
+          { key: 'remaining_amount', label: 'Remaining (AED)' },
+          { key: 'status', label: 'Status' }
         ];
       default:
         return [];
@@ -106,7 +117,21 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
                 <tr key={itemId || index} className="hover:bg-gray-50">
                   {columns.map((column) => (
                     <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item[column.key] || '-'}
+                      {column.key === 'status' && dataType === 'loan' ? (
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          item[column.key] === 'active' 
+                            ? 'bg-green-100 text-green-800'
+                            : item[column.key] === 'completed'
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item[column.key] || '-'}
+                        </span>
+                      ) : column.key.includes('amount') && dataType === 'loan' ? (
+                        `AED ${parseFloat(item[column.key] || 0).toFixed(2)}`
+                      ) : (
+                        item[column.key] || '-'
+                      )}
                     </td>
                   ))}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

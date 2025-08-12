@@ -37,6 +37,7 @@ const flushRoutes = require('./routes/flushRoutes'); // NEW
 const approvedLeaveRoutes = require('./routes/approvedLeaveRoutes'); // NEW
 const advanceSalaryRoutes = require('./routes/advanceSalaryRoutes'); // NEW
 const salarySlipRoutes = require('./routes/salarySlipRoutes'); // NEW
+const loanRoutes = require('./routes/loanRoutes'); // NEW - EMPLOYEE LOANS
 
 // Middleware
 app.use(cors({
@@ -90,6 +91,7 @@ app.use('/api/flush', verifyToken,  flushRoutes); // NEW - ADMIN ONLY
 app.use('/api/approved-leaves', approvedLeaveRoutes); // NEW - APPROVED LEAVES
 app.use('/api/advance-salary', advanceSalaryRoutes); // NEW - ADVANCE SALARY
 app.use('/api/salary-slips', salarySlipRoutes); // NEW - SALARY SLIPS
+app.use('/api/loans', loanRoutes); // NEW - EMPLOYEE LOANS
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -140,6 +142,7 @@ app.listen(PORT, () => {
     console.log('✅ Approved Leaves: /api/approved-leaves/* (auth required)'); // NEW
     console.log('💵 Advance Salary: /api/advance-salary/* (manager+ required)'); // NEW
     console.log('📄 Salary Slips: /api/salary-slips/* (auth required)'); // NEW
+    console.log('🏦 Employee Loans: /api/loans/* (manager+ required)'); // NEW
     console.log('\n⚙️ Setup: node migrate.js');
   }
 });
