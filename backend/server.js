@@ -68,12 +68,34 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint (public)
+// NEW: Half-day database tables check
+const checkHalfDayTables = async () => {
+  if (process.env.HALF_DAY_FEATURE_ENABLED === 'true') {
+    try {
+      await pool.query('SELECT 1 FROM half_day_shifts LIMIT 1');
+      console.log('✅ Half-day tables verified');
+    } catch (error) {
+      console.warn('⚠️ Half-day feature enabled but tables not found. Run database migrations:');
+      console.warn('   CREATE TABLE half_day_shifts...');
+      console.warn('   ALTER TABLE employees ADD COLUMN half_day_eligible...');
+      console.warn('   ALTER TABLE payroll ADD COLUMN planned_half_days...');
+    }
+  }
+};
+
+// Enhanced health check endpoint with feature flags
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '2.0.0'
+    version: '2.1.0', // Updated version to reflect half-day feature
+    features: {
+      halfDayShifts: process.env.HALF_DAY_FEATURE_ENABLED === 'true',
+      approvedLeaves: true,
+      advanceSalary: true,
+      employeeLoans: true,
+      salarySlips: true
+    }
   });
 });
 
@@ -87,7 +109,7 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/holidays', holidaysRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/masters', masterRoutes);
-app.use('/api/flush', verifyToken,  flushRoutes); // NEW - ADMIN ONLY
+app.use('/api/flush', verifyToken, flushRoutes); // NEW - ADMIN ONLY
 app.use('/api/approved-leaves', approvedLeaveRoutes); // NEW - APPROVED LEAVES
 app.use('/api/advance-salary', advanceSalaryRoutes); // NEW - ADVANCE SALARY
 app.use('/api/salary-slips', salarySlipRoutes); // NEW - SALARY SLIPS
@@ -117,15 +139,23 @@ app.use('*', (req, res) => {
   });
 });
 
-// Server
+// Server startup with enhanced logging
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // NEW: Add half-day feature status
+  console.log(`📅 Half-Day Feature: ${process.env.HALF_DAY_FEATURE_ENABLED === 'true' ? '✅ ENABLED' : '❌ DISABLED'}`);
+  
+  // Check half-day tables if feature is enabled
+  await checkHalfDayTables();
+  
   console.log('\n👥 User Accounts Available:');
   console.log('🔐 Admin: admin / admin123');
   console.log('🏢 HR: hr / hr123');
   console.log('👨‍💼 Floor Manager: floormanager / manager123');
+  
   if (process.env.NODE_ENV !== 'production') {
     console.log('\n📋 API Endpoints:');
     console.log('🏥 Health Check: GET /api/health');
@@ -135,14 +165,41 @@ app.listen(PORT, () => {
     console.log('👥 Employees: /api/employees/* (auth required)');
     console.log('📅 Attendance: /api/attendance/* (auth required)');
     console.log('💰 Payroll: /api/payroll/* (manager+ required)');
+    
+    // NEW: Add half-day specific endpoints when feature is enabled
+    if (process.env.HALF_DAY_FEATURE_ENABLED === 'true') {
+      console.log('🕒 Half-Day Shifts: GET /api/payroll/half-day-shifts (auth required)');
+      console.log('🕒 Half-Day Status: GET /api/payroll/half-day-feature-status (auth required)');
+      console.log('📊 Half-Day Eligibility: GET /api/payroll/employee/:id/half-day-eligibility (auth required)');
+      console.log('⚙️ Manage Half-Day Shifts: POST/PUT/DELETE /api/payroll/half-day-shifts/* (manager+ required)');
+    }
+    
     console.log('🏢 Masters: /api/masters/* (admin required)');
     console.log('🎉 Holidays: /api/holidays/* (hr+ required)');
     console.log('📊 Reports: /api/reports/* (manager+ required)');
-    console.log('🗑️ Flush DB: /api/flush/* (admin required)'); // NEW
-    console.log('✅ Approved Leaves: /api/approved-leaves/* (auth required)'); // NEW
-    console.log('💵 Advance Salary: /api/advance-salary/* (manager+ required)'); // NEW
-    console.log('📄 Salary Slips: /api/salary-slips/* (auth required)'); // NEW
-    console.log('🏦 Employee Loans: /api/loans/* (manager+ required)'); // NEW
-    console.log('\n⚙️ Setup: node migrate.js');
+    console.log('🗑️ Flush DB: /api/flush/* (admin required)');
+    console.log('✅ Approved Leaves: /api/approved-leaves/* (auth required)');
+    console.log('💵 Advance Salary: /api/advance-salary/* (manager+ required)');
+    console.log('📄 Salary Slips: /api/salary-slips/* (auth required)');
+    console.log('🏦 Employee Loans: /api/loans/* (manager+ required)');
+    
+    console.log('\n⚙️ Setup Instructions:');
+    console.log('1. Run: node migrate.js');
+    if (process.env.HALF_DAY_FEATURE_ENABLED === 'true') {
+      console.log('2. Ensure half-day database tables are created');
+      console.log('3. Configure half-day shifts: Morning (8:30-13:30), Afternoon (13:30-18:30)');
+    }
+    
+    console.log('\n🎯 Available Features:');
+    console.log(`• Employee Management: ✅ Active`);
+    console.log(`• Attendance Tracking: ✅ Active`);
+    console.log(`• Payroll Processing: ✅ Active`);
+    console.log(`• Half-Day Shifts: ${process.env.HALF_DAY_FEATURE_ENABLED === 'true' ? '✅ Active' : '❌ Disabled'}`);
+    console.log(`• Approved Leaves: ✅ Active`);
+    console.log(`• Advance Salary: ✅ Active`);
+    console.log(`• Employee Loans: ✅ Active`);
+    console.log(`• Salary Slips: ✅ Active`);
   }
+  
+  console.log('\n🚀 Server ready and waiting for requests...\n');
 });

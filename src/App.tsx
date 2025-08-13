@@ -8,6 +8,7 @@ import AddEmployeePage from './pages/AddEmployee';
 import { Dashboard } from './pages/Dashboard';
 import { Employees } from './pages/Employees';
 import PayrollReports from './pages/PayrollReports';
+import HalfDayManagement from './pages/HalfDayManagement';
 import { DashboardByPlatform } from './pages/DashboardByPlatform';
 import EmployeePayrollDetails from './pages/EmployeePayrollDetails';
 import { Holidays } from './pages/holidays';
@@ -18,6 +19,7 @@ import FlushDB from './pages/FlushDB';
 import MasterData from './pages/MasterData';
 import AdvanceSalary from './pages/AdvanceSalary';
 import { SalarySlips } from './pages/SalarySlips';
+import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -25,7 +27,7 @@ import { ToastContainer } from 'react-toastify';
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
   permission?: string;
-  adminOnly?: boolean; // ADD THIS PROP
+  adminOnly?: boolean;
 }> = ({ children, permission, adminOnly }) => {
   const { isAuthenticated, hasPermission, user } = useAuth();
 
@@ -127,6 +129,7 @@ const AppRoutes: React.FC = () => {
         }
       />
 
+      {/* === EMPLOYEE ROUTES === */}
       <Route
         path="/employees"
         element={
@@ -159,6 +162,19 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* === END EMPLOYEE ROUTES === */}
+
+      {/* === EMPLOYEE LOAN HISTORY ROUTE (IMPORTANT - MUST BE BEFORE GENERIC /employee/:employeeId) === */}
+      <Route
+        path="/employee-loan-history/:employee_id"
+        element={
+          <ProtectedRoute permission="manage_offices">
+            <EmployeeLoanHistory />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END EMPLOYEE LOAN HISTORY ROUTE === */}
+
       {/* === ATTENDANCE UPLOAD ROUTE === */}
       <Route
         path="/attendance"
@@ -188,6 +204,7 @@ const AppRoutes: React.FC = () => {
       />
       {/* === END FLUSH DB ROUTE === */}
 
+      {/* === PAYROLL ROUTES === */}
       <Route
         path="/payroll"
         element={
@@ -196,6 +213,18 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
+      {/* Half-Day Management Route */}
+      <Route
+        path="/manage-half-days"
+        element={
+          <ProtectedRoute permission="manage_payroll">
+            <HalfDayManagement />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* IMPORTANT: This route should come AFTER the loan history route */}
       <Route
         path="/employee/:employeeId"
         element={
@@ -204,6 +233,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       {/* === SALARY SLIPS ROUTE === */}
       <Route
         path="/salary-slips"
@@ -214,6 +244,8 @@ const AppRoutes: React.FC = () => {
         }
       />
       {/* === END SALARY SLIPS ROUTE === */}
+      {/* === END PAYROLL ROUTES === */}
+
       <Route
         path="/api/holidays"
         element={

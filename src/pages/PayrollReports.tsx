@@ -6,6 +6,7 @@ import moment from "moment";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+// UPDATED: Enhanced interface with combined half-day support
 interface PayrollEntry {
   employeeId: string;
   name: string;
@@ -21,6 +22,9 @@ interface PayrollEntry {
   perDaySalary: number;
   totalDeductions: number;
   netSalary: number;
+  // UPDATED: Keep plannedHalfDays for calculation but combine in display
+  plannedHalfDays?: number;
+  halfDayFeatureEnabled?: boolean;
 }
 
 interface Summary {
@@ -29,6 +33,7 @@ interface Summary {
   totalDeductions: string;
   netPayroll: string;
   workingDays: number;
+  halfDayFeatureEnabled?: boolean;
 }
 
 interface Office {
@@ -39,6 +44,17 @@ interface Office {
 interface Position {
   id: number;
   title: string;
+}
+
+interface HalfDayFeatureStatus {
+  featureEnabled: boolean;
+  availableShifts: number;
+  shifts: Array<{
+    id: number;
+    shift_name: string;
+    start_time: string;
+    end_time: string;
+  }>;
 }
 
 const PayrollReports: React.FC = () => {
@@ -59,6 +75,9 @@ const PayrollReports: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const isInitial = useRef(true);
 
+  const [halfDayFeature, setHalfDayFeature] = useState<HalfDayFeatureStatus | null>(null);
+  const [showHalfDayInfo, setShowHalfDayInfo] = useState(false);
+
   // Sorting state
   const [sortField, setSortField] = useState<keyof PayrollEntry | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -66,6 +85,45 @@ const PayrollReports: React.FC = () => {
   const pageSizes = [10, 30, 50, 70, 100, 150, 200, 300, 400, 500];
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // NEW: Navigate to Half Day Management
+  const handleManageHalfDays = () => {
+    navigate('/manage-half-days');
+  };
+
+  // UPDATED: Calculate combined half-day statistics
+  const calculateHalfDayStats = () => {
+    if (!halfDayFeature?.featureEnabled || payrollData.length === 0) return null;
+    
+    const totalPlannedHalfDays = payrollData.reduce((sum, emp) => sum + (emp.plannedHalfDays || 0), 0);
+    const totalRegularHalfDays = payrollData.reduce((sum, emp) => sum + emp.halfDays, 0);
+    const totalCombinedHalfDays = totalPlannedHalfDays + totalRegularHalfDays;
+    const employeesUsingHalfDays = payrollData.filter(emp => 
+      (emp.plannedHalfDays || 0) > 0 || emp.halfDays > 0
+    ).length;
+    
+    return {
+      totalPlannedHalfDays,
+      totalRegularHalfDays,
+      totalCombinedHalfDays,
+      employeesUsingHalfDays
+    };
+  };
+
+  // UPDATED: Function to get combined half days for display
+  const getCombinedHalfDays = (emp: PayrollEntry) => {
+    return emp.halfDays + (emp.plannedHalfDays || 0);
+  };
+
+  const fetchHalfDayFeatureStatus = async () => {
+    try {
+      const response = await axios.get('/payroll/half-day-feature-status');
+      setHalfDayFeature(response.data);
+    } catch (error) {
+      console.log('Half-day feature not available or disabled');
+      setHalfDayFeature({ featureEnabled: false, availableShifts: 0, shifts: [] });
+    }
+  };
 
   const fetchDropdowns = async () => {
     try {
@@ -184,7 +242,7 @@ const PayrollReports: React.FC = () => {
     navigate(`/employee/${employee.employeeId}?${qs}`);
   };
 
-  // Column sorting handler
+  // Column sorting handler - UPDATED to handle combined half days
   const handleSort = (field: keyof PayrollEntry) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -194,13 +252,19 @@ const PayrollReports: React.FC = () => {
     }
   };
 
-  // Sort the payroll data
+  // UPDATED: Sort the payroll data with combined half days
   const sortedPayrollData = React.useMemo(() => {
     if (!sortField) return payrollData;
     
     return [...payrollData].sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Special handling for halfDays - use combined value
+      if (sortField === 'halfDays') {
+        aValue = getCombinedHalfDays(a);
+        bValue = getCombinedHalfDays(b);
+      }
       
       // Handle string comparisons
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -218,7 +282,6 @@ const PayrollReports: React.FC = () => {
     });
   }, [payrollData, sortField, sortDirection]);
 
-  // Render sort icon
   const renderSortIcon = (field: keyof PayrollEntry) => {
     if (sortField !== field) {
       return (
@@ -243,6 +306,8 @@ const PayrollReports: React.FC = () => {
     }
   };
 
+  const halfDayStats = calculateHalfDayStats();
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('fromDate')) {
@@ -254,6 +319,7 @@ const PayrollReports: React.FC = () => {
     if (params.get('pageSize')) setPageSize(Number(params.get('pageSize')));
     if (params.get('page')) setPage(Number(params.get('page')));
     fetchDropdowns();
+    fetchHalfDayFeatureStatus();
   }, []);
 
   useEffect(() => {
@@ -280,6 +346,73 @@ const PayrollReports: React.FC = () => {
   return (
     <MainLayout title="Payroll Reports" subtitle="View and manage employee payroll reports">
       <div className="space-y-8">
+
+        {/* UPDATED: Half-Day Feature Status Banner with Manage Button */}
+        {halfDayFeature?.featureEnabled && (
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-600 rounded-full p-2">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-indigo-800">🕒 Half-Day Feature Active</h3>
+                  <p className="text-sm text-indigo-700">
+                    {halfDayFeature.availableShifts} shift patterns available: Morning (8:30-13:30) & Afternoon (13:30-18:30)
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {/* NEW: Manage Half Days Button */}
+                <button
+                  onClick={handleManageHalfDays}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Manage Half Days
+                </button>
+                <button
+                  onClick={() => setShowHalfDayInfo(!showHalfDayInfo)}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  {showHalfDayInfo ? 'Hide Info' : 'Show Info'}
+                </button>
+              </div>
+            </div>
+            
+            {showHalfDayInfo && (
+              <div className="mt-4 pt-4 border-t border-indigo-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-indigo-800 mb-2">Available Shifts:</h4>
+                    {halfDayFeature.shifts.map(shift => (
+                      <div key={shift.id} className="text-sm text-indigo-700 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
+                        <strong>{shift.shift_name}:</strong> {shift.start_time.substring(0,5)} - {shift.end_time.substring(0,5)}
+                      </div>
+                    ))}
+                  </div>
+                  {halfDayStats && (
+                    <div>
+                      <h4 className="font-semibold text-indigo-800 mb-2">This Month Stats:</h4>
+                      <div className="text-sm text-indigo-700 space-y-1">
+                        <div>✅ Planned Half Days: <strong>{halfDayStats.totalPlannedHalfDays}</strong></div>
+                        <div>⚠️ Unplanned Half Days: <strong>{halfDayStats.totalRegularHalfDays}</strong></div>
+                        <div>📊 Total Half Days: <strong>{halfDayStats.totalCombinedHalfDays}</strong></div>
+                        <div>👥 Employees Using: <strong>{halfDayStats.employeesUsingHalfDays}</strong></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="bg-white ring-1 ring-blue-100 rounded-2xl shadow-sm px-6 py-5 mb-2">
           <div className="flex items-center gap-3 mb-4">
@@ -337,7 +470,16 @@ const PayrollReports: React.FC = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  const worksheet = XLSX.utils.json_to_sheet(payrollData);
+                  const exportData = payrollData.map(emp => ({
+                    ...emp,
+                    // UPDATED: Include combined half days in export
+                    totalHalfDays: getCombinedHalfDays(emp),
+                    ...(halfDayFeature?.featureEnabled && { 
+                      plannedHalfDays: emp.plannedHalfDays || 0,
+                      regularHalfDays: emp.halfDays
+                    })
+                  }));
+                  const worksheet = XLSX.utils.json_to_sheet(exportData);
                   const workbook = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(workbook, worksheet, "Payroll Data");
                   const xlsbData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
@@ -375,6 +517,8 @@ const PayrollReports: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Rest of your existing filter section remains the same */}
           {(payrollData.length > 0 || calendarDays.length > 0) && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-xl p-6">
@@ -417,6 +561,8 @@ const PayrollReports: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Loading states remain the same */}
         {loading && (
           <div className="p-4 rounded-md bg-blue-50 border border-blue-100 text-blue-800 flex items-center gap-2">
             <svg className="animate-spin h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24">
@@ -426,15 +572,17 @@ const PayrollReports: React.FC = () => {
             Loading payroll reports...
           </div>
         )}
+
         {deleteLoading && (
           <div className="p-4 rounded-md bg-red-50 border border-red-200 text-red-800 flex items-center gap-2">
             <svg className="animate-spin h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 14 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 14 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             🗑️ Deleting attendance data for {moment(selectedMonth).format('MMMM YYYY')}...
           </div>
         )}
+
         {error && (
           <div className="p-4 rounded-md bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
             <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -443,6 +591,7 @@ const PayrollReports: React.FC = () => {
             <span>{error}</span>
           </div>
         )}
+
         {noData && (
           <div className="p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-2">
             <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
@@ -451,6 +600,8 @@ const PayrollReports: React.FC = () => {
             No attendance uploaded for {selectedMonth}
           </div>
         )}
+
+        {/* UPDATED: Summary cards WITHOUT separate half-day card */}
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow p-6 border border-green-100 flex items-center">
@@ -496,6 +647,8 @@ const PayrollReports: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* UPDATED: Table WITHOUT separate planned column - combined half days */}
         {!noData && payrollData.length > 0 && (
           <div className="bg-white rounded-xl shadow border border-gray-100 overflow-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-blue-50">
@@ -506,8 +659,12 @@ const PayrollReports: React.FC = () => {
                   </svg>
                 </span>
                 <h3 className="text-lg font-bold text-gray-800">Employee Payroll Data</h3>
+                {halfDayFeature?.featureEnabled && (
+                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">
+                    Half-Day Feature Active
+                  </span>
+                )}
               </div>
-              
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-xs sm:text-sm">
@@ -551,11 +708,18 @@ const PayrollReports: React.FC = () => {
                       </div>
                     </th>
                     <th 
-                      className="py-3 px-4 font-bold text-gray-700 text-center cursor-pointer hover:bg-blue-200 transition-colors select-none"
+                      className="py-3 px-4 font-bold text-orange-700 text-center cursor-pointer hover:bg-blue-200 transition-colors select-none"
                       onClick={() => handleSort('halfDays')}
                     >
                       <div className="flex items-center justify-center">
-                        Half
+                        {halfDayFeature?.featureEnabled ? (
+                          <>
+                            <span className="mr-1">🕒</span>
+                            Half 
+                          </>
+                        ) : (
+                          'Half'
+                        )}
                         {renderSortIcon('halfDays')}
                       </div>
                     </th>
@@ -599,55 +763,75 @@ const PayrollReports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {sortedPayrollData.map((emp, i) => (
-                    <tr
-                      key={emp.employeeId}
-                      className="hover:bg-blue-50 cursor-pointer transition"
-                      onClick={() => handleEmployeeClick(emp)}
-                    >
-                      <td className="py-3 px-4 text-gray-500 font-semibold">{(page - 1) * pageSize + i + 1}</td>
-                      <td className="py-3 px-4 text-blue-800 font-mono font-bold">{emp.employeeId}</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="rounded px-2 bg-green-100 text-green-800 text-xs font-bold">{emp.presentDays}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="rounded px-2 bg-yellow-100 text-yellow-900 text-xs font-bold">{emp.lateDays}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="rounded px-2 bg-red-100 text-red-800 text-xs font-bold">{emp.absentDays}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="rounded px-2 bg-orange-100 text-orange-800 text-xs font-bold">{emp.halfDays}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="rounded px-2 bg-purple-100 text-purple-800 text-xs font-bold">{emp.excessLeaves}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center text-green-700 font-bold">
-                        AED {emp.baseSalary.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 text-center text-red-600 font-semibold">
-                        AED {emp.totalDeductions.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 text-center text-blue-700 font-extrabold">
-                        AED {emp.netSalary.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-full shadow-sm transition"
-                          onClick={e => { e.preventDefault(); e.stopPropagation(); handleEmployeeClick(emp); }}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {sortedPayrollData.map((emp, i) => {
+                    const combinedHalfDays = getCombinedHalfDays(emp);
+                    const hasPlannedHalfDays = (emp.plannedHalfDays || 0) > 0;
+                    
+                    return (
+                      <tr
+                        key={emp.employeeId}
+                        className="hover:bg-blue-50 cursor-pointer transition"
+                        onClick={() => handleEmployeeClick(emp)}
+                      >
+                        <td className="py-3 px-4 text-gray-500 font-semibold">{(page - 1) * pageSize + i + 1}</td>
+                        <td className="py-3 px-4 text-blue-800 font-mono font-bold">{emp.employeeId}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="rounded px-2 bg-green-100 text-green-800 text-xs font-bold">{emp.presentDays}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="rounded px-2 bg-yellow-100 text-yellow-900 text-xs font-bold">{emp.lateDays}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="rounded px-2 bg-red-100 text-red-800 text-xs font-bold">{emp.absentDays}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {/* UPDATED: Combined half days with tooltip showing breakdown */}
+                          <span 
+                            className={`rounded px-2 text-xs font-bold ${
+                              hasPlannedHalfDays 
+                                ? 'bg-orange-100 text-orange-800 border border-orange-300' 
+                                : 'bg-orange-100 text-orange-800'
+                            }`}
+                            title={halfDayFeature?.featureEnabled && hasPlannedHalfDays ? 
+                              `Total: ${combinedHalfDays} (Planned: ${emp.plannedHalfDays}, Regular: ${emp.halfDays})` : 
+                              `Half Days: ${combinedHalfDays}`
+                            }
+                          >
+                            {combinedHalfDays}
+                            {hasPlannedHalfDays && <span className="ml-1">🕒</span>}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="rounded px-2 bg-purple-100 text-purple-800 text-xs font-bold">{emp.excessLeaves}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center text-green-700 font-bold">
+                          AED {emp.baseSalary.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-center text-red-600 font-semibold">
+                          AED {emp.totalDeductions.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-center text-blue-700 font-extrabold">
+                          AED {emp.netSalary.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-full shadow-sm transition"
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); handleEmployeeClick(emp); }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            
             <div className="flex flex-wrap items-center justify-between px-6 py-3 border-t bg-gradient-to-r from-gray-50 to-blue-50">
               <div className="text-gray-600 text-sm">
                 Showing <span className="font-bold">{summary ? (page - 1) * pageSize + 1 : 0}</span>–<span className="font-bold">{summary ? (page - 1) * pageSize + payrollData.length : 0}</span> of <span className="font-bold">{summary ? summary.totalEmployees : 0}</span> employees
@@ -694,4 +878,3 @@ const PayrollReports: React.FC = () => {
 };
 
 export default PayrollReports;
-
