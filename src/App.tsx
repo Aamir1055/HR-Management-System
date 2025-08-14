@@ -20,8 +20,8 @@ import MasterData from './pages/MasterData';
 import AdvanceSalary from './pages/AdvanceSalary';
 import AdvanceSalaryHistory from './pages/AdvanceSalaryHistory';
 import { SalarySlips } from './pages/SalarySlips';
-import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
 import EmployeeLoans from './pages/EmployeeLoans';
+import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -166,27 +166,6 @@ const AppRoutes: React.FC = () => {
       />
       {/* === END EMPLOYEE ROUTES === */}
 
-      {/* === EMPLOYEE LOANS ROUTES === */}
-      <Route
-        path="/employee-loans"
-        element={
-          <ProtectedRoute permission="manage_offices">
-            <EmployeeLoans />
-          </ProtectedRoute>
-        }
-      />
-      {/* === END EMPLOYEE LOANS ROUTES === */}
-
-      {/* === EMPLOYEE LOAN HISTORY ROUTE (IMPORTANT - MUST BE BEFORE GENERIC /employee/:employeeId) === */}
-      <Route
-        path="/employee-loan-history/:employee_id"
-        element={
-          <ProtectedRoute permission="manage_offices">
-            <EmployeeLoanHistory />
-          </ProtectedRoute>
-        }
-      />
-      {/* === END EMPLOYEE LOAN HISTORY ROUTE === */}
 
       {/* === ATTENDANCE UPLOAD ROUTE === */}
       <Route
@@ -213,6 +192,25 @@ const AppRoutes: React.FC = () => {
         }
       />
       {/* === END ADVANCE SALARY ROUTES === */}
+      
+      {/* === EMPLOYEE LOANS ROUTES === */}
+      <Route
+        path="/employee-loans"
+        element={
+          <ProtectedRoute>
+            <EmployeeLoans />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employee-loan-history/:employee_id"
+        element={
+          <ProtectedRoute>
+            <EmployeeLoanHistory />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END EMPLOYEE LOANS ROUTES === */}
       
       {/* === FLUSH DB ROUTE - ADMIN ONLY WITH PROTECTION === */}
       <Route

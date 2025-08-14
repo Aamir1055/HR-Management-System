@@ -723,25 +723,26 @@ exports.getOverview = async (req, res) => {
     
     const [overviewRows] = await db.query(overviewQuery, overviewParams);
     
-    // Get employee list with advance summary
-    let employeeQuery = `
-      SELECT 
-        e.employeeId as employee_id,
-        e.name as employee_name,
-        o.name as employee_office,
-        e.monthlySalary as monthly_salary,
-        COUNT(a.id) as total_advances,
-        COALESCE(SUM(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN a.amount ELSE 0 END), 0) as current_month_advance,
-        MAX(a.uploaded_date) as last_advance_date,
-        COALESCE(SUM(a.amount), 0) as total_advance_amount,
-        CASE 
-          WHEN COUNT(a.id) = 0 THEN 'no_advances'
-          WHEN COUNT(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN 1 END) > 0 THEN 'active'
-          ELSE 'pending'
-        END as status
-      FROM employees e
-      LEFT JOIN offices o ON e.office_id = o.id
-      LEFT JOIN advance_salary a ON e.employeeId = a.employee_id
+      // Get employee list with advance summary
+      let employeeQuery = `
+        SELECT 
+          e.employeeId as employee_id,
+          e.name as employee_name,
+          o.name as office_name,
+          e.monthlySalary as monthly_salary,
+          COUNT(a.id) as total_advances,
+          COALESCE(SUM(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN a.amount ELSE 0 END), 0) as current_month_advance,
+          MAX(a.uploaded_date) as last_advance_date,
+          MAX(a.month_year) as last_advance_month,
+          COALESCE(SUM(a.amount), 0) as total_amount,
+          CASE 
+            WHEN COUNT(a.id) = 0 THEN 'no_advances'
+            WHEN COUNT(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN 1 END) > 0 THEN 'active'
+            ELSE 'pending'
+          END as status
+        FROM employees e
+        LEFT JOIN offices o ON e.office_id = o.id
+        LEFT JOIN advance_salary a ON e.employeeId = a.employee_id
     `;
     
     let employeeParams = [];
@@ -758,7 +759,7 @@ exports.getOverview = async (req, res) => {
       total_employees_with_advances: overviewRows[0].total_employees_with_advances,
       total_advance_records: overviewRows[0].total_advance_records,
       current_month_advances: overviewRows[0].current_month_advances,
-      total_advance_amount: overviewRows[0].total_advance_amount.toString(),
+      total_amount: overviewRows[0].total_advance_amount.toString(),
       average_advance_amount: overviewRows[0].average_advance_amount,
       employees: employeeRows
     };

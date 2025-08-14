@@ -1,4 +1,4 @@
-const pool = require('../db');
+const pool = require('../db/index');
 
 // Since we're using mysql2/promise, the pool already returns promises
 module.exports = {

@@ -370,14 +370,24 @@ module.exports = {
         'Salary': 4000,
         'Joining Date': '01-01-2023',
         'Status': 'active',
-        'DOB': '',
-        'Passport Number': '',
-        'Passport Expiry': '',
+        'DOB': '1990-01-15',
+        'Passport Number': 'P1234567',
+        'Passport Expiry': '2030-01-01',
         'Visa Type': 1,
+        'Visa Expiry': '2030-12-31',
         'Platform': 1,
-        'Address': '',
-        'Phone': '',
-        'Gender': ''
+        'Address': '123 Main Street',
+        'Current Address': '456 Current Street',
+        'Phone': '+971501234567',
+        'WhatsApp': '+971507891234',
+        'Gender': 'Male',
+        'Primary Language': 'English',
+        'Secondary Language': 'Arabic',
+        'Marital Status': 'Single',
+        'Hiring Source': 'Job Portal',
+        'Salary Currency': 'AED',
+        'Emirates ID': '784-1990-1234567-8',
+        'Emergency Contact': '+971509876543'
       }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(template), 'Template');

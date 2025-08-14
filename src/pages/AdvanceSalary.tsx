@@ -506,7 +506,7 @@ const AdvanceSalary: React.FC = () => {
 
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
@@ -516,18 +516,6 @@ const AdvanceSalary: React.FC = () => {
                     value={filters.searchTerm}
                     onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
                   />
-                </div>
-                <div>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={filters.selectedOffice}
-                    onChange={(e) => setFilters(prev => ({ ...prev, selectedOffice: e.target.value }))}
-                  >
-                    <option value="">All Offices</option>
-                    {getUniqueOffices().map(office => (
-                      <option key={office} value={office}>{office}</option>
-                    ))}
-                  </select>
                 </div>
                 <div className="flex gap-2">
                   <button

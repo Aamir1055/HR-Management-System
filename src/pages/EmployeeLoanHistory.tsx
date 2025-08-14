@@ -1139,14 +1139,6 @@ const EmployeeLoanHistory: React.FC = () => {
                           <div className="text-3xl font-bold">{formatCurrency(data.summary.total_remaining)}</div>
                           <div className="text-orange-100 text-xs mt-1">Amount yet to be recovered</div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-orange-100 text-sm">Recovery Rate</div>
-                          <div className="text-xl font-bold">
-                            {parseFloat(data.summary.total_loan_amount) > 0 ? 
-                              Math.round(((parseFloat(data.summary.total_loan_amount) - parseFloat(data.summary.total_remaining)) / parseFloat(data.summary.total_loan_amount)) * 100) 
-                              : 0}%
-                          </div>
-                        </div>
                       </div>
                       
                       {/* Progress Bar */}

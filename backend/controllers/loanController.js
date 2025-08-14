@@ -46,7 +46,7 @@ const updateLoanStatus = async (loanId) => {
 
     if (shouldBeCompleted && loan.status !== 'completed') {
       await query(
-        'UPDATE employee_loans SET status = ?, remaining_amount = 0, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE employee_loans SET status = ?, remaining_amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         ['completed', loanId]
       );
       console.log(`🎉 Loan ${loanId} marked as COMPLETED! (remaining: ${remainingAmount}, total: ${totalLoanAmount})`);
@@ -55,7 +55,7 @@ const updateLoanStatus = async (loanId) => {
     // If loan has outstanding amount but was marked as completed, reactivate it
     else if (shouldBeActive && loan.status === 'completed') {
       await query(
-        'UPDATE employee_loans SET status = ?, completed_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE employee_loans SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         ['active', loanId]
       );
       console.log(`🔄 Loan ${loanId} REACTIVATED! (remaining: ${remainingAmount}, total: ${totalLoanAmount})`);
@@ -469,7 +469,7 @@ exports.createLoan = async (req, res) => {
         start_date, 
         remaining_amount,
         created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       employee_id,
       totalAmountFloat,

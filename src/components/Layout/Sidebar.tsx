@@ -19,7 +19,6 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
   { name: 'Employees', href: '/employees', icon: Users },
-  { name: 'Employee Loans', href: '/employee-loans', icon: CreditCard },
   { name: 'Payroll', href: '/payroll', icon: TrendingUp },
   { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
   { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
@@ -28,6 +27,7 @@ const navigation = [
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Role Management', href: '/roles', icon: UserCog }, // Changed icon for better distinction
   { name: 'Master Data', href: '/master-data', icon: Settings }, // New Master Data route
+  { name: 'Employee Loans', href: '/employee-loans', icon: CreditCard }, // Employee Loans navigation
   { name: 'Flush DB', href: '/flush-db', icon: Trash2, adminOnly: true },
 ];
 
@@ -69,8 +69,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return hasPermission('manage_holidays');
       case '/employees':
         return hasPermission('manage_employees');
-      case '/employee-loans':
-        return hasPermission('manage_offices'); // Same permission as Master Data
       case '/payroll':
         return hasPermission('manage_payroll');
       case '/salary-slips':
