@@ -586,6 +586,58 @@ exports.remove = async (req, res) => {
   }
 };
 
+// Delete all advance salary records for an employee
+exports.removeAllForEmployee = async (req, res) => {
+  const { employeeId } = req.params;
+  try {
+    // Check office access first
+    const { buildOfficeFilter } = require('../middleware/auth');
+    const { whereClause, params } = buildOfficeFilter(req, 'e');
+    
+    let checkQuery = `
+      SELECT e.employeeId, e.name 
+      FROM employees e 
+      WHERE e.employeeId = ?
+    `;
+    let checkParams = [employeeId];
+    
+    if (whereClause) {
+      checkQuery += ` AND ${whereClause}`;
+      checkParams.push(...params);
+    }
+    
+    const [checkRows] = await db.query(checkQuery, checkParams);
+    if (checkRows.length === 0) {
+      return res.status(404).json({ message: 'Employee not found or access denied' });
+    }
+
+    // Check if employee has advance salary records
+    const [recordRows] = await db.query(
+      'SELECT COUNT(*) as count FROM advance_salary WHERE employee_id = ?',
+      [employeeId]
+    );
+    
+    if (recordRows[0].count === 0) {
+      return res.status(404).json({ message: 'No advance salary records found for this employee' });
+    }
+
+    // Delete all advance salary records for this employee
+    const [result] = await db.query(
+      'DELETE FROM advance_salary WHERE employee_id = ?',
+      [employeeId]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `Successfully deleted ${result.affectedRows} advance salary record(s) for employee ${checkRows[0].name}`,
+      deletedRecords: result.affectedRows
+    });
+  } catch (err) {
+    console.error('Error deleting employee advance salary records:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Get advance salary summary for a specific employee
 exports.getEmployeeSummary = async (req, res) => {
   const { employeeId } = req.params;

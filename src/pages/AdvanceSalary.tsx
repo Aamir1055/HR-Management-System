@@ -17,7 +17,8 @@ import {
   AlertCircle,
   X,
   Calendar,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -239,7 +240,7 @@ const AddAdvanceModal: React.FC<AddAdvanceModalProps> = ({
 
 const AdvanceSalary: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'employees' | 'upload'>('upload');
+  const [activeTab, setActiveTab] = useState<'employees' | 'upload'>('employees');
   const [overview, setOverview] = useState<AdvanceOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -249,6 +250,7 @@ const AdvanceSalary: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -347,6 +349,36 @@ const AdvanceSalary: React.FC = () => {
     navigate(`/advance-salary-history/${employeeId}`);
   };
 
+  // Handle delete employee advance records
+  const handleDeleteEmployeeAdvances = async (employeeId: string, employeeName: string) => {
+    if (!window.confirm(`Are you sure you want to delete all advance salary records for ${employeeName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleteLoading(employeeId);
+    try {
+      const response = await fetch(`http://localhost:5000/api/advance-salary/employee/${employeeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success(`Successfully deleted all advance salary records for ${employeeName}`);
+        fetchAdvanceOverview(); // Refresh the overview
+      } else {
+        const error = await response.json();
+        toast.error(`Failed to delete advance salary records: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting advance salary records:', error);
+      toast.error('Network error while deleting advance salary records');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
   // Format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-AE', {
@@ -439,7 +471,7 @@ const AdvanceSalary: React.FC = () => {
           <div className="space-y-6">
             {/* Overview Stats */}
             {overview && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-lg shadow-sm border">
                   <div className="flex items-center justify-between">
                     <div>
@@ -492,15 +524,6 @@ const AdvanceSalary: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg shadow-sm border">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Average Amount</p>
-                      <p className="text-2xl font-bold text-red-600">{formatCurrency(overview.average_advance_amount)}</p>
-                    </div>
-                    <CheckCircle className="w-8 h-8 text-red-500" />
-                  </div>
-                </div>
               </div>
             )}
 
@@ -643,14 +666,29 @@ const AdvanceSalary: React.FC = () => {
                               )}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => handleViewEmployeeHistory(employee.employee_id)}
-                                className="flex items-center gap-1 text-blue-600 hover:text-blue-900 transition-colors"
-                                title="View History"
-                              >
-                                <History className="w-4 h-4" />
-                                <span>View History</span>
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleViewEmployeeHistory(employee.employee_id)}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md transition-colors"
+                                  title="View History"
+                                >
+                                  <History className="w-4 h-4" />
+                                  <span>View</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEmployeeAdvances(employee.employee_id, employee.employee_name)}
+                                  disabled={deleteLoading === employee.employee_id}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Delete all advance records"
+                                >
+                                  {deleteLoading === employee.employee_id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                  <span>{deleteLoading === employee.employee_id ? 'Deleting...' : 'Delete'}</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}

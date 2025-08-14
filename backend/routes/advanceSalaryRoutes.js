@@ -17,6 +17,9 @@ router.get('/filter', requireAuth, addUserOffices, advanceSalaryController.filte
 router.get('/employee/:employeeId/summary', requireAuth, addUserOffices, advanceSalaryController.getEmployeeSummary);
 router.get('/employee/:employeeId/history', requireAuth, addUserOffices, advanceSalaryController.getEmployeeHistory);
 
+// Delete all advance salary records for an employee (Manager access required)
+router.delete('/employee/:employeeId', requireAuth, requireManager, addUserOffices, advanceSalaryController.removeAllForEmployee);
+
 // Fetch all advance salary records
 router.get('/', requireAuth, addUserOffices, advanceSalaryController.getAll);
 

@@ -454,7 +454,7 @@ const AdvanceSalaryHistory: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <button
-              onClick={() => navigate('/advance-salary')}
+              onClick={() => navigate('/advance-salary', { replace: false })}
               className="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4"
             >
               <ArrowLeft className="w-5 h-5 mr-1" />
