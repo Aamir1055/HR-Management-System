@@ -1,212 +1,350 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout/MainLayout';
 import AdvanceSalaryUpload from '../components/AdvanceSalary/AdvanceSalaryUpload';
 import { 
-  DollarSign, 
   Upload, 
-  List, 
-  Filter, 
   Search, 
-  Calendar,
   Building,
   User,
-  Edit,
-  Trash2,
   Plus,
-  Download,
   Eye,
-  RefreshCw
+  RefreshCw,
+  TrendingUp,
+  Users,
+  Activity,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Calendar,
+  History
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-interface AdvanceSalaryRecord {
-  id: number;
+interface EmployeeAdvanceSummary {
   employee_id: string;
   employee_name: string;
   office_name: string;
-  month_year: string;
-  amount: number;
-  uploaded_date: string;
-  uploaded_by: string;
+  monthly_salary: number;
+  total_advances: number;
+  total_amount: number | string; // Handle both types from API
+  current_month_advance: number;
+  last_advance_date: string;
+  last_advance_month: string;
+}
+
+interface AdvanceOverview {
+  total_employees_with_advances: number;
+  total_advance_records: number;
+  current_month_advances: number;
+  total_amount: string | number; // Handle both types from API
+  average_advance_amount: number;
+  employees: EmployeeAdvanceSummary[];
 }
 
 interface FilterState {
   searchTerm: string;
-  monthYear: string;
   selectedOffice: string;
 }
 
-const AdvanceSalary: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'upload' | 'view'>('view');
-  const [records, setRecords] = useState<AdvanceSalaryRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<AdvanceSalaryRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
-    searchTerm: '',
-    monthYear: '',
-    selectedOffice: ''
+interface Employee {
+  employee_id: string;
+  employee_name: string;
+  office_name: string;
+  monthly_salary: number;
+}
+
+interface AddAdvanceModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (advanceData: any) => void;
+  loading: boolean;
+  employees: Employee[];
+}
+
+const AddAdvanceModal: React.FC<AddAdvanceModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  loading,
+  employees
+}) => {
+  const [formData, setFormData] = useState({
+    employee_id: '',
+    amount: '',
+    month_year: '',
+    notes: ''
   });
-  const [offices, setOffices] = useState<any[]>([]);
-  
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 10;
 
-  // Modal states
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<AdvanceSalaryRecord | null>(null);
-  const [editAmount, setEditAmount] = useState('');
-
-  // Fetch records
-  const fetchRecords = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/advance-salary', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setRecords(data);
-      } else {
-        toast.error('Failed to fetch advance salary records');
-      }
-    } catch (error) {
-      console.error('Error fetching records:', error);
-      toast.error('Network error while fetching records');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch offices for filter
-  const fetchOffices = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/masters/offices', {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setOffices(Array.isArray(data) ? data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching offices:', error);
-    }
-  }, []);
-
-  // Filter records
-  useEffect(() => {
-    let filtered = [...records];
-
-    // Search filter
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
-      filtered = filtered.filter(record => 
-        record.employee_id.toLowerCase().includes(searchLower) ||
-        record.employee_name.toLowerCase().includes(searchLower) ||
-        record.office_name.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Month-year filter
-    if (filters.monthYear) {
-      filtered = filtered.filter(record => record.month_year === filters.monthYear);
-    }
-
-    // Office filter
-    if (filters.selectedOffice) {
-      filtered = filtered.filter(record => record.office_name === filters.selectedOffice);
-    }
-
-    setFilteredRecords(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [records, filters]);
-
-  // Initialize data
-  useEffect(() => {
-    fetchRecords();
-    fetchOffices();
-  }, [fetchRecords, fetchOffices]);
-
-  // Handle upload completion
-  const handleUploadComplete = (uploadedRecords: any[]) => {
-    fetchRecords(); // Refresh the records list
-    setActiveTab('view'); // Switch to view tab
-    toast.success(`Successfully uploaded ${uploadedRecords.length} records!`);
+  // Get current month-year for default value
+  const getCurrentMonthYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    return `${year}-${month.toString().padStart(2, '0')}`;
   };
 
-  // Handle edit record
-  const handleEditRecord = (record: AdvanceSalaryRecord) => {
-    setEditingRecord(record);
-    setEditAmount(record.amount.toString());
-    setShowEditModal(true);
-  };
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        employee_id: '',
+        amount: '',
+        month_year: getCurrentMonthYear(),
+        notes: ''
+      });
+    }
+  }, [isOpen]);
 
-  // Save edited record
-  const handleSaveEdit = async () => {
-    if (!editingRecord) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.employee_id || !formData.amount || !formData.month_year) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-    const amount = parseFloat(editAmount);
+    const amount = parseFloat(formData.amount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
 
-    try {
-      const response = await fetch(`/api/advance-salary/${editingRecord.employee_id}/${editingRecord.month_year}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ amount })
-      });
-
-      if (response.ok) {
-        toast.success('Record updated successfully');
-        fetchRecords();
-        setShowEditModal(false);
-      } else {
-        const error = await response.json();
-        toast.error(`Failed to update record: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error updating record:', error);
-      toast.error('Network error while updating record');
-    }
+    onSubmit({
+      ...formData,
+      amount
+    });
   };
 
-  // Delete record
-  const handleDeleteRecord = async (record: AdvanceSalaryRecord) => {
-    if (!window.confirm(`Are you sure you want to delete the advance salary record for ${record.employee_name} (${record.month_year})?`)) {
-      return;
-    }
+  if (!isOpen) return null;
 
+  const selectedEmployee = employees.find(emp => emp.employee_id === formData.employee_id);
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Add Advance Salary</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Employee ID *
+            </label>
+            <input
+              type="text"
+              placeholder="Enter employee ID (e.g., EMP001)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.employee_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value.trim() }))}
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Enter the unique employee ID for the advance salary
+            </p>
+          </div>
+
+          {selectedEmployee && (
+            <div className="p-3 bg-gray-50 rounded-md">
+              <div className="flex items-center mb-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <User className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{selectedEmployee.employee_name}</p>
+                  <p className="text-xs text-gray-500">{selectedEmployee.office_name}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Monthly Salary: <span className="font-medium text-green-600">
+                  {new Intl.NumberFormat('en-AE', {
+                    style: 'currency',
+                    currency: 'AED',
+                  }).format(selectedEmployee.monthly_salary)}
+                </span>
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Amount (AED) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Enter advance amount"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.amount}
+              onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Month/Year *
+            </label>
+            <input
+              type="month"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.month_year}
+              onChange={(e) => setFormData(prev => ({ ...prev, month_year: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Optional notes about this advance"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Adding...' : 'Add Advance'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const AdvanceSalary: React.FC = () => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'employees' | 'upload'>('upload');
+  const [overview, setOverview] = useState<AdvanceOverview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    searchTerm: '',
+    selectedOffice: ''
+  });
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  // Fetch advance overview
+  const fetchAdvanceOverview = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`/api/advance-salary/${record.employee_id}/${record.month_year}`, {
-        method: 'DELETE',
+      const response = await fetch('http://localhost:5000/api/advance-salary/overview', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
+      
       if (response.ok) {
-        toast.success('Record deleted successfully');
-        fetchRecords();
+        const data = await response.json();
+        console.log('🔍 API Response Data:', data);
+        console.log('🔍 Total Amount from API:', data.total_amount, typeof data.total_amount);
+        if (data.employees && data.employees.length > 0) {
+          console.log('🔍 First Employee Total Amount:', data.employees[0].total_amount, typeof data.employees[0].total_amount);
+        }
+        setOverview(data);
       } else {
-        const error = await response.json();
-        toast.error(`Failed to delete record: ${error.message}`);
+        toast.error('Failed to fetch advance salary overview');
       }
     } catch (error) {
-      console.error('Error deleting record:', error);
-      toast.error('Network error while deleting record');
+      console.error('Error fetching overview:', error);
+      toast.error('Network error while fetching data');
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  // Fetch all employees for manual add
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/employees', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  }, []);
+
+  // Initialize data
+  useEffect(() => {
+    fetchAdvanceOverview();
+    fetchEmployees();
+  }, [fetchAdvanceOverview, fetchEmployees]);
+
+  // Handle upload completion
+  const handleUploadComplete = (uploadedRecords: any[]) => {
+    fetchAdvanceOverview(); // Refresh the overview
+    toast.success(`Successfully uploaded ${uploadedRecords.length} records!`);
+  };
+
+  // Handle add advance salary
+  const handleAddAdvance = async (advanceData: any) => {
+    setAddLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/advance-salary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(advanceData)
+      });
+
+      if (response.ok) {
+        toast.success('Advance salary added successfully');
+        setShowAddModal(false);
+        fetchAdvanceOverview(); // Refresh the overview
+      } else {
+        const error = await response.json();
+        toast.error(`Failed to add advance salary: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error adding advance salary:', error);
+      toast.error('Network error while adding advance salary');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  // Navigate to employee advance history
+  const handleViewEmployeeHistory = (employeeId: string) => {
+    navigate(`/advance-salary-history/${employeeId}`);
   };
 
   // Format currency
@@ -223,23 +361,32 @@ const AdvanceSalary: React.FC = () => {
     return new Date(dateString).toLocaleDateString('en-AE');
   };
 
-  // Get unique month-years for filter
-  const getUniqueMonthYears = (): string[] => {
-    const monthYears = records.map(r => r.month_year);
-    return [...new Set(monthYears)].sort().reverse();
-  };
+  // Filter employees based on search and office (only show employees who have taken advances)
+  const filteredEmployees = overview?.employees?.filter(employee => {
+    // Only include employees who have actually taken advances
+    const hasAdvances = employee.total_advances > 0;
+    
+    const matchesSearch = !filters.searchTerm || 
+      employee.employee_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      employee.employee_id.toLowerCase().includes(filters.searchTerm.toLowerCase());
+    
+    const matchesOffice = !filters.selectedOffice || employee.office_name === filters.selectedOffice;
+    
+    return hasAdvances && matchesSearch && matchesOffice;
+  }) || [];
 
   // Get unique offices for filter
   const getUniqueOffices = (): string[] => {
-    const officeNames = records.map(r => r.office_name);
-    return [...new Set(officeNames)].sort();
+    if (!overview?.employees) return [];
+    const offices = overview.employees.map(emp => emp.office_name);
+    return [...new Set(offices)].sort();
   };
 
   // Pagination logic
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord);
-  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+  const currentEmployees = filteredEmployees.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(filteredEmployees.length / recordsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
@@ -249,21 +396,10 @@ const AdvanceSalary: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-green-600" />
+            <TrendingUp className="w-8 h-8 text-blue-500" />
             <h1 className="text-3xl font-bold text-gray-900">Advance Salary Management</h1>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('view')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'view' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              View Records
-            </button>
             <button
               onClick={() => setActiveTab('upload')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
@@ -275,6 +411,24 @@ const AdvanceSalary: React.FC = () => {
               <Upload className="w-4 h-4" />
               Upload Records
             </button>
+            <button
+              onClick={() => setActiveTab('employees')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                activeTab === 'employees' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              View Employees
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Advance Salary
+            </button>
           </div>
         </div>
 
@@ -283,34 +437,85 @@ const AdvanceSalary: React.FC = () => {
           <AdvanceSalaryUpload onUploadComplete={handleUploadComplete} />
         ) : (
           <div className="space-y-6">
+            {/* Overview Stats */}
+            {overview && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Employees with Advances</p>
+                      <p className="text-2xl font-bold text-blue-600">{overview.total_employees_with_advances}</p>
+                    </div>
+                    <Users className="w-8 h-8 text-blue-500" />
+                  </div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Records</p>
+                      <p className="text-2xl font-bold text-green-600">{overview.total_advance_records}</p>
+                    </div>
+                    <Activity className="w-8 h-8 text-green-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">This Month</p>
+                      <p className="text-2xl font-bold text-orange-600">{overview.current_month_advances}</p>
+                    </div>
+                    <Calendar className="w-8 h-8 text-orange-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Amount</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {(() => {
+                          // Handle both string and number types from API
+                          let amount = 0;
+                          if (typeof overview.total_amount === 'string') {
+                            amount = parseFloat(overview.total_amount) || 0;
+                          } else if (typeof overview.total_amount === 'number') {
+                            amount = overview.total_amount;
+                          }
+                          console.log('🔍 Processing Total Amount:', overview.total_amount, 'Parsed as:', amount);
+                          return formatCurrency(amount);
+                        })()}
+                      </p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-purple-500" />
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Average Amount</p>
+                      <p className="text-2xl font-bold text-red-600">{formatCurrency(overview.average_advance_amount)}</p>
+                    </div>
+                    <CheckCircle className="w-8 h-8 text-red-500" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Filters */}
             <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search by employee ID, name, or office..."
+                    placeholder="Search by employee name or ID..."
                     className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={filters.searchTerm}
                     onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
                   />
-                </div>
-                <div>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={filters.monthYear}
-                    onChange={(e) => setFilters(prev => ({ ...prev, monthYear: e.target.value }))}
-                  >
-                    <option value="">All Months</option>
-                    {getUniqueMonthYears().map(monthYear => (
-                      <option key={monthYear} value={monthYear}>{monthYear}</option>
-                    ))}
-                  </select>
                 </div>
                 <div>
                   <select
@@ -326,7 +531,7 @@ const AdvanceSalary: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={fetchRecords}
+                    onClick={fetchAdvanceOverview}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                     disabled={loading}
                   >
@@ -334,7 +539,7 @@ const AdvanceSalary: React.FC = () => {
                     Refresh
                   </button>
                   <button
-                    onClick={() => setFilters({ searchTerm: '', monthYear: '', selectedOffice: '' })}
+                    onClick={() => setFilters({ searchTerm: '', selectedOffice: '' })}
                     className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                   >
                     Clear
@@ -343,25 +548,23 @@ const AdvanceSalary: React.FC = () => {
               </div>
             </div>
 
-            {/* Records Table */}
+            {/* Employees Table */}
             <div className="bg-white rounded-lg shadow-sm border">
               <div className="p-4 border-b">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Advance Salary Records ({filteredRecords.length})
-                  </h3>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Employees with Advance Salary ({filteredEmployees.length})
+                </h3>
               </div>
               
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                  <span className="ml-2">Loading records...</span>
+                  <span className="ml-2">Loading employees...</span>
                 </div>
-              ) : currentRecords.length === 0 ? (
+              ) : currentEmployees.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No advance salary records found</p>
+                  <AlertCircle className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <p>No employees found with advance salary records</p>
                 </div>
               ) : (
                 <>
@@ -376,13 +579,16 @@ const AdvanceSalary: React.FC = () => {
                             Office
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Month/Year
+                            Monthly Salary
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Amount
+                            Total Advances
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Uploaded
+                            Total Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Last Advance
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
@@ -390,17 +596,17 @@ const AdvanceSalary: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {currentRecords.map((record) => (
-                          <tr key={record.id} className="hover:bg-gray-50">
+                        {currentEmployees.map((employee) => (
+                          <tr key={employee.employee_id} className="hover:bg-gray-50">
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <User className="w-8 h-8 text-gray-400 mr-3" />
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">
-                                    {record.employee_name}
+                                    {employee.employee_name}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {record.employee_id}
+                                    {employee.employee_id}
                                   </div>
                                 </div>
                               </div>
@@ -408,41 +614,55 @@ const AdvanceSalary: React.FC = () => {
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <Building className="w-4 h-4 text-gray-400 mr-2" />
-                                <span className="text-sm text-gray-900">{record.office_name}</span>
+                                <span className="text-sm text-gray-900">{employee.office_name}</span>
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                                <span className="text-sm text-gray-900">{record.month_year}</span>
+                              <span className="text-sm font-medium text-blue-600">
+                                {formatCurrency(employee.monthly_salary)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  {employee.total_advances}
+                                </span>
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <span className="text-sm font-medium text-green-600">
-                                {formatCurrency(record.amount)}
+                                {(() => {
+                                  // Handle both string and number types from API
+                                  let amount = 0;
+                                  if (typeof employee.total_amount === 'string') {
+                                    amount = parseFloat(employee.total_amount) || 0;
+                                  } else if (typeof employee.total_amount === 'number') {
+                                    amount = employee.total_amount;
+                                  }
+                                  console.log('🔍 Employee Total Amount:', employee.employee_id, employee.total_amount, 'Parsed as:', amount);
+                                  return formatCurrency(amount);
+                                })()}
                               </span>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div>{formatDate(record.uploaded_date)}</div>
-                              <div className="text-xs">by {record.uploaded_by}</div>
+                              {employee.last_advance_date ? (
+                                <div>
+                                  <div>{formatDate(employee.last_advance_date)}</div>
+                                  <div className="text-xs text-gray-400">{employee.last_advance_month}</div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">No records</span>
+                              )}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleEditRecord(record)}
-                                  className="text-blue-600 hover:text-blue-900 p-1"
-                                  title="Edit"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteRecord(record)}
-                                  className="text-red-600 hover:text-red-900 p-1"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => handleViewEmployeeHistory(employee.employee_id)}
+                                className="flex items-center gap-1 text-blue-600 hover:text-blue-900 transition-colors"
+                                title="View History"
+                              >
+                                <History className="w-4 h-4" />
+                                <span>View History</span>
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -477,10 +697,10 @@ const AdvanceSalary: React.FC = () => {
                               <span className="font-medium">{indexOfFirstRecord + 1}</span>{' '}
                               to{' '}
                               <span className="font-medium">
-                                {Math.min(indexOfLastRecord, filteredRecords.length)}
+                                {Math.min(indexOfLastRecord, filteredEmployees.length)}
                               </span>{' '}
                               of{' '}
-                              <span className="font-medium">{filteredRecords.length}</span>{' '}
+                              <span className="font-medium">{filteredEmployees.length}</span>{' '}
                               results
                             </p>
                           </div>
@@ -511,45 +731,14 @@ const AdvanceSalary: React.FC = () => {
           </div>
         )}
 
-        {/* Edit Modal */}
-        {showEditModal && editingRecord && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3 text-center">
-                <h3 className="text-lg font-medium text-gray-900">Edit Advance Salary</h3>
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-4">
-                    Employee: {editingRecord.employee_name} ({editingRecord.employee_id})<br />
-                    Month/Year: {editingRecord.month_year}
-                  </p>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Amount"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                  />
-                </div>
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Add Advance Modal */}
+        <AddAdvanceModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddAdvance}
+          loading={addLoading}
+          employees={employees}
+        />
       </div>
     </MainLayout>
   );

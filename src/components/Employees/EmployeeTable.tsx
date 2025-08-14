@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Employee } from '../../types';
-import { Edit, Trash2, Eye } from 'lucide-react';
+import { Edit, Trash2, Eye, MessageCircle } from 'lucide-react';
+import EmployeeComments from './EmployeeComments';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -17,6 +18,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<keyof Employee>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   // Get status display text
   const getStatusDisplay = (status: boolean | number | string) => {
@@ -63,6 +66,16 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  const handleCommentsClick = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setCommentsModalOpen(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentsModalOpen(false);
+    setSelectedEmployeeId('');
   };
 
   return (
@@ -207,6 +220,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleCommentsClick(employee.employeeId)}
+                        className="text-purple-600 hover:text-purple-900 p-1 rounded-full hover:bg-purple-50"
+                        title="View Comments"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => onDelete(employee.employeeId)}
                         className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
                         title="Delete Employee"
@@ -228,6 +248,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Comments Modal */}
+      <EmployeeComments
+        employeeId={selectedEmployeeId}
+        isOpen={commentsModalOpen}
+        onClose={handleCloseComments}
+      />
     </div>
   );
 };

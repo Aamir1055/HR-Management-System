@@ -1,7 +1,8 @@
 export interface Employee {
   id: number; // Remove undefined if it's always required
   employeeId: string;
-  name: string;
+  name: string; // Backend field name
+  fullName?: string; // Frontend display name (maps to 'name')
   email: string;
   office_id: number;
   office_name: string;
@@ -21,10 +22,20 @@ export interface Employee {
   visa_type_id?: number; // For form handling
   platform?: string; // This stores the platform name
   platform_id?: number; // For form handling
-  address?: string;
+  address?: string; // Permanent address
+  current_address?: string; // Current address
   phone?: string;
   gender?: string;
-  
+  // New fields added
+  whatsapp?: string;
+  visa_expiry?: string;
+  primary_language?: string;
+  secondary_language?: string;
+  marital_status?: 'Single' | 'Married' | 'Divorced' | 'Widowed' | 'Other';
+  hiring_source?: string;
+  salary_currency?: string;
+  emirates_id?: string;
+  emergency_contact?: string;
 }
 
 export interface AttendanceRecord {

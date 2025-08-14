@@ -30,6 +30,9 @@ router.get('/employee/:employee_id/transactions', loanController.getEmployeeTran
 // Get loan transaction history for specific employee (add/deduct activities) - legacy route
 router.get('/employee/:employee_id/transactions-legacy', loanController.getEmployeeLoanTransactions);
 
+// Delete all loans for specific employee
+router.delete('/employee/:employee_id', loanController.deleteEmployeeLoans);
+
 // -------- LOAN ADJUSTMENT ROUTES (SPECIFIC ACTIONS) --------
 // Deduct amount from existing loan (PUT method - your current test)
 router.put('/deduct/:id', loanController.deductAmountFromLoan);

@@ -12,7 +12,6 @@ import {
   TrendingUp,
   TrendingDown,
   Sparkles,
-  DollarSign,
   Users,
   PlusCircle,
   MinusCircle,
@@ -309,7 +308,7 @@ const MasterData = () => {
                     <p className="text-sm text-purple-600 mt-1">All loans combined</p>
                   </div>
                   <div className="p-3 bg-purple-200 rounded-full">
-                    <DollarSign className="w-8 h-8 text-purple-700" />
+                    <TrendingUp className="w-8 h-8 text-purple-700" />
                   </div>
                 </div>
               </div>

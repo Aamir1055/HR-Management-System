@@ -585,3 +585,186 @@ exports.remove = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Get advance salary summary for a specific employee
+exports.getEmployeeSummary = async (req, res) => {
+  const { employeeId } = req.params;
+  try {
+    const { buildOfficeFilter } = require('../middleware/auth');
+    const { whereClause, params } = buildOfficeFilter(req, 'e');
+    
+    // Check if employee exists and user has access
+    let employeeQuery = `
+      SELECT e.employeeId, e.name, o.name as office_name, e.monthlySalary as monthly_salary
+      FROM employees e 
+      LEFT JOIN offices o ON e.office_id = o.id
+      WHERE e.employeeId = ?
+    `;
+    let empParams = [employeeId];
+    
+    if (whereClause) {
+      employeeQuery += ` AND ${whereClause}`;
+      empParams.push(...params);
+    }
+    
+    const [empRows] = await db.query(employeeQuery, empParams);
+    if (empRows.length === 0) {
+      return res.status(404).json({ message: 'Employee not found or access denied' });
+    }
+    
+    const employee = {
+      employee_id: empRows[0].employeeId,
+      name: empRows[0].name,
+      office: empRows[0].office_name,
+      monthly_salary: empRows[0].monthly_salary
+    };
+    
+    // Get advance salary summary
+    const currentYear = new Date().getFullYear();
+    const [summaryRows] = await db.query(`
+      SELECT 
+        COUNT(*) as total_advances,
+        COALESCE(SUM(amount), 0) as total_amount,
+        COUNT(CASE WHEN SUBSTRING(month_year, 1, 4) = ? THEN 1 END) as current_year_advances,
+        COALESCE(SUM(CASE WHEN SUBSTRING(month_year, 1, 4) = ? THEN amount ELSE 0 END), 0) as current_year_amount,
+        COALESCE(AVG(amount), 0) as average_amount,
+        MAX(uploaded_date) as recent_advance_date
+      FROM advance_salary 
+      WHERE employee_id = ?
+    `, [currentYear.toString(), currentYear.toString(), employeeId]);
+    
+    const summary = {
+      total_advances: summaryRows[0].total_advances,
+      total_amount: summaryRows[0].total_amount,
+      current_year_advances: summaryRows[0].current_year_advances,
+      current_year_amount: summaryRows[0].current_year_amount,
+      average_amount: summaryRows[0].average_amount,
+      recent_advance_date: summaryRows[0].recent_advance_date
+    };
+    
+    res.json({ employee, summary });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get advance salary history for a specific employee
+exports.getEmployeeHistory = async (req, res) => {
+  const { employeeId } = req.params;
+  try {
+    const { buildOfficeFilter } = require('../middleware/auth');
+    const { whereClause, params } = buildOfficeFilter(req, 'e');
+    
+    // Check if employee exists and user has access
+    let checkQuery = `
+      SELECT e.employeeId 
+      FROM employees e 
+      WHERE e.employeeId = ?
+    `;
+    let checkParams = [employeeId];
+    
+    if (whereClause) {
+      checkQuery += ` AND ${whereClause}`;
+      checkParams.push(...params);
+    }
+    
+    const [checkRows] = await db.query(checkQuery, checkParams);
+    if (checkRows.length === 0) {
+      return res.status(404).json({ message: 'Employee not found or access denied' });
+    }
+    
+    // Get advance salary records with status (simulated based on creation date)
+    const [rows] = await db.query(`
+      SELECT 
+        a.id,
+        a.employee_id,
+        a.amount,
+        a.month_year,
+        'Manual advance salary entry' as reason,
+        a.uploaded_date as created_date,
+        CASE 
+          WHEN DATE(a.uploaded_date) >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) THEN 'active'
+          ELSE 'deducted'
+        END as status
+      FROM advance_salary a 
+      WHERE a.employee_id = ?
+      ORDER BY a.month_year DESC, a.uploaded_date DESC
+    `, [employeeId]);
+    
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get advance salary overview for management dashboard
+exports.getOverview = async (req, res) => {
+  try {
+    const { buildOfficeFilter } = require('../middleware/auth');
+    const { whereClause, params } = buildOfficeFilter(req, 'e');
+    
+    // Get overview statistics
+    let overviewQuery = `
+      SELECT 
+        COUNT(DISTINCT a.employee_id) as total_employees_with_advances,
+        COUNT(a.id) as total_advance_records,
+        COUNT(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN 1 END) as current_month_advances,
+        COALESCE(SUM(a.amount), 0) as total_advance_amount,
+        COALESCE(AVG(a.amount), 0) as average_advance_amount
+      FROM advance_salary a
+      INNER JOIN employees e ON a.employee_id = e.employeeId
+    `;
+    
+    let overviewParams = [];
+    if (whereClause) {
+      overviewQuery += ` WHERE ${whereClause}`;
+      overviewParams = params;
+    }
+    
+    const [overviewRows] = await db.query(overviewQuery, overviewParams);
+    
+    // Get employee list with advance summary
+    let employeeQuery = `
+      SELECT 
+        e.employeeId as employee_id,
+        e.name as employee_name,
+        o.name as employee_office,
+        e.monthlySalary as monthly_salary,
+        COUNT(a.id) as total_advances,
+        COALESCE(SUM(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN a.amount ELSE 0 END), 0) as current_month_advance,
+        MAX(a.uploaded_date) as last_advance_date,
+        COALESCE(SUM(a.amount), 0) as total_advance_amount,
+        CASE 
+          WHEN COUNT(a.id) = 0 THEN 'no_advances'
+          WHEN COUNT(CASE WHEN DATE_FORMAT(STR_TO_DATE(CONCAT(a.month_year, '-01'), '%Y-%m-%d'), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN 1 END) > 0 THEN 'active'
+          ELSE 'pending'
+        END as status
+      FROM employees e
+      LEFT JOIN offices o ON e.office_id = o.id
+      LEFT JOIN advance_salary a ON e.employeeId = a.employee_id
+    `;
+    
+    let employeeParams = [];
+    if (whereClause) {
+      employeeQuery += ` WHERE ${whereClause}`;
+      employeeParams = params;
+    }
+    
+    employeeQuery += ` GROUP BY e.employeeId, e.name, o.name, e.monthlySalary ORDER BY e.name ASC`;
+    
+    const [employeeRows] = await db.query(employeeQuery, employeeParams);
+    
+    const overview = {
+      total_employees_with_advances: overviewRows[0].total_employees_with_advances,
+      total_advance_records: overviewRows[0].total_advance_records,
+      current_month_advances: overviewRows[0].current_month_advances,
+      total_advance_amount: overviewRows[0].total_advance_amount.toString(),
+      average_advance_amount: overviewRows[0].average_advance_amount,
+      employees: employeeRows
+    };
+    
+    res.json(overview);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -72,11 +72,21 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       passport_expiry: '',
       visa_type_id: 0,
       visa_type: '',
+      visa_expiry: '',
       platform_id: 0,
       platform: '',
       address: '',
+      current_address: '',
       phone: '',
+      whatsapp: '',
       gender: '',
+      primary_language: '',
+      secondary_language: '',
+      marital_status: '',
+      hiring_source: '',
+      salary_currency: 'AED',
+      emirates_id: '',
+      emergency_contact: '',
     },
   });
 
@@ -172,10 +182,20 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             passport_number: employee.passport_number || '',
             passport_expiry: employee.passport_expiry ? employee.passport_expiry.split('T')[0] : '',
             visa_type: employee.visa_type || visaTypeObj?.typeofvisa || '',
+            visa_expiry: employee.visa_expiry ? employee.visa_expiry.split('T')[0] : '',
             platform: employee.platform || platformObj?.platform_name || '',
             address: employee.address || '',
+            current_address: employee.current_address || '',
             phone: employee.phone || '',
+            whatsapp: employee.whatsapp || '',
             gender: employee.gender || '',
+            primary_language: employee.primary_language || '',
+            secondary_language: employee.secondary_language || '',
+            marital_status: employee.marital_status || '',
+            hiring_source: employee.hiring_source || '',
+            salary_currency: employee.salary_currency || 'AED',
+            emirates_id: employee.emirates_id || '',
+            emergency_contact: employee.emergency_contact || '',
           });
 
           setReportingTime(employee.reporting_time?.toString() || 'Not set');
@@ -280,10 +300,20 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         passport_number: formData.passport_number || null,
         passport_expiry: formData.passport_expiry || null,
         visa_type: visaType?.typeofvisa || null,
+        visa_expiry: formData.visa_expiry || null,
         platform: platform?.platform_name || null,
         address: formData.address || null,
+        current_address: formData.current_address || null,
         phone: formData.phone || null,
+        whatsapp: formData.whatsapp || null,
         gender: formData.gender || null,
+        primary_language: formData.primary_language || null,
+        secondary_language: formData.secondary_language || null,
+        marital_status: formData.marital_status || null,
+        hiring_source: formData.hiring_source || null,
+        salary_currency: formData.salary_currency || 'AED',
+        emirates_id: formData.emirates_id || null,
+        emergency_contact: formData.emergency_contact || null,
       };
 
       if (onSubmit) {
@@ -326,9 +356,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-600">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-600">*</span></label>
         <input
-          {...register('name', { required: 'Name is required' })}
+          {...register('name', { required: 'Full Name is required' })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
@@ -360,9 +390,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Permanent Address</label>
         <input
           {...register('address')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          autoComplete="off"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
+        <input
+          {...register('current_address')}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
           autoComplete="off"
@@ -372,6 +411,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
         <input
           {...register('phone')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          autoComplete="off"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+        <input
+          {...register('whatsapp')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          autoComplete="off"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+        <input
+          {...register('emergency_contact')}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
           autoComplete="off"
@@ -389,6 +446,47 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           <option value="Female">Female</option>
           <option value="Other">Other</option>
         </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+        <select
+          {...register('marital_status')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        >
+          <option value="">Select Marital Status</option>
+          <option value="Single">Single</option>
+          <option value="Married">Married</option>
+          <option value="Divorced">Divorced</option>
+          <option value="Widowed">Widowed</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Language</label>
+        <input
+          {...register('primary_language')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., English, Arabic"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Language</label>
+        <input
+          {...register('secondary_language')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., Hindi, Urdu"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Emirates ID</label>
+        <input
+          {...register('emirates_id')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="784-XXXX-XXXXXXX-X"
+        />
       </div>
     </>
   );
@@ -447,6 +545,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
         {errors.monthlySalary && <p className="text-red-500 text-sm mt-1">{errors.monthlySalary.message}</p>}
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Salary Currency</label>
+        <input
+          {...register('salary_currency')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., AED, USD, EUR"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Hiring Source</label>
+        <input
+          {...register('hiring_source')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., Referral, Job Board, Direct"
+        />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date <span className="text-red-600">*</span></label>
@@ -550,6 +666,15 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             </option>
           ))}
         </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Visa Expiry Date</label>
+        <input
+          type="date"
+          {...register('visa_expiry')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
       </div>
       </>
     );

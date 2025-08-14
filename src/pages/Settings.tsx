@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { MainLayout } from '../components/Layout/MainLayout';
-import { Save, Clock, Calendar, Users, DollarSign } from 'lucide-react';
+import { Save, Clock, Calendar, Users, TrendingUp } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const [settings, setSettings] = useState({
@@ -125,7 +125,7 @@ export const Settings: React.FC = () => {
         {/* Payroll Configuration */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center space-x-3 mb-6">
-            <DollarSign className="w-5 h-5 text-purple-600" />
+            <TrendingUp className="w-5 h-5 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900">Payroll Configuration</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

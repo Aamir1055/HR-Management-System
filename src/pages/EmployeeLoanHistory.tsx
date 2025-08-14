@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   User, 
   Calendar, 
-  DollarSign, 
   CreditCard, 
   TrendingUp, 
   TrendingDown,
@@ -89,7 +88,7 @@ const AdjustmentModal: React.FC<AdjustmentModalProps> = ({ isOpen, type, onClose
                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                 <p className="text-sm font-semibold text-blue-800">Selected Loan</p>
               </div>
-              <p className="text-lg font-bold text-blue-900 mb-1">{selectedLoan.title}</p>
+              <p className="text-lg font-bold text-blue-900 mb-1">Loan #{selectedLoan.id}</p>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-blue-700">Remaining Balance:</p>
                 <p className="text-lg font-bold text-orange-600">AED {parseFloat(selectedLoan.remaining_amount).toFixed(2)}</p>
@@ -171,7 +170,7 @@ interface LoanSelectorProps {
 const LoanSelector: React.FC<LoanSelectorProps> = ({ loans, selectedLoan, onLoanSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  const activeLoans = loans.filter(loan => loan.status === 'active');
+  const activeLoans = loans.filter(loan => parseFloat(loan.remaining_amount) > 0);
 
   if (activeLoans.length === 0) {
     return (
@@ -188,7 +187,7 @@ const LoanSelector: React.FC<LoanSelectorProps> = ({ loans, selectedLoan, onLoan
         className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <span className="text-sm">
-          {selectedLoan ? selectedLoan.title : 'Select a loan'}
+          {selectedLoan ? `Loan #${selectedLoan.id}` : 'Select a loan'}
         </span>
         <ChevronDown className="w-4 h-4 text-gray-400" />
       </button>
@@ -204,7 +203,7 @@ const LoanSelector: React.FC<LoanSelectorProps> = ({ loans, selectedLoan, onLoan
               }}
               className="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
             >
-              <div className="font-medium text-sm text-gray-900">{loan.title}</div>
+              <div className="font-medium text-sm text-gray-900">{`Loan #${loan.id}`}</div>
               <div className="text-xs text-gray-500">
                 Remaining: AED {parseFloat(loan.remaining_amount).toFixed(2)}
               </div>
@@ -230,7 +229,7 @@ const NewLoanForm: React.FC<NewLoanFormProps> = ({ isOpen, onClose, onSubmit, lo
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    if (!formData.title.trim()) {
+    if (!"Employee Loan".trim()) {
       newErrors.title = 'Loan title is required';
     }
 
@@ -252,7 +251,7 @@ const NewLoanForm: React.FC<NewLoanFormProps> = ({ isOpen, onClose, onSubmit, lo
     if (validateForm()) {
       const loanData = {
         employee_id: employee.employeeId,
-        title: formData.title.trim(),
+        title: "Employee Loan",
         total_amount: parseFloat(formData.amount),
         description: formData.description.trim(),
         start_date: formData.startDate
@@ -322,7 +321,7 @@ const NewLoanForm: React.FC<NewLoanFormProps> = ({ isOpen, onClose, onSubmit, lo
             <input
               type="text"
               id="loan-title"
-              value={formData.title}
+              value={"Employee Loan"}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                 errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -450,7 +449,7 @@ interface LoanHistoryData {
   };
   loans: Array<{
     id: number;
-    title: string;
+    
     total_amount: string;
     amount_added: string;
     amount_deducted: string;
@@ -490,7 +489,7 @@ const EmployeeLoanHistory: React.FC = () => {
   // ✅ NEW: Auto-select loan when only one active loan exists
   useEffect(() => {
     if (data && data.loans) {
-      const activeLoans = data.loans.filter(loan => loan.status === 'active');
+      const activeLoans = data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0);
       
       // If there's exactly one active loan and no loan is currently selected, auto-select it
       if (activeLoans.length === 1 && !selectedLoan) {
@@ -671,7 +670,7 @@ const EmployeeLoanHistory: React.FC = () => {
       
       // Success message
       toast.success(
-        `✨ New loan "${loanData.title}" created successfully for AED ${loanData.total_amount.toFixed(2)}!`
+        `✨ New loan created successfully for AED ${loanData.total_amount.toFixed(2)}!`
       );
       
     } catch (err: any) {
@@ -693,18 +692,23 @@ const EmployeeLoanHistory: React.FC = () => {
     })}`;
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
-      completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' },
-      suspended: { bg: 'bg-red-100', text: 'text-red-800', label: 'Suspended' }
-    };
+  const getStatusBadge = (loan: any) => {
+    const remainingAmount = parseFloat(loan.remaining_amount);
+    const isSettled = remainingAmount <= 0;
     
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+    // If the loan is settled (no remaining amount), it should be "Completed"
+    if (isSettled) {
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+          Completed
+        </span>
+      );
+    }
     
+    // If there's remaining amount, it should be "Active"
     return (
-      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
-        {config.label}
+      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+        Active
       </span>
     );
   };
@@ -769,7 +773,7 @@ const EmployeeLoanHistory: React.FC = () => {
         </div>
 
         {/* ✅ CONDITIONAL: Only show loan management panel if there are active loans */}
-        {data.loans.filter(loan => loan.status === 'active').length > 0 && (
+        {data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length > 0 && (
           <div className="mb-6">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
               {/* Header Section */}
@@ -800,7 +804,7 @@ const EmployeeLoanHistory: React.FC = () => {
                   {/* Loan Selection */}
                   <div className="lg:col-span-2">
                     {(() => {
-                      const activeLoans = data.loans.filter(loan => loan.status === 'active');
+                      const activeLoans = data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0);
                       
                       if (activeLoans.length === 1) {
                         return (
@@ -813,7 +817,7 @@ const EmployeeLoanHistory: React.FC = () => {
                             </div>
                             <div className="space-y-3">
                               <div>
-                                <h5 className="text-xl font-bold text-indigo-900">{activeLoans[0].title}</h5>
+                              <h5 className="text-xl font-bold text-indigo-900">Loan #{activeLoans[0].id}</h5>
                                 <p className="text-sm text-gray-600">{activeLoans[0].description || 'No description'}</p>
                               </div>
                               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -841,7 +845,7 @@ const EmployeeLoanHistory: React.FC = () => {
                           />
                           {selectedLoan && (
                             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                              <h5 className="font-semibold text-blue-900 mb-1">{selectedLoan.title}</h5>
+                              <h5 className="font-semibold text-blue-900 mb-1">{`Loan #${selectedLoan.id}`}</h5>
                               <p className="text-sm text-blue-700">Remaining: <span className="font-semibold">AED {parseFloat(selectedLoan.remaining_amount).toFixed(2)}</span></p>
                             </div>
                           )}
@@ -856,7 +860,7 @@ const EmployeeLoanHistory: React.FC = () => {
                     
                     <button
                       onClick={() => {
-                        const activeLoans = data.loans.filter(loan => loan.status === 'active');
+                        const activeLoans = data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0);
                         if (activeLoans.length === 1) {
                           setSelectedLoan(activeLoans[0]);
                         }
@@ -874,7 +878,7 @@ const EmployeeLoanHistory: React.FC = () => {
                     
                     <button
                       onClick={() => {
-                        const activeLoans = data.loans.filter(loan => loan.status === 'active');
+                        const activeLoans = data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0);
                         if (activeLoans.length === 1) {
                           setSelectedLoan(activeLoans[0]);
                         }
@@ -897,7 +901,7 @@ const EmployeeLoanHistory: React.FC = () => {
         )}
 
         {/* ✅ NEW: Create New Loan Section for employees with no active loans */}
-        {data.loans.filter(loan => loan.status === 'active').length === 0 && (
+        {data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length === 0 && (
           <div className="mb-6">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border-2 border-dashed border-blue-200">
               <div className="text-center">
@@ -925,7 +929,7 @@ const EmployeeLoanHistory: React.FC = () => {
         )}
 
           {/* ✅ COMPACT: Summary Cards with Reduced Size */}
-        <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {/* Total Loans Card */}
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md border border-blue-200 p-4 transform hover:scale-105 transition-all duration-200">
             <div className="flex items-center justify-between">
@@ -945,7 +949,7 @@ const EmployeeLoanHistory: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Active</p>
-                <p className="text-2xl font-bold text-green-900 mt-1">{data.summary.active_loans}</p>
+                <p className="text-2xl font-bold text-green-900 mt-1">{data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length}</p>
                 <p className="text-xs text-green-600">Running</p>
               </div>
               <div className="p-2 bg-green-200 rounded-full">
@@ -956,11 +960,11 @@ const EmployeeLoanHistory: React.FC = () => {
               <div className="flex-1 bg-green-200 rounded-full h-1.5">
                 <div 
                   className="bg-green-600 h-1.5 rounded-full" 
-                  style={{ width: `${data.summary.total_loans > 0 ? (data.summary.active_loans / data.summary.total_loans) * 100 : 0}%` }}
+                  style={{ width: `${data.summary.total_loans > 0 ? (data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length / data.summary.total_loans) * 100 : 0}%` }}
                 ></div>
               </div>
               <span className="text-xs font-medium text-green-700 ml-1">
-                {data.summary.total_loans > 0 ? Math.round((data.summary.active_loans / data.summary.total_loans) * 100) : 0}%
+                {data.summary.total_loans > 0 ? Math.round((data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length / data.summary.total_loans) * 100) : 0}%
               </span>
             </div>
           </div>
@@ -970,7 +974,7 @@ const EmployeeLoanHistory: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Completed</p>
-                <p className="text-2xl font-bold text-purple-900 mt-1">{data.summary.completed_loans}</p>
+                <p className="text-2xl font-bold text-purple-900 mt-1">{data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length}</p>
                 <p className="text-xs text-purple-600">Finished</p>
               </div>
               <div className="p-2 bg-purple-200 rounded-full">
@@ -981,30 +985,16 @@ const EmployeeLoanHistory: React.FC = () => {
               <div className="flex-1 bg-purple-200 rounded-full h-1.5">
                 <div 
                   className="bg-purple-600 h-1.5 rounded-full" 
-                  style={{ width: `${data.summary.total_loans > 0 ? (data.summary.completed_loans / data.summary.total_loans) * 100 : 0}%` }}
+                  style={{ width: `${data.summary.total_loans > 0 ? (data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length / data.summary.total_loans) * 100 : 0}%` }}
                 ></div>
               </div>
               <span className="text-xs font-medium text-purple-700 ml-1">
-                {data.summary.total_loans > 0 ? Math.round((data.summary.completed_loans / data.summary.total_loans) * 100) : 0}%
+                {data.summary.total_loans > 0 ? Math.round((data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length / data.summary.total_loans) * 100) : 0}%
               </span>
             </div>
           </div>
 
-          {/* Total Value Card */}
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-md border border-indigo-200 p-4 transform hover:scale-105 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Value</p>
-                <p className="text-lg font-bold text-indigo-900 mt-1">{formatCurrency(data.summary.total_loan_amount)}</p>
-                <p className="text-xs text-indigo-600">Combined</p>
-              </div>
-              <div className="p-2 bg-indigo-200 rounded-full">
-                <DollarSign className="w-5 h-5 text-indigo-700" />
-              </div>
-            </div>
-          </div>
-
-          {/* ✅ COMPACT: Outstanding Amount Card */}
+          {/* ✅ FIXED: Outstanding/Settled Amount Card */}
           <div className={`rounded-lg shadow-md border p-4 transform hover:scale-105 transition-all duration-200 ${
             parseFloat(data.summary.total_remaining) <= 0 
               ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
@@ -1017,10 +1007,10 @@ const EmployeeLoanHistory: React.FC = () => {
                 }`}>
                   {parseFloat(data.summary.total_remaining) <= 0 ? 'Settled' : 'Outstanding'}
                 </p>
-                <p className={`text-lg font-bold mt-1 ${
+                <p className={`text-2xl font-bold mt-1 ${
                   parseFloat(data.summary.total_remaining) <= 0 ? 'text-green-900' : 'text-orange-900'
                 }`}>
-                  {parseFloat(data.summary.total_remaining) <= 0 ? 'DONE' : formatCurrency(data.summary.total_remaining)}
+                  {parseFloat(data.summary.total_remaining) <= 0 ? data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length : formatCurrency(data.summary.total_remaining)}
                 </p>
                 <p className={`text-xs ${
                   parseFloat(data.summary.total_remaining) <= 0 ? 'text-green-600' : 'text-orange-600'
@@ -1101,7 +1091,7 @@ const EmployeeLoanHistory: React.FC = () => {
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
                     <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                       <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                        <DollarSign className="w-6 h-6 text-blue-600" />
+                        <TrendingUp className="w-6 h-6 text-blue-600" />
                       </div>
                       Financial Overview
                     </h3>
@@ -1195,39 +1185,16 @@ const EmployeeLoanHistory: React.FC = () => {
                       
                       <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                         <span className="text-gray-700 font-medium">Active Loans</span>
-                        <span className="text-xl font-bold text-green-600">{data.summary.active_loans}</span>
+                        <span className="text-xl font-bold text-green-600">{data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length}</span>
                       </div>
                       
                       <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                         <span className="text-gray-700 font-medium">Completed Loans</span>
-                        <span className="text-xl font-bold text-purple-600">{data.summary.completed_loans}</span>
+                        <span className="text-xl font-bold text-purple-600">{data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Performance Metrics */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                      <Activity className="w-5 h-5 mr-2 text-gray-600" />
-                      Performance Metrics
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                        <div className="text-2xl font-bold text-indigo-600 mb-1">
-                          {data.summary.total_loans > 0 ? ((data.summary.completed_loans / data.summary.total_loans) * 100).toFixed(1) : '0.0'}%
-                        </div>
-                        <div className="text-sm text-gray-600">Completion Rate</div>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                        <div className="text-lg font-bold text-green-600 mb-1">
-                          {data.summary.total_loans > 0 ? formatCurrency((parseFloat(data.summary.total_loan_amount) / data.summary.total_loans).toString()) : 'AED 0.00'}
-                        </div>
-                        <div className="text-sm text-gray-600">Average Loan Amount</div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1371,7 +1338,7 @@ const EmployeeLoanHistory: React.FC = () => {
                                 <td className="px-6 py-5">
                                   <div className="max-w-xs">
                                     <div className="text-sm font-medium text-gray-900 truncate">
-                                      {transaction.loan_title || `Loan #${transaction.loan_id}`}
+                                      {`Loan #${transaction.loan_id}`}
                                     </div>
                                     <div className="text-xs text-gray-500">ID: {transaction.loan_id}</div>
                                   </div>

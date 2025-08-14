@@ -97,7 +97,6 @@ exports.getAllLoans = async (req, res) => {
         el.id,
         el.employee_id,
         e.name as employee_name,
-        el.title,
         ROUND(el.total_amount, 2) as total_amount,
         ROUND(el.amount_added, 2) as amount_added,
         ROUND(el.amount_deducted, 2) as amount_deducted,
@@ -170,7 +169,6 @@ exports.getEmployeeLoanHistory = async (req, res) => {
     const loans = await query(`
       SELECT 
         el.id,
-        el.title,
         el.total_amount,
         el.amount_added,
         el.amount_deducted,
@@ -202,7 +200,6 @@ exports.getEmployeeLoanHistory = async (req, res) => {
     const updatedLoans = await query(`
       SELECT 
         el.id,
-        el.title,
         el.total_amount,
         el.amount_added,
         el.amount_deducted,
@@ -229,7 +226,6 @@ exports.getEmployeeLoanHistory = async (req, res) => {
       SELECT 
         lp.id,
         lp.loan_id,
-        el.title as loan_title,
         lp.payment_date,
         lp.amount_paid,
         lp.remaining_balance,
@@ -310,7 +306,6 @@ exports.getEmployeeTransactionHistory = async (req, res) => {
       SELECT 
         lt.id,
         lt.loan_id,
-        el.title as loan_title,
         lt.transaction_type,
         lt.amount,
         lt.reason,
@@ -355,7 +350,6 @@ exports.getLoanById = async (req, res) => {
         el.employee_id,
         e.name as employee_name,
         e.monthlySalary as employee_salary,
-        el.title,
         ROUND(el.total_amount, 2) as total_amount,
         ROUND(el.amount_added, 2) as amount_added,
         ROUND(el.amount_deducted, 2) as amount_deducted,
@@ -427,16 +421,15 @@ exports.createLoan = async (req, res) => {
   try {
     const { 
       employee_id, 
-      title, 
       total_amount, 
       description, 
       start_date 
     } = req.body;
     
     // Validation
-    if (!employee_id || !title || !total_amount || !start_date) {
+    if (!employee_id ||  !total_amount || !start_date) {
       return res.status(400).json({ 
-        error: 'Employee ID, title, total amount, and start date are required' 
+        error: 'Employee ID, total amount, and start date are required' 
       });
     }
     
@@ -468,7 +461,6 @@ exports.createLoan = async (req, res) => {
     const result = await query(`
       INSERT INTO employee_loans (
         employee_id, 
-        title, 
         total_amount, 
         amount_added,
         amount_deducted,
@@ -480,7 +472,6 @@ exports.createLoan = async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       employee_id,
-      title,
       totalAmountFloat,
       initialAmountAdded,
       initialAmountDeducted,
@@ -495,7 +486,6 @@ exports.createLoan = async (req, res) => {
       success: true,
       id: result.insertId,
       employee_id,
-      title,
       total_amount: totalAmountFloat.toFixed(2),
       amount_added: initialAmountAdded.toFixed(2),
       amount_deducted: initialAmountDeducted.toFixed(2),
@@ -731,7 +721,6 @@ exports.updateLoan = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      title, 
       total_amount, 
       description, 
       start_date,
@@ -756,10 +745,7 @@ exports.updateLoan = async (req, res) => {
     const updateFields = [];
     const params = [];
     
-    if (title !== undefined) {
-      updateFields.push('title = ?');
-      params.push(title);
-    }
+    
     
     if (total_amount !== undefined) {
       const totalAmountFloat = parseFloat(total_amount);
@@ -850,7 +836,6 @@ exports.updateLoan = async (req, res) => {
       `SELECT 
         id,
         employee_id,
-        title,
         ROUND(total_amount, 2) as total_amount,
         ROUND(amount_added, 2) as amount_added,
         ROUND(amount_deducted, 2) as amount_deducted,
@@ -927,6 +912,103 @@ exports.deleteLoan = async (req, res) => {
   }
 };
 
+// ✅ NEW: Delete all loans for a specific employee
+exports.deleteEmployeeLoans = async (req, res) => {
+  try {
+    const { employee_id } = req.params;
+    
+    console.log(`🔄 Attempting to delete all loans for employee: ${employee_id}`);
+    
+    // First, verify the employee exists
+    const employeeCheck = await query(
+      'SELECT employeeId, name FROM employees WHERE employeeId = ?',
+      [employee_id]
+    );
+    
+    if (employeeCheck.length === 0) {
+      console.log(`❌ Employee not found: ${employee_id}`);
+      return res.status(404).json({ 
+        error: 'Employee not found',
+        employee_id 
+      });
+    }
+    
+    const employee = employeeCheck[0];
+    console.log(`👤 Found employee: ${employee.name} (${employee_id})`);
+    
+    // Get all loans for this employee
+    const existingLoans = await query(
+      'SELECT id, total_loan_amount, remaining_amount FROM employee_loans WHERE employee_id = ?',
+      [employee_id]
+    );
+    
+    if (existingLoans.length === 0) {
+      console.log(`ℹ️ No loans found for employee: ${employee_id}`);
+      return res.status(404).json({ 
+        error: 'No loans found for this employee',
+        employee_id,
+        employee_name: employee.name
+      });
+    }
+    
+    console.log(`📋 Found ${existingLoans.length} loans for employee ${employee_id}:`);
+    existingLoans.forEach(loan => {
+      console.log(`  - Loan #${loan.id}: Loan #${loan.id} (AED ${loan.remaining_amount} remaining)`);
+    });
+    
+    // Check if any loans have payments - this determines if we allow deletion
+    const paymentsCheck = await query(`
+      SELECT COUNT(*) as payment_count, COUNT(DISTINCT loan_id) as loans_with_payments
+      FROM loan_payments lp 
+      JOIN employee_loans el ON lp.loan_id = el.id
+      WHERE el.employee_id = ?
+    `, [employee_id]);
+    
+    const { payment_count, loans_with_payments } = paymentsCheck[0];
+    
+    if (payment_count > 0) {
+      console.log(`⚠️ Found ${payment_count} payments across ${loans_with_payments} loans - deletion not allowed`);
+      return res.status(400).json({
+        error: `Cannot delete employee loans with existing payment history. Found ${payment_count} payment records across ${loans_with_payments} loans. Consider marking loans as completed instead.`,
+        employee_id,
+        employee_name: employee.name,
+        total_loans: existingLoans.length,
+        loans_with_payments: parseInt(loans_with_payments),
+        total_payments: parseInt(payment_count)
+      });
+    }
+    
+    // Delete all loans for the employee (since no payments exist)
+    const deleteResult = await query(
+      'DELETE FROM employee_loans WHERE employee_id = ?',
+      [employee_id]
+    );
+    
+    const deletedCount = deleteResult.affectedRows;
+    console.log(`✅ Successfully deleted ${deletedCount} loans for employee ${employee_id}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted all ${deletedCount} loan(s) for employee ${employee.name}`,
+      employee_id,
+      employee_name: employee.name,
+      deleted_loans_count: deletedCount,
+      deleted_loans: existingLoans.map(loan => ({
+        id: loan.id,
+        amount: parseFloat(loan.total_loan_amount || 0).toFixed(2)
+      }))
+    });
+    
+  } catch (err) {
+    console.error('❌ Error deleting employee loans:', err);
+    res.status(500).json({ 
+      error: 'Failed to delete employee loans',
+      details: err.message,
+      employee_id: req.params.employee_id
+    });
+  }
+};
+
 // Get active loans for salary calculation (UPDATED)
 exports.getActiveLoansForEmployee = async (req, res) => {
   try {
@@ -940,7 +1022,6 @@ exports.getActiveLoansForEmployee = async (req, res) => {
     const results = await query(`
       SELECT 
         el.id,
-        el.title,
         ROUND(el.total_loan_amount, 2) as total_loan_amount,
         ROUND(el.remaining_amount, 2) as remaining_amount,
         el.start_date,
@@ -1070,8 +1151,7 @@ exports.getLoanSummaryForEmployee = async (req, res) => {
     const recentPayments = await query(`
       SELECT 
         lp.payment_date,
-        ROUND(lp.amount_paid, 2) as amount_paid,
-        el.title as loan_title
+        ROUND(lp.amount_paid, 2) as amount_paid
       FROM loan_payments lp
       JOIN employee_loans el ON lp.loan_id = el.id
       WHERE lp.employee_id = ?
@@ -1121,7 +1201,6 @@ exports.getEmployeeLoanTransactions = async (req, res) => {
       SELECT 
         lt.id,
         lt.loan_id,
-        el.title as loan_title,
         lt.transaction_type,
         ROUND(lt.amount, 2) as amount,
         lt.reason,
@@ -1165,7 +1244,6 @@ exports.processLoanPaymentsForPayroll = async (employee_id, payroll_month, payme
     const activeLoans = await query(`
       SELECT 
         el.id,
-        el.title,
         ROUND(el.remaining_amount, 2) as remaining_amount,
         CASE 
           WHEN lp.loan_id IS NOT NULL THEN TRUE
@@ -1222,7 +1300,6 @@ exports.processLoanPaymentsForPayroll = async (employee_id, payroll_month, payme
         
         processedPayments.push({
           loan_id: loan.id,
-          loan_title: loan.title,
           amount_paid: parseFloat(deductionAmount.toFixed(2)),
           new_remaining_amount: parseFloat(newRemainingAmount.toFixed(2)),
           status: newRemainingAmount <= 0 ? 'completed' : 'active',
@@ -1231,7 +1308,7 @@ exports.processLoanPaymentsForPayroll = async (employee_id, payroll_month, payme
         
         totalDeductions += deductionAmount;
         
-        console.log(`Processed loan payment: ${loan.title} - AED ${deductionAmount.toFixed(2)}, remaining: AED ${newRemainingAmount.toFixed(2)}`);
+        console.log(`Processed loan payment: Loan #${loan.id} - AED ${deductionAmount.toFixed(2)}, remaining: AED ${newRemainingAmount.toFixed(2)}`);
       }
     }
     

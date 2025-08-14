@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Download, Eye, FileText, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
+import { Upload, Download, Eye, FileText, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 
 interface AdvanceSalaryRecord {
   employee_id: string;
@@ -360,7 +360,7 @@ const AdvanceSalaryUpload: React.FC<AdvanceSalaryUploadProps> = ({ onUploadCompl
     <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <DollarSign className="w-8 h-8 text-green-600" />
+          <TrendingUp className="w-8 h-8 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-800">Upload Advance Salary Records</h2>
         </div>
         <button

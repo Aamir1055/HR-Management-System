@@ -7,11 +7,18 @@ const { requireAuth, addUserOffices, requireManager } = require('../middleware/a
 // Handle file upload for advance salary data (Manager access required)
 router.post('/upload', requireAuth, requireManager, addUserOffices, upload.single('file'), advanceSalaryController.upload);
 
-// Fetch all advance salary records
-router.get('/', requireAuth, addUserOffices, advanceSalaryController.getAll);
+// Get advance salary overview (for management dashboard)
+router.get('/overview', requireAuth, addUserOffices, advanceSalaryController.getOverview);
 
 // Filter advance salary by month-year (this needs to be before the /:employeeId route)
 router.get('/filter', requireAuth, addUserOffices, advanceSalaryController.filterByMonthYear);
+
+// Get employee advance summary and history
+router.get('/employee/:employeeId/summary', requireAuth, addUserOffices, advanceSalaryController.getEmployeeSummary);
+router.get('/employee/:employeeId/history', requireAuth, addUserOffices, advanceSalaryController.getEmployeeHistory);
+
+// Fetch all advance salary records
+router.get('/', requireAuth, addUserOffices, advanceSalaryController.getAll);
 
 // Fetch advance salary for a specific employee
 router.get('/:employeeId', requireAuth, addUserOffices, advanceSalaryController.getByEmployee);

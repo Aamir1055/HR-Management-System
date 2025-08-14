@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from "../components/Layout/MainLayout";
 import { 
   ArrowLeft,
-  DollarSign, 
   User, 
   Calendar,
   Edit,
@@ -250,80 +249,34 @@ const AdvanceSalaryHistory: React.FC = () => {
       setLoading(true);
       console.log('🔄 Fetching advance history for employee:', employeeId);
       
-      // For now, simulate the data since we need to create the backend endpoint
-      // This would be multiple API calls:
-      // - Employee info: await fetch(`/api/employees/${employeeId}`)
-      // - Advance summary: await fetch(`/api/advance-salary/summary/${employeeId}`)
-      // - Advance records: await fetch(`/api/advance-salary/history/${employeeId}`)
-      
-      // Simulated data - replace with actual API calls
-      const simulatedEmployee: EmployeeInfo = {
-        employee_id: employeeId!,
-        name: "John Doe",
-        office: "Dubai Main Office",
-        monthly_salary: 8000
-      };
-
-      const simulatedSummary: AdvanceSummary = {
-        total_advances: 5,
-        total_amount: 12000,
-        current_year_advances: 3,
-        current_year_amount: 7500,
-        average_amount: 2400,
-        recent_advance_date: "2024-01-15"
-      };
-
-      const simulatedAdvances: AdvanceSalaryRecord[] = [
-        {
-          id: "1",
-          employee_id: employeeId!,
-          amount: 2500,
-          month_year: "2024-01",
-          reason: "Medical emergency",
-          created_date: "2024-01-15T10:30:00Z",
-          status: "active"
-        },
-        {
-          id: "2",
-          employee_id: employeeId!,
-          amount: 2000,
-          month_year: "2023-12",
-          reason: "Family expenses",
-          created_date: "2023-12-20T14:20:00Z",
-          status: "deducted"
-        },
-        {
-          id: "3",
-          employee_id: employeeId!,
-          amount: 3000,
-          month_year: "2023-11",
-          reason: "Personal loan repayment",
-          created_date: "2023-11-10T09:15:00Z",
-          status: "deducted"
-        },
-        {
-          id: "4",
-          employee_id: employeeId!,
-          amount: 1500,
-          month_year: "2023-10",
-          reason: "House rent advance",
-          created_date: "2023-10-25T16:45:00Z",
-          status: "deducted"
-        },
-        {
-          id: "5",
-          employee_id: employeeId!,
-          amount: 3000,
-          month_year: "2023-09",
-          reason: "Education fees",
-          created_date: "2023-09-05T11:00:00Z",
-          status: "deducted"
+      // Fetch employee summary (includes employee info and advance summary)
+      const summaryResponse = await fetch(`/api/advance-salary/employee/${employeeId}/summary`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      ];
+      });
       
-      setEmployee(simulatedEmployee);
-      setSummary(simulatedSummary);
-      setAdvances(simulatedAdvances);
+      if (!summaryResponse.ok) {
+        throw new Error('Failed to fetch employee summary');
+      }
+      
+      const summaryData = await summaryResponse.json();
+      setEmployee(summaryData.employee);
+      setSummary(summaryData.summary);
+      
+      // Fetch advance salary history
+      const historyResponse = await fetch(`/api/advance-salary/employee/${employeeId}/history`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!historyResponse.ok) {
+        throw new Error('Failed to fetch advance history');
+      }
+      
+      const historyData = await historyResponse.json();
+      setAdvances(historyData);
       
       console.log('✅ Advance history fetched successfully');
     } catch (err: any) {
@@ -345,13 +298,13 @@ const AdvanceSalaryHistory: React.FC = () => {
       setEditLoading(true);
       console.log('🔄 Updating advance salary:', advanceData);
 
-      const response = await fetch(`/api/advance-salary/${advanceData.id}`, {
+      const response = await fetch(`/api/advance-salary/${employeeId}/${advanceData.month_year}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(advanceData)
+        body: JSON.stringify({ amount: advanceData.amount })
       });
 
       if (!response.ok) {
@@ -385,11 +338,18 @@ const AdvanceSalaryHistory: React.FC = () => {
       return;
     }
 
+    // Find the advance record to get its month_year
+    const advance = advances.find(a => a.id === advanceId);
+    if (!advance) {
+      toast.error('Advance record not found');
+      return;
+    }
+
     try {
       setDeleteLoading(advanceId);
       console.log('🔄 Deleting advance salary:', advanceId);
 
-      const response = await fetch(`/api/advance-salary/${advanceId}`, {
+      const response = await fetch(`/api/advance-salary/${employeeId}/${advance.month_year}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -476,7 +436,7 @@ const AdvanceSalaryHistory: React.FC = () => {
               Try Again
             </button>
             <button
-              onClick={() => navigate('/advance-salary-management')}
+              onClick={() => navigate('/advance-salary')}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
             >
               Back to Overview
@@ -494,7 +454,7 @@ const AdvanceSalaryHistory: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <button
-              onClick={() => navigate('/advance-salary-management')}
+              onClick={() => navigate('/advance-salary')}
               className="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4"
             >
               <ArrowLeft className="w-5 h-5 mr-1" />
@@ -516,7 +476,6 @@ const AdvanceSalaryHistory: React.FC = () => {
                   {employee.office}
                 </span>
                 <span className="flex items-center">
-                  <DollarSign className="w-4 h-4 mr-1" />
                   Monthly Salary: {formatCurrency(employee.monthly_salary)}
                 </span>
               </p>
@@ -553,7 +512,7 @@ const AdvanceSalaryHistory: React.FC = () => {
                 <p className="text-sm text-green-600 mt-1">All time</p>
               </div>
               <div className="p-3 bg-green-200 rounded-full">
-                <DollarSign className="w-6 h-6 text-green-700" />
+                <TrendingUp className="w-6 h-6 text-green-700" />
               </div>
             </div>
           </div>

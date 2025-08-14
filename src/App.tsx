@@ -18,6 +18,7 @@ import AttendanceUpload from './pages/AttendanceUpload';
 import FlushDB from './pages/FlushDB';
 import MasterData from './pages/MasterData';
 import AdvanceSalary from './pages/AdvanceSalary';
+import AdvanceSalaryHistory from './pages/AdvanceSalaryHistory';
 import { SalarySlips } from './pages/SalarySlips';
 import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
 import EmployeeLoans from './pages/EmployeeLoans';
@@ -194,7 +195,7 @@ const AppRoutes: React.FC = () => {
       />
       {/* === END ATTENDANCE UPLOAD ROUTE === */}
       
-      {/* === ADVANCE SALARY ROUTE === */}
+      {/* === ADVANCE SALARY ROUTES === */}
       <Route
         path="/advance-salary"
         element={
@@ -203,7 +204,15 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* === END ADVANCE SALARY ROUTE === */}
+      <Route
+        path="/advance-salary-history/:employeeId"
+        element={
+          <ProtectedRoute>
+            <AdvanceSalaryHistory />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END ADVANCE SALARY ROUTES === */}
       
       {/* === FLUSH DB ROUTE - ADMIN ONLY WITH PROTECTION === */}
       <Route

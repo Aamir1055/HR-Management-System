@@ -98,6 +98,8 @@ module.exports = {
           const dobParsed = dobRaw ? excelDateToJSDate(dobRaw) : null;
           const passportExpiryRaw = row['Passport Expiry'];
           const passportExpiryParsed = passportExpiryRaw ? excelDateToJSDate(passportExpiryRaw) : null;
+          const visaExpiryRaw = row['Visa Expiry'];
+          const visaExpiryParsed = visaExpiryRaw ? excelDateToJSDate(visaExpiryRaw) : null;
 
           // Parse visa type - convert ID to name
           let visaTypeName = null;
@@ -161,8 +163,19 @@ module.exports = {
             visaTypeName,
             platformName,
             row['Address'] || null,
+            row['Current Address'] || null,
             row['Phone'] || null,
-            row['Gender'] || null
+            row['Gender'] || null,
+            // New fields
+            row['WhatsApp'] || null,
+            visaExpiryParsed,
+            row['Primary Language'] || null,
+            row['Secondary Language'] || null,
+            row['Marital Status'] || null,
+            row['Hiring Source'] || null,
+            row['Salary Currency'] || 'AED',
+            row['Emirates ID'] || null,
+            row['Emergency Contact'] || null
           ]);
         } catch (error) {
           console.error('[IMPORT] Error in row:', error);
@@ -170,12 +183,13 @@ module.exports = {
         }
       }
       if (processed.length > 0) {
-        const placeholders = processed.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+        const placeholders = processed.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
         const flatValues = processed.flat();
         const sql = `
           INSERT INTO employees 
           (employeeId, name, email, office_id, position_id, monthlySalary, joiningDate, status,
-            dob, passport_number, passport_expiry, visa_type, platform, address, phone, gender)
+            dob, passport_number, passport_expiry, visa_type, platform, address, current_address, phone, gender,
+            whatsapp, visa_expiry, primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact)
           VALUES ${placeholders}
           ON DUPLICATE KEY UPDATE
             name = VALUES(name),
@@ -191,8 +205,18 @@ module.exports = {
             visa_type = VALUES(visa_type),
             platform = VALUES(platform),
             address = VALUES(address),
+            current_address = VALUES(current_address),
             phone = VALUES(phone),
-            gender = VALUES(gender)
+            gender = VALUES(gender),
+            whatsapp = VALUES(whatsapp),
+            visa_expiry = VALUES(visa_expiry),
+            primary_language = VALUES(primary_language),
+            secondary_language = VALUES(secondary_language),
+            marital_status = VALUES(marital_status),
+            hiring_source = VALUES(hiring_source),
+            salary_currency = VALUES(salary_currency),
+            emirates_id = VALUES(emirates_id),
+            emergency_contact = VALUES(emergency_contact)
         `;
         console.log('[IMPORT] SQL to run:', sql);
         console.log('[IMPORT] First row values:', processed[0]);
@@ -263,8 +287,22 @@ module.exports = {
           values.push(visaTypeName);
         }
         if ('Address' in row) fields.push('address = ?'), values.push(row['Address'] || null);
+        if ('Current Address' in row) fields.push('current_address = ?'), values.push(row['Current Address'] || null);
         if ('Phone' in row) fields.push('phone = ?'), values.push(row['Phone'] || null);
+        if ('WhatsApp' in row) fields.push('whatsapp = ?'), values.push(row['WhatsApp'] || null);
         if ('Gender' in row) fields.push('gender = ?'), values.push(row['Gender'] || null);
+        if ('Primary Language' in row) fields.push('primary_language = ?'), values.push(row['Primary Language'] || null);
+        if ('Secondary Language' in row) fields.push('secondary_language = ?'), values.push(row['Secondary Language'] || null);
+        if ('Marital Status' in row) fields.push('marital_status = ?'), values.push(row['Marital Status'] || null);
+        if ('Hiring Source' in row) fields.push('hiring_source = ?'), values.push(row['Hiring Source'] || null);
+        if ('Salary Currency' in row) fields.push('salary_currency = ?'), values.push(row['Salary Currency'] || 'AED');
+        if ('Emirates ID' in row) fields.push('emirates_id = ?'), values.push(row['Emirates ID'] || null);
+        if ('Emergency Contact' in row) fields.push('emergency_contact = ?'), values.push(row['Emergency Contact'] || null);
+        if ('Visa Expiry' in row) {
+          const ve = row['Visa Expiry'] ? excelDateToJSDate(row['Visa Expiry']) : null;
+          console.log(`[SEC IMPORT] ${employeeId}: Visa Expiry raw='${row['Visa Expiry']}', parsed='${ve}'`);
+          fields.push('visa_expiry = ?'); values.push(ve);
+        }
         if ('Platform' in row) {
           let platformName = null;
           if (row['Platform']) {
@@ -533,7 +571,8 @@ module.exports = {
   createEmployee: async (req, res) => {
     try {
       const { employeeId, name, email, office_name, position_name, monthlySalary, joiningDate, status,
-        dob, passport_number, passport_expiry, visa_type, platform, address, phone, gender } = req.body;
+        dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact } = req.body;
       if (!employeeId || !office_name || !position_name) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
@@ -555,12 +594,15 @@ module.exports = {
       await db.query(`
         INSERT INTO employees 
         (employeeId, name, email, office_id, position_id, monthlySalary, joiningDate, status,
-          dob, passport_number, passport_expiry, visa_type, platform, address, phone, gender)
+          dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
+          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?)
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?)
       `, [
         employeeId, name, email, office_id, position_id, monthlySalary, joiningDate, statusValue,
-        dob || null, passport_number || null, passport_expiry || null, visa_type || null, platform || null, address || null, phone || null, gender || null
+        dob || null, passport_number || null, passport_expiry || null, visa_type || null, visa_expiry || null, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null
       ]);
       const [newEmployee] = await db.query(`
         SELECT e.*, o.name AS office_name, p.title AS position_title,
@@ -608,7 +650,8 @@ module.exports = {
     try {
       const {
         name, email, office_name, position_name, monthlySalary, joiningDate, status,
-        dob, passport_number, passport_expiry, visa_type, platform, address, phone, gender
+        dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact
       } = req.body;
       const db = req.db;
       const office_id = await getOfficeIdByName(office_name, db);
@@ -621,11 +664,13 @@ module.exports = {
         UPDATE employees SET
           name = ?, email = ?, office_id = ?, position_id = ?,
           monthlySalary = ?, joiningDate = ?, status = ?,
-          dob = ?, passport_number = ?, passport_expiry = ?, visa_type = ?, platform = ?, address = ?, phone = ?, gender = ?
+          dob = ?, passport_number = ?, passport_expiry = ?, visa_type = ?, visa_expiry = ?, platform = ?, address = ?, current_address = ?, phone = ?, whatsapp = ?, gender = ?,
+          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?
         WHERE employeeId = ?
       `, [
         name, email, office_id, position_id, monthlySalary, joiningDate, statusValue,
-        dob || null, passport_number || null, passport_expiry || null, visa_type || null, platform || null, address || null, phone || null, gender || null,
+        dob || null, passport_number || null, passport_expiry || null, visa_type || null, visa_expiry || null, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null,
         req.params.employeeId
       ]);
       if (!result.affectedRows) return res.status(404).json({ error: 'Employee not found' });
