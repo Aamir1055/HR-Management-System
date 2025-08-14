@@ -50,7 +50,10 @@ router.post('/:id/adjust', loanController.adjustLoanAmount);
 // GENERIC ROUTES (MUST COME LAST)
 // ============================================================================
 
-// -------- BASIC LOAN MANAGEMENT ROUTES --------
+// -------- OVERVIEW AND BASIC LOAN MANAGEMENT ROUTES --------
+// Get comprehensive loan overview for all employees
+router.get('/overview', loanController.getLoanOverview);
+
 // Get all loans (with optional filters like ?status=active or ?employee_id=EMP-001)
 router.get('/', loanController.getAllLoans);
 

@@ -20,6 +20,7 @@ import MasterData from './pages/MasterData';
 import AdvanceSalary from './pages/AdvanceSalary';
 import { SalarySlips } from './pages/SalarySlips';
 import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
+import EmployeeLoans from './pages/EmployeeLoans';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -163,6 +164,17 @@ const AppRoutes: React.FC = () => {
         }
       />
       {/* === END EMPLOYEE ROUTES === */}
+
+      {/* === EMPLOYEE LOANS ROUTES === */}
+      <Route
+        path="/employee-loans"
+        element={
+          <ProtectedRoute permission="manage_offices">
+            <EmployeeLoans />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END EMPLOYEE LOANS ROUTES === */}
 
       {/* === EMPLOYEE LOAN HISTORY ROUTE (IMPORTANT - MUST BE BEFORE GENERIC /employee/:employeeId) === */}
       <Route

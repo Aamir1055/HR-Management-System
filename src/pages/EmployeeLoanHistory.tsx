@@ -731,7 +731,7 @@ const EmployeeLoanHistory: React.FC = () => {
               {error || 'Failed to load employee loan history'}
             </div>
             <button
-              onClick={() => navigate('/master-data')}
+              onClick={() => navigate('/employee-loans')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Back to Loans
@@ -750,7 +750,7 @@ const EmployeeLoanHistory: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/master-data')}
+                onClick={() => navigate('/employee-loans')}
                 className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />

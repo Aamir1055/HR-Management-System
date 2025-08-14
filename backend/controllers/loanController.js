@@ -1252,3 +1252,92 @@ exports.processLoanPaymentsForPayroll = async (employee_id, payroll_month, payme
     };
   }
 };
+
+// ✅ NEW: Get comprehensive loan overview for all employees
+exports.getLoanOverview = async (req, res) => {
+  try {
+    console.log('🔄 Fetching comprehensive loan overview...');
+    
+    // Get overall loan statistics
+    const overallStats = await query(`
+      SELECT 
+        COUNT(DISTINCT el.employee_id) as total_employees_with_loans,
+        COUNT(CASE WHEN el.status = 'active' THEN 1 END) as total_active_loans,
+        COUNT(CASE WHEN el.status = 'completed' THEN 1 END) as total_completed_loans,
+        COALESCE(ROUND(SUM(CASE WHEN el.status = 'active' THEN el.remaining_amount ELSE 0 END), 2), 0.00) as total_outstanding_amount,
+        COALESCE(ROUND(SUM(el.total_loan_amount), 2), 0.00) as total_loan_value
+      FROM employee_loans el
+    `);
+
+    // Get employee-wise loan summary with recovery rates
+    const employeeLoans = await query(`
+      SELECT 
+        e.employeeId as employee_id,
+        e.name as employee_name,
+        e.monthlySalary as monthly_salary,
+        COUNT(el.id) as total_loans,
+        COUNT(CASE WHEN el.status = 'active' THEN 1 END) as active_loans,
+        COUNT(CASE WHEN el.status = 'completed' THEN 1 END) as completed_loans,
+        COALESCE(ROUND(SUM(el.total_loan_amount), 2), 0.00) as total_loan_amount,
+        COALESCE(ROUND(SUM(CASE WHEN el.status = 'active' THEN el.remaining_amount ELSE 0 END), 2), 0.00) as total_remaining,
+        CASE 
+          WHEN SUM(el.total_loan_amount) > 0 THEN 
+            ROUND(((SUM(el.total_loan_amount) - SUM(CASE WHEN el.status = 'active' THEN el.remaining_amount ELSE 0 END)) / SUM(el.total_loan_amount)) * 100, 1)
+          ELSE 100.0
+        END as recovery_rate,
+        MAX(COALESCE(lt.created_at, el.updated_at)) as last_activity,
+        CASE 
+          WHEN COUNT(el.id) = 0 THEN 'no_loans'
+          WHEN COUNT(CASE WHEN el.status = 'active' THEN 1 END) > 0 THEN 'active'
+          WHEN COUNT(CASE WHEN el.status = 'completed' THEN 1 END) > 0 THEN 'completed'
+          ELSE 'no_loans'
+        END as status
+      FROM employees e
+      LEFT JOIN employee_loans el ON e.employeeId = el.employee_id
+      LEFT JOIN loan_transactions lt ON el.id = lt.loan_id
+      GROUP BY e.employeeId, e.name, e.monthlySalary
+      HAVING COUNT(el.id) > 0
+      ORDER BY recovery_rate ASC, total_remaining DESC, e.name ASC
+    `);
+
+    // Calculate average recovery rate
+    const totalValueWithLoans = employeeLoans.reduce((sum, emp) => sum + parseFloat(emp.total_loan_amount), 0);
+    const totalRecovered = employeeLoans.reduce((sum, emp) => {
+      const loanAmount = parseFloat(emp.total_loan_amount);
+      const remaining = parseFloat(emp.total_remaining);
+      return sum + (loanAmount - remaining);
+    }, 0);
+    const averageRecoveryRate = totalValueWithLoans > 0 ? Math.round((totalRecovered / totalValueWithLoans) * 100 * 10) / 10 : 0;
+
+    // Format employee data
+    const formattedEmployees = employeeLoans.map(emp => ({
+      ...emp,
+      monthly_salary: parseFloat(emp.monthly_salary || 0),
+      total_loan_amount: parseFloat(emp.total_loan_amount || 0).toFixed(2),
+      total_remaining: parseFloat(emp.total_remaining || 0).toFixed(2),
+      recovery_rate: parseFloat(emp.recovery_rate || 0)
+    }));
+
+    const response = {
+      total_employees_with_loans: overallStats[0].total_employees_with_loans,
+      total_active_loans: overallStats[0].total_active_loans,
+      total_completed_loans: overallStats[0].total_completed_loans,
+      total_outstanding_amount: parseFloat(overallStats[0].total_outstanding_amount || 0).toFixed(2),
+      total_loan_value: parseFloat(overallStats[0].total_loan_value || 0).toFixed(2),
+      average_recovery_rate: averageRecoveryRate,
+      employees: formattedEmployees
+    };
+
+    console.log('✅ Loan overview fetched successfully:', {
+      totalEmployees: response.total_employees_with_loans,
+      activeLoans: response.total_active_loans,
+      completedLoans: response.total_completed_loans,
+      outstandingAmount: response.total_outstanding_amount
+    });
+
+    res.json(response);
+  } catch (err) {
+    console.error('❌ Error fetching loan overview:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
