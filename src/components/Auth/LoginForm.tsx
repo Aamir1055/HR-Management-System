@@ -47,7 +47,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, loading, error })
             <Shield className="w-8 h-8 text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your payroll account</p>
+          <p className="text-gray-600 mt-2">Sign in to your HR Management System</p>
         </div>
 
         {/* Error Message */}

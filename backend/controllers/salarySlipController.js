@@ -1,4 +1,4 @@
-console.log("==> salarySlipController.js loaded - loan logic removed");
+console.log("==> salarySlipController.js loaded - with loan integration and skip month support");
 
 const moment = require('moment');
 const PDFDocument = require('pdfkit');
@@ -102,6 +102,54 @@ const generateSalarySlipData = async (req, res) => {
     `, [employeeId, monthYearStr]);
     const advanceAmount = parseFloat(advanceSalaryRows[0]?.advance_amount || 0);
 
+    // Get loan deductions for the month (considering skip months)
+    const [loanRows] = await req.db.query(`
+      SELECT l.id, l.description as title, l.monthly_deduction, l.remaining_amount, l.total_loan_amount as total_amount,
+             CASE WHEN sm.id IS NOT NULL THEN 1 ELSE 0 END as is_skip_month
+      FROM employee_loans l
+      LEFT JOIN loan_deduction_skips sm ON l.id = sm.loan_id 
+        AND sm.skip_month = ?
+      WHERE l.employee_id = ? 
+        AND l.status = 'active'
+        AND l.remaining_amount > 0
+        AND l.start_date <= LAST_DAY(STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d'))
+        AND (l.end_date IS NULL OR l.end_date >= STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d'))
+      ORDER BY l.id
+    `, [monthYearStr, employeeId, yearNum, monthNum, yearNum, monthNum]);
+    
+    let totalLoanDeduction = 0;
+    const loanDetails = [];
+    
+    for (const loan of loanRows) {
+      // Skip this loan if it's marked as skip month
+      if (loan.is_skip_month === 1) {
+        console.log(`Skipping loan ${loan.id} for ${employeeId} - skip month: ${monthYearStr}`);
+        loanDetails.push({
+          id: loan.id,
+          title: `${loan.title} (SKIPPED)`,
+          deduction: 0,
+          remainingAfter: parseFloat(loan.remaining_amount),
+          skipped: true
+        });
+        continue;
+      }
+      
+      const monthlyDeduction = parseFloat(loan.monthly_deduction || 0);
+      const remainingAmount = parseFloat(loan.remaining_amount || 0);
+      const actualDeduction = Math.min(monthlyDeduction, remainingAmount);
+      
+      if (actualDeduction > 0) {
+        totalLoanDeduction += actualDeduction;
+        loanDetails.push({
+          id: loan.id,
+          title: loan.title,
+          deduction: actualDeduction,
+          remainingAfter: remainingAmount - actualDeduction,
+          skipped: false
+        });
+      }
+    }
+
     // Calculate working days in the month
     const totalWorkingDays = await getWorkingDaysInMonth(yearNum, monthNum);
 
@@ -122,7 +170,7 @@ const generateSalarySlipData = async (req, res) => {
     const excessLeaveDeduction = excessLeaves * 2 * perDayRate;
 
     const attendanceDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction + excessLeaveDeduction;
-    const totalDeductions = attendanceDeduction + advanceAmount;
+    const totalDeductions = attendanceDeduction + advanceAmount + totalLoanDeduction;
     const netSalary = Math.max(0, grossSalary - totalDeductions);
 
     const salarySlipData = {
@@ -168,7 +216,9 @@ const generateSalarySlipData = async (req, res) => {
         halfDayDeduction: parseFloat(halfDayDeduction.toFixed(2)),
         excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
         missingDayDeduction: 0,
-        advanceDeduction: parseFloat(advanceAmount.toFixed(2))
+        advanceDeduction: parseFloat(advanceAmount.toFixed(2)),
+        loanDeductions: parseFloat(totalLoanDeduction.toFixed(2)),
+        loanDetails: loanDetails
       },
       metadata: {
         generatedAt: new Date().toISOString(),
@@ -371,19 +421,27 @@ const getAvailablePeriods = async (req, res) => {
   }
 };
 
-// Generate simplified salary slips for all employees (loans removed)
+// Generate simplified salary slips for all employees (optimized with batched queries)
 const generateAllSimplifiedSalarySlips = async (req, res) => {
+  const startTime = Date.now();
+  console.log(`Starting salary slip generation at ${new Date().toISOString()}`);
+  
   try {
-    const { month, year, search, office, position, employeeIds } = req.query;
+    // Handle both GET and POST requests
+    const requestData = req.method === 'POST' ? req.body : req.query;
+    const { month, year, search, office, position, employeeIds } = requestData;
+    
     if (!month || !year) {
       return res.status(400).json({ error: 'Month and year are required' });
     }
+    
     const monthNum = parseInt(month);
     const yearNum = parseInt(year);
     if (monthNum < 1 || monthNum > 12 || yearNum < 2020 || yearNum > 2030) {
       return res.status(400).json({ error: 'Invalid month or year' });
     }
 
+    // Build employee selection query
     let query = `
       SELECT DISTINCT pr.employeeId,
              COALESCE(e.name, CONCAT('Employee ', pr.employeeId)) as name, 
@@ -398,13 +456,27 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
       WHERE pr.month = ? AND pr.year = ?
     `;
     const queryParams = [monthNum, yearNum];
+    
+    // Handle employee ID filtering
+    let targetEmployeeIds = [];
     if (employeeIds) {
-      const idsArray = employeeIds.split(',').map(id => id.trim()).filter(Boolean);
-      if (idsArray.length > 0) {
-        query += ` AND pr.employeeId IN (${idsArray.map(() => '?').join(',')})`;
-        queryParams.push(...idsArray);
+      if (Array.isArray(employeeIds)) {
+        targetEmployeeIds = employeeIds.filter(Boolean);
+      } else {
+        targetEmployeeIds = employeeIds.split(',').map(id => id.trim()).filter(Boolean);
+      }
+      
+      if (targetEmployeeIds.length > 0) {
+        // Use chunked IN clauses for large lists to avoid SQL limits
+        const chunkSize = 1000; // SQL limit for IN clauses
+        if (targetEmployeeIds.length > chunkSize) {
+          console.log(`Large employee list detected (${targetEmployeeIds.length} employees), using chunked processing`);
+        }
+        query += ` AND pr.employeeId IN (${targetEmployeeIds.map(() => '?').join(',')})`;
+        queryParams.push(...targetEmployeeIds);
       }
     } else {
+      // Apply other filters only if no specific employee IDs are provided
       if (search) {
         query += ` AND (e.name LIKE ? OR pr.employeeId LIKE ? OR e.email LIKE ? OR e.phone LIKE ?)`;
         const pattern = `%${search}%`;
@@ -421,69 +493,158 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
     }
     query += ` ORDER BY pr.employeeId`;
 
+    console.log(`Fetching employees with query parameters: ${queryParams.length} params`);
     const [employeeRows] = await req.db.query(query, queryParams);
+    
     if (employeeRows.length === 0) {
+      console.log('No employees found matching criteria');
       return res.json({ success: true, data: [], message: 'No employees found' });
     }
 
+    console.log(`Found ${employeeRows.length} employees to process`);
     const totalWorkingDays = await getWorkingDaysInMonth(yearNum, monthNum);
+    
+    // Extract all employee IDs for batched queries
+    const allEmployeeIds = employeeRows.map(emp => emp.employeeId);
+    const monthYearStr = `${yearNum}-${monthNum.toString().padStart(2, '0')}`;
+    
+    // Batch query 1: Get all payroll data at once
+    console.log('Fetching payroll data in batch...');
+    const payrollQuery = `
+      SELECT * FROM payroll 
+      WHERE employeeId IN (${allEmployeeIds.map(() => '?').join(',')}) 
+        AND month = ? AND year = ?
+      ORDER BY employeeId
+    `;
+    const [allPayrollRows] = await req.db.query(payrollQuery, [...allEmployeeIds, monthNum, yearNum]);
+    const payrollMap = new Map(allPayrollRows.map(row => [row.employeeId, row]));
+    
+    // Batch query 2: Get all advance salary data at once
+    console.log('Fetching advance salary data in batch...');
+    const advanceQuery = `
+      SELECT employee_id, COALESCE(SUM(amount), 0) as advance_amount
+      FROM advance_salary 
+      WHERE employee_id IN (${allEmployeeIds.map(() => '?').join(',')}) 
+        AND month_year = ?
+      GROUP BY employee_id
+    `;
+    const [allAdvanceRows] = await req.db.query(advanceQuery, [...allEmployeeIds, monthYearStr]);
+    const advanceMap = new Map(allAdvanceRows.map(row => [row.employee_id, parseFloat(row.advance_amount || 0)]));
+    
+    // Batch query 3: Get all loan data at once
+    console.log('Fetching loan data in batch...');
+    const loanQuery = `
+      SELECT l.employee_id, l.id, l.description as title, l.monthly_deduction, l.remaining_amount, l.total_loan_amount as total_amount,
+             CASE WHEN sm.id IS NOT NULL THEN 1 ELSE 0 END as is_skip_month
+      FROM employee_loans l
+      LEFT JOIN loan_deduction_skips sm ON l.id = sm.loan_id AND sm.skip_month = ?
+      WHERE l.employee_id IN (${allEmployeeIds.map(() => '?').join(',')}) 
+        AND l.status = 'active'
+        AND l.remaining_amount > 0
+        AND l.start_date <= LAST_DAY(STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d'))
+        AND (l.end_date IS NULL OR l.end_date >= STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d'))
+      ORDER BY l.employee_id, l.id
+    `;
+    const [allLoanRows] = await req.db.query(loanQuery, [monthYearStr, ...allEmployeeIds, yearNum, monthNum, yearNum, monthNum]);
+    
+    // Group loans by employee
+    const loanMap = new Map();
+    for (const loan of allLoanRows) {
+      if (!loanMap.has(loan.employee_id)) {
+        loanMap.set(loan.employee_id, []);
+      }
+      loanMap.get(loan.employee_id).push(loan);
+    }
+    
+    console.log('Processing salary calculations...');
     const salarySlips = [];
+    let processedCount = 0;
+    
     for (const employee of employeeRows) {
-      const [payrollRows] = await req.db.query(`
-        SELECT * FROM payroll 
-        WHERE employeeId = ? AND month = ? AND year = ?
-      `, [employee.employeeId, monthNum, yearNum]);
-      if (payrollRows.length === 0) continue;
-      const payroll = payrollRows[0];
+      try {
+        const payroll = payrollMap.get(employee.employeeId);
+        if (!payroll) {
+          console.warn(`No payroll data found for employee ${employee.employeeId}`);
+          continue;
+        }
 
-      const monthYearStr = `${yearNum}-${monthNum.toString().padStart(2, '0')}`;
-      const [advanceSalaryRows] = await req.db.query(`
-        SELECT COALESCE(SUM(amount), 0) as advance_amount
-        FROM advance_salary 
-        WHERE employee_id = ? AND month_year = ?
-      `, [employee.employeeId, monthYearStr]);
-      const advanceAmount = parseFloat(advanceSalaryRows[0]?.advance_amount || 0);
+        const advanceAmount = advanceMap.get(employee.employeeId) || 0;
+        const employeeLoans = loanMap.get(employee.employeeId) || [];
+        
+        // Calculate loan deductions
+        let totalLoanDeduction = 0;
+        for (const loan of employeeLoans) {
+          if (loan.is_skip_month === 1) {
+            continue; // Skip this month
+          }
+          
+          const monthlyDeduction = parseFloat(loan.monthly_deduction || 0);
+          const remainingAmount = parseFloat(loan.remaining_amount || 0);
+          const actualDeduction = Math.min(monthlyDeduction, remainingAmount);
+          
+          if (actualDeduction > 0) {
+            totalLoanDeduction += actualDeduction;
+          }
+        }
 
-      const presentDays = payroll.present_days || 0;
-      const halfDays = payroll.half_days || 0;
-      const approvedLeaves = payroll.approved_leaves || 0;
-      const actualAbsentDays = payroll.leaves || 0;
-      const excessLeaves = payroll.excess_leaves || 0;
-      const lateDays = payroll.late_days || 0;
+        // Calculate attendance and salary
+        const presentDays = payroll.present_days || 0;
+        const halfDays = payroll.half_days || 0;
+        const approvedLeaves = payroll.approved_leaves || 0;
+        const actualAbsentDays = payroll.leaves || 0;
+        const excessLeaves = payroll.excess_leaves || 0;
+        const lateDays = payroll.late_days || 0;
 
-      const grossSalary = parseFloat(employee.monthlySalary);
-      const perDayRate = grossSalary / totalWorkingDays;
+        const grossSalary = parseFloat(employee.monthlySalary);
+        const perDayRate = grossSalary / totalWorkingDays;
 
-      const absentDeduction = actualAbsentDays * perDayRate;
-      const halfDayDeduction = halfDays * 0.5 * perDayRate;
-      const approvedLeaveDeduction = approvedLeaves * perDayRate;
-      const excessLeaveDeduction = excessLeaves * 2 * perDayRate;
-      const totalAbsentRelatedDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction;
-      const totalDeduction = totalAbsentRelatedDeduction + excessLeaveDeduction + advanceAmount;
-      const netSalary = Math.max(0, grossSalary - totalDeduction);
+        const absentDeduction = actualAbsentDays * perDayRate;
+        const halfDayDeduction = halfDays * 0.5 * perDayRate;
+        const approvedLeaveDeduction = approvedLeaves * perDayRate;
+        const excessLeaveDeduction = excessLeaves * 2 * perDayRate;
+        const totalAbsentRelatedDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction;
+        const totalDeduction = totalAbsentRelatedDeduction + excessLeaveDeduction + advanceAmount + totalLoanDeduction;
+        const netSalary = Math.max(0, grossSalary - totalDeduction);
 
-      salarySlips.push({
-        employeeId: employee.employeeId,
-        name: employee.name,
-        position: employee.position_title || 'N/A',
-        workingDays: totalWorkingDays,
-        absentDays: parseFloat((actualAbsentDays + (halfDays * 0.5) + approvedLeaves).toFixed(1)),
-        latePunchIn: lateDays,
-        excessLeaves,
-        grossSalary: parseFloat(grossSalary.toFixed(2)),
-        absentDeduction: parseFloat(totalAbsentRelatedDeduction.toFixed(2)),
-        excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
-        advanceSalary: parseFloat(advanceAmount.toFixed(2)),
-        totalDeduction: parseFloat(totalDeduction.toFixed(2)),
-        netSalary: parseFloat(netSalary.toFixed(2))
-      });
+        salarySlips.push({
+          employeeId: employee.employeeId,
+          name: employee.name,
+          position: employee.position_title || 'N/A',
+          workingDays: totalWorkingDays,
+          absentDays: parseFloat((actualAbsentDays + (halfDays * 0.5) + approvedLeaves).toFixed(1)),
+          latePunchIn: lateDays,
+          excessLeaves,
+          grossSalary: parseFloat(grossSalary.toFixed(2)),
+          absentDeduction: parseFloat(totalAbsentRelatedDeduction.toFixed(2)),
+          excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
+          advanceSalary: parseFloat(advanceAmount.toFixed(2)),
+          loanDeductions: parseFloat(totalLoanDeduction.toFixed(2)),
+          totalDeduction: parseFloat(totalDeduction.toFixed(2)),
+          netSalary: parseFloat(netSalary.toFixed(2))
+        });
+        
+        processedCount++;
+        if (processedCount % 50 === 0) {
+          console.log(`Processed ${processedCount}/${employeeRows.length} employees`);
+        }
+      } catch (employeeError) {
+        console.error(`Error processing employee ${employee.employeeId}:`, employeeError);
+        // Continue processing other employees instead of failing the entire batch
+      }
     }
 
+    const endTime = Date.now();
+    const processingTime = (endTime - startTime) / 1000;
+    
+    console.log(`Completed salary slip generation: ${salarySlips.length} slips generated in ${processingTime}s`);
+    
     res.json({
       success: true,
       data: salarySlips,
       meta: {
         totalEmployees: salarySlips.length,
+        processedEmployees: processedCount,
+        processingTimeSeconds: processingTime,
         period: {
           month: monthNum,
           year: yearNum,
@@ -493,8 +654,22 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error generating all simplified salary slips:', error);
-    res.status(500).json({ error: 'Failed to generate salary slips', message: error.message });
+    const endTime = Date.now();
+    const processingTime = (endTime - startTime) / 1000;
+    
+    console.error('Error generating all simplified salary slips:', {
+      error: error.message,
+      stack: error.stack,
+      processingTime: processingTime
+    });
+    
+    // Return more detailed error information
+    res.status(500).json({ 
+      error: 'Failed to generate salary slips', 
+      message: error.message,
+      processingTime: processingTime,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

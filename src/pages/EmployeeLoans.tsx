@@ -57,6 +57,7 @@ interface AddLoanModalProps {
 interface LoanFormData {
   employee_id: string;
   total_amount: string;
+  monthly_deduction: string;
   start_date: string;
   description: string;
 }
@@ -71,6 +72,7 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
   const [formData, setFormData] = useState<LoanFormData>({
     employee_id: '',
     total_amount: '',
+    monthly_deduction: '',
     start_date: '',
     description: ''
   });
@@ -91,6 +93,7 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
       setFormData({
         employee_id: '',
         total_amount: '',
+        monthly_deduction: '',
         start_date: getCurrentDate(),
         description: ''
       });
@@ -111,7 +114,7 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
     }
 
     if (!formData.start_date) {
-      newErrors.start_date = 'Start date is required';
+      newErrors.start_date = 'Disbursed date is required';
     }
 
     setErrors(newErrors);
@@ -133,6 +136,7 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
     setFormData({
       employee_id: '',
       total_amount: '',
+      monthly_deduction: '',
       start_date: getCurrentDate(),
       description: ''
     });
@@ -216,10 +220,33 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
             )}
           </div>
 
+          {/* Monthly Deduction */}
+          <div>
+            <label htmlFor="monthly_deduction" className="block text-sm font-medium text-gray-700 mb-2">
+              Monthly Deduction Amount <span className="text-sm text-gray-500">(Optional)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500 text-sm">AED</span>
+              <input
+                type="number"
+                id="monthly_deduction"
+                step="0.01"
+                min="0"
+                value={formData.monthly_deduction}
+                onChange={(e) => setFormData(prev => ({ ...prev, monthly_deduction: e.target.value }))}
+                className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00 (Leave empty for no fixed monthly deduction)"
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Set a fixed monthly deduction amount for payroll processing. Leave empty to allow flexible deductions.
+            </p>
+          </div>
+
           {/* Start Date */}
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date <span className="text-red-500">*</span>
+              Disbursed Date <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
@@ -584,10 +611,10 @@ const EmployeeLoans: React.FC = () => {
                 <div className="p-2 bg-blue-100 rounded-lg mr-4">
                   <CreditCard className="w-8 h-8 text-blue-600" />
                 </div>
-                Employee Loans Management
+                Employee Loan Management
               </h1>
               <p className="mt-2 text-gray-600">
-                Comprehensive overview of all employee loans and their statuses
+                Comprehensive overview of all employee loan records and their statuses
               </p>
             </div>
             <div className="flex gap-3">

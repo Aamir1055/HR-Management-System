@@ -185,7 +185,13 @@ const MasterData = () => {
                   </button>
                   <button
                     onClick={handleAddNew}
-                    className={`inline-flex items-center px-6 py-3 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold bg-gradient-to-r from-${currentTabConfig.color}-600 to-${currentTabConfig.color}-700 hover:from-${currentTabConfig.color}-700 hover:to-${currentTabConfig.color}-800`}
+                    className={`inline-flex items-center px-6 py-3 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold ${
+                      activeTab === 'visaType' 
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                        : activeTab === 'platform'
+                        ? 'bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800'
+                        : `bg-gradient-to-r from-${currentTabConfig.color}-600 to-${currentTabConfig.color}-700 hover:from-${currentTabConfig.color}-700 hover:to-${currentTabConfig.color}-800`
+                    }`}
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Add New {currentTabConfig.name.slice(0, -1)}

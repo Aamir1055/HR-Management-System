@@ -440,26 +440,44 @@ export const SalarySlips: React.FC = () => {
 
     setLoadingState('all', true);
     try {
-      // Build query parameters including filters
-      const queryParams = new URLSearchParams({
-        year: filters.year,
-        month: filters.month
-      });
+      const employeeIds = filteredEmployees.map(emp => emp.employeeId);
       
-      // ALWAYS send filtered employee IDs to ensure backend uses correct set
-      if (filteredEmployees.length > 0) {
-        const employeeIds = filteredEmployees.map(emp => emp.employeeId).join(',');
-        queryParams.append('employeeIds', employeeIds);
+      // Use POST for large employee lists to avoid URL length limits
+      const shouldUsePost = employeeIds.length > 50; // Threshold for switching to POST
+      
+      let response;
+      if (shouldUsePost) {
+        console.log(`Using POST request for ${employeeIds.length} employees to avoid URL length limits`);
+        // Use POST request with employee IDs in body
+        response = await api.post('/salary-slips/simplified/generate-all', {
+          year: filters.year,
+          month: filters.month,
+          employeeIds: employeeIds,
+          search: filters.searchTerm || undefined,
+          office: filters.selectedOffice || undefined,
+          position: filters.selectedPosition || undefined
+        });
+      } else {
+        // Use GET request for smaller lists
+        const queryParams = new URLSearchParams({
+          year: filters.year,
+          month: filters.month
+        });
+        
+        // Send filtered employee IDs to ensure backend uses correct set
+        if (employeeIds.length > 0) {
+          queryParams.append('employeeIds', employeeIds.join(','));
+        }
+        
+        // Add individual filter parameters for debugging
+        if (filters.searchTerm) queryParams.append('search', filters.searchTerm);
+        if (filters.selectedOffice) queryParams.append('office', filters.selectedOffice);
+        if (filters.selectedPosition) queryParams.append('position', filters.selectedPosition);
+        
+        response = await api.get(
+          `/salary-slips/simplified/generate-all?${queryParams.toString()}`
+        );
       }
-      
-      // Also add individual filter parameters for debugging
-      if (filters.searchTerm) queryParams.append('search', filters.searchTerm);
-      if (filters.selectedOffice) queryParams.append('office', filters.selectedOffice);
-      if (filters.selectedPosition) queryParams.append('position', filters.selectedPosition);
-      
-      const response = await api.get(
-        `/salary-slips/simplified/generate-all?${queryParams.toString()}`
-      );
       
       const slipsData = response.data.data || response.data || [];
       

@@ -106,6 +106,7 @@ exports.getAllLoans = async (req, res) => {
         el.end_date,
         el.status,
         ROUND(el.remaining_amount, 2) as remaining_amount,
+        ROUND(el.monthly_deduction, 2) as monthly_deduction,
         el.created_by,
         el.created_at,
         el.updated_at,
@@ -174,6 +175,7 @@ exports.getEmployeeLoanHistory = async (req, res) => {
         el.amount_deducted,
         el.total_loan_amount,
         el.remaining_amount,
+        el.monthly_deduction,
         el.start_date,
         el.end_date,
         el.status,
@@ -422,6 +424,7 @@ exports.createLoan = async (req, res) => {
     const { 
       employee_id, 
       total_amount, 
+      monthly_deduction,
       description, 
       start_date 
     } = req.body;
@@ -438,6 +441,17 @@ exports.createLoan = async (req, res) => {
       return res.status(400).json({ 
         error: 'Total amount must be a positive number' 
       });
+    }
+    
+    // Validate monthly_deduction if provided (optional field)
+    let monthlyDeductionFloat = null;
+    if (monthly_deduction !== undefined && monthly_deduction !== null && monthly_deduction !== '') {
+      monthlyDeductionFloat = parseFloat(monthly_deduction);
+      if (isNaN(monthlyDeductionFloat) || monthlyDeductionFloat < 0) {
+        return res.status(400).json({ 
+          error: 'Monthly deduction must be a non-negative number' 
+        });
+      }
     }
     
     // Check if employee exists
@@ -468,8 +482,9 @@ exports.createLoan = async (req, res) => {
         description, 
         start_date, 
         remaining_amount,
+        monthly_deduction,
         created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       employee_id,
       totalAmountFloat,
@@ -479,6 +494,7 @@ exports.createLoan = async (req, res) => {
       description || null,
       start_date,
       calculatedTotalLoanAmount, // remaining_amount equals total_loan_amount initially
+      monthlyDeductionFloat, // Include the validated monthly_deduction
       createdBy
     ]);
     
@@ -1416,5 +1432,285 @@ exports.getLoanOverview = async (req, res) => {
   } catch (err) {
     console.error('❌ Error fetching loan overview:', err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ================ SKIP MONTHS MANAGEMENT ================
+
+// Add skip month for loan deduction
+exports.addSkipMonth = async (req, res) => {
+  try {
+    const { loan_id, skip_month, reason } = req.body;
+    
+    if (!loan_id || !skip_month) {
+      return res.status(400).json({
+        error: 'Loan ID and skip month are required'
+      });
+    }
+    
+    // Validate month format (YYYY-MM)
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(skip_month)) {
+      return res.status(400).json({
+        error: 'Skip month must be in YYYY-MM format'
+      });
+    }
+    
+    // Get loan details and verify it exists
+    const loanResult = await query(
+      'SELECT employee_id FROM employee_loans WHERE id = ?',
+      [loan_id]
+    );
+    
+    if (loanResult.length === 0) {
+      return res.status(404).json({ error: 'Loan not found' });
+    }
+    
+    const employee_id = loanResult[0].employee_id;
+    const createdBy = req.user?.username || req.user?.name || 'Admin User';
+    
+    // Insert skip month record
+    const result = await query(`
+      INSERT INTO loan_deduction_skips (
+        employee_id, loan_id, skip_month, reason, created_by
+      ) VALUES (?, ?, ?, ?, ?)
+    `, [employee_id, loan_id, skip_month, reason || null, createdBy]);
+    
+    res.json({
+      success: true,
+      message: `Skip month ${skip_month} added for loan ID ${loan_id}`,
+      skip_id: result.insertId,
+      employee_id,
+      loan_id: parseInt(loan_id),
+      skip_month,
+      reason: reason || null
+    });
+    
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        error: 'Skip month already exists for this loan'
+      });
+    }
+    console.error('Error adding skip month:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get skip months for a loan
+exports.getSkipMonths = async (req, res) => {
+  try {
+    const { loan_id } = req.params;
+    
+    const skipMonths = await query(`
+      SELECT 
+        id,
+        skip_month,
+        reason,
+        created_by,
+        created_at
+      FROM loan_deduction_skips
+      WHERE loan_id = ?
+      ORDER BY skip_month DESC
+    `, [loan_id]);
+    
+    res.json({
+      success: true,
+      loan_id: parseInt(loan_id),
+      skip_months: skipMonths
+    });
+    
+  } catch (err) {
+    console.error('Error fetching skip months:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get skip months for an employee
+exports.getEmployeeSkipMonths = async (req, res) => {
+  try {
+    const { employee_id } = req.params;
+    const { month } = req.query; // Optional filter by specific month
+    
+    let whereClause = 'WHERE lds.employee_id = ?';
+    let params = [employee_id];
+    
+    if (month) {
+      whereClause += ' AND lds.skip_month = ?';
+      params.push(month);
+    }
+    
+    const skipMonths = await query(`
+      SELECT 
+        lds.id,
+        lds.loan_id,
+        lds.skip_month,
+        lds.reason,
+        lds.created_by,
+        lds.created_at,
+        el.total_loan_amount,
+        el.remaining_amount,
+        el.status as loan_status
+      FROM loan_deduction_skips lds
+      LEFT JOIN employee_loans el ON lds.loan_id = el.id
+      ${whereClause}
+      ORDER BY lds.skip_month DESC
+    `, params);
+    
+    res.json({
+      success: true,
+      employee_id,
+      skip_months: skipMonths.map(skip => ({
+        ...skip,
+        total_loan_amount: parseFloat(skip.total_loan_amount || 0).toFixed(2),
+        remaining_amount: parseFloat(skip.remaining_amount || 0).toFixed(2)
+      }))
+    });
+    
+  } catch (err) {
+    console.error('Error fetching employee skip months:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Remove skip month
+exports.removeSkipMonth = async (req, res) => {
+  try {
+    const { skip_id } = req.params;
+    
+    // Get skip month details before deleting
+    const skipDetails = await query(
+      'SELECT employee_id, loan_id, skip_month FROM loan_deduction_skips WHERE id = ?',
+      [skip_id]
+    );
+    
+    if (skipDetails.length === 0) {
+      return res.status(404).json({ error: 'Skip month record not found' });
+    }
+    
+    const { employee_id, loan_id, skip_month } = skipDetails[0];
+    
+    // Delete the skip month record
+    const result = await query(
+      'DELETE FROM loan_deduction_skips WHERE id = ?',
+      [skip_id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Skip month record not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: `Skip month ${skip_month} removed for loan ID ${loan_id}`,
+      employee_id,
+      loan_id: parseInt(loan_id),
+      skip_month
+    });
+    
+  } catch (err) {
+    console.error('Error removing skip month:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update skip month
+exports.updateSkipMonth = async (req, res) => {
+  try {
+    const { skip_id } = req.params;
+    const { loan_id, skip_month, reason } = req.body;
+    
+    // Validate required fields
+    if (!loan_id || !skip_month) {
+      return res.status(400).json({ error: 'Loan ID and skip month are required' });
+    }
+
+    // Validate skip_month format (YYYY-MM)
+    const skipMonthRegex = /^\d{4}-\d{2}$/;
+    if (!skipMonthRegex.test(skip_month)) {
+      return res.status(400).json({ error: 'Skip month must be in YYYY-MM format' });
+    }
+
+    // Validate skip month is not in the past
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    if (skip_month < currentMonth) {
+      return res.status(400).json({ error: 'Cannot set skip month in the past' });
+    }
+    
+    // Get current skip month details
+    const skipDetails = await query(
+      'SELECT employee_id, loan_id as old_loan_id, skip_month as old_skip_month, reason as old_reason FROM loan_deduction_skips WHERE id = ?',
+      [skip_id]
+    );
+    
+    if (skipDetails.length === 0) {
+      return res.status(404).json({ error: 'Skip month record not found' });
+    }
+    
+    const { employee_id, old_loan_id, old_skip_month, old_reason } = skipDetails[0];
+    const updatedBy = req.user?.username || req.user?.name || 'Admin User';
+    
+    // Check if loan exists and belongs to the same employee
+    const loanCheck = await query(
+      'SELECT id FROM employee_loans WHERE id = ? AND employee_id = ? AND status = "active"',
+      [loan_id, employee_id]
+    );
+    
+    if (loanCheck.length === 0) {
+      return res.status(400).json({ error: 'Loan not found or not active for this employee' });
+    }
+    
+    // Check for duplicate skip month (excluding current record)
+    const duplicateCheck = await query(
+      'SELECT id FROM loan_deduction_skips WHERE loan_id = ? AND skip_month = ? AND id != ?',
+      [loan_id, skip_month, skip_id]
+    );
+    
+    if (duplicateCheck.length > 0) {
+      return res.status(400).json({ error: 'A skip month already exists for this loan and month' });
+    }
+    
+    // Update the skip month record with all fields
+    const result = await query(
+      'UPDATE loan_deduction_skips SET loan_id = ?, skip_month = ?, reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [loan_id, skip_month, reason || null, skip_id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Skip month record not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: `Skip month updated successfully`,
+      employee_id,
+      loan_id: parseInt(loan_id),
+      skip_month,
+      reason: reason || '',
+      updated_by: updatedBy,
+      changes: {
+        loan_id: { from: parseInt(old_loan_id), to: parseInt(loan_id) },
+        skip_month: { from: old_skip_month, to: skip_month },
+        reason: { from: old_reason || '', to: reason || '' }
+      }
+    });
+    
+  } catch (err) {
+    console.error('Error updating skip month:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Check if a month should be skipped for loan deduction
+exports.checkSkipMonth = async (employee_id, loan_id, payroll_month) => {
+  try {
+    const skipCheck = await query(`
+      SELECT id FROM loan_deduction_skips
+      WHERE employee_id = ? AND loan_id = ? AND skip_month = ?
+    `, [employee_id, loan_id, payroll_month]);
+    
+    return skipCheck.length > 0;
+  } catch (err) {
+    console.error('Error checking skip month:', err);
+    return false;
   }
 };

@@ -33,6 +33,22 @@ router.get('/employee/:employee_id/transactions-legacy', loanController.getEmplo
 // Delete all loans for specific employee
 router.delete('/employee/:employee_id', loanController.deleteEmployeeLoans);
 
+// -------- SKIP MONTHS MANAGEMENT ROUTES --------
+// Add skip month for loan deduction
+router.post('/skip-month', loanController.addSkipMonth);
+
+// Get skip months for a specific loan
+router.get('/:loan_id/skip-months', loanController.getSkipMonths);
+
+// Get skip months for an employee
+router.get('/employee/:employee_id/skip-months', loanController.getEmployeeSkipMonths);
+
+// Remove skip month
+router.delete('/skip-month/:skip_id', loanController.removeSkipMonth);
+
+// Update skip month
+router.put('/skip-month/:skip_id', loanController.updateSkipMonth);
+
 // -------- LOAN ADJUSTMENT ROUTES (SPECIFIC ACTIONS) --------
 // Deduct amount from existing loan (PUT method - your current test)
 router.put('/deduct/:id', loanController.deductAmountFromLoan);

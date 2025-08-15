@@ -353,12 +353,12 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
             {/* Start Date */}
             <div className="mb-4">
               <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
-                Start Date <span className="text-red-500">*</span>
+                Disbursed Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 id="start_date"
-                {...register('start_date', { required: mode !== 'view' ? 'Start date is required' : false })}
+                {...register('start_date', { required: mode !== 'view' ? 'Disbursed date is required' : false })}
                 disabled={mode === 'view'}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
               />

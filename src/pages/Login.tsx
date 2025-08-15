@@ -49,7 +49,7 @@ export const Login = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white">Payroll System</h1>
-          <p className="text-blue-100 mt-1">Sign in to your account</p>
+          <p className="text-blue-100 mt-1">Sign in to your HR Management System</p>
         </div>
 
         <div className="p-6 sm:p-8">

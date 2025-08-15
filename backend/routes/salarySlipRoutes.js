@@ -32,6 +32,11 @@ router.get('/generate/:employeeId', (req, res) => {
 // GET /api/salary-slips/simplified/generate-all?year=2024&month=7
 router.get('/simplified/generate-all', generateAllSimplifiedSalarySlips);
 
+// Generate simplified salary slips for all employees (POST for large requests)
+// POST /api/salary-slips/simplified/generate-all
+// Body: { year: 2024, month: 7, employeeIds: ["EMP-001", "EMP-002", ...] }
+router.post('/simplified/generate-all', generateAllSimplifiedSalarySlips);
+
 // Legacy endpoints (keep for backward compatibility)
 // GET /api/salary-slips/:employeeId/:month/:year (month comes before year in the URL)
 router.get('/:employeeId/:month/:year', generateSalarySlipData);

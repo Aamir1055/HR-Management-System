@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import MasterDataForm from '../components/Masters/MasterDataForm';
+import SkipMonthManager from '../components/SkipMonthManager';
 
 // Add this new interface for the adjustment modal
 interface AdjustmentModalProps {
@@ -481,6 +482,9 @@ const EmployeeLoanHistory: React.FC = () => {
   // ✅ NEW: States for new loan form
   const [showLoanForm, setShowLoanForm] = useState(false);
   const [loanFormLoading, setLoanFormLoading] = useState(false);
+  
+  // ✅ NEW: States for skip month manager
+  const [showSkipMonthManager, setShowSkipMonthManager] = useState(false);
 
   useEffect(() => {
     fetchEmployeeLoanHistory();
@@ -892,6 +896,15 @@ const EmployeeLoanHistory: React.FC = () => {
                     >
                       <MinusCircle className="w-5 h-5 mr-2" />
                       Deduct Amount
+                    </button>
+                    
+                    {/* Skip Month Manager Button */}
+                    <button
+                      onClick={() => setShowSkipMonthManager(true)}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                    >
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Manage Skip Months
                     </button>
                   </div>
                 </div>
@@ -1447,6 +1460,16 @@ const EmployeeLoanHistory: React.FC = () => {
         loading={loanFormLoading}
         employee={data?.employee || {}}
       />
+      
+      {/* ✅ NEW: Skip Month Manager Modal */}
+      {showSkipMonthManager && (
+        <SkipMonthManager
+          employee_id={data?.employee.employeeId || ''}
+          loans={data?.loans || []}
+          isOpen={showSkipMonthManager}
+          onClose={() => setShowSkipMonthManager(false)}
+        />
+      )}
     </MainLayout>
   );
 };

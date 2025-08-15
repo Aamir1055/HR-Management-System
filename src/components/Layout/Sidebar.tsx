@@ -19,6 +19,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
   { name: 'Employees', href: '/employees', icon: Users },
+  { name: 'Employee Loan', href: '/employee-loans', icon: CreditCard }, // Employee Loan navigation - moved below Employees
   { name: 'Payroll', href: '/payroll', icon: TrendingUp },
   { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
   { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
@@ -27,7 +28,6 @@ const navigation = [
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Role Management', href: '/roles', icon: UserCog }, // Changed icon for better distinction
   { name: 'Master Data', href: '/master-data', icon: Settings }, // New Master Data route
-  { name: 'Employee Loans', href: '/employee-loans', icon: CreditCard }, // Employee Loans navigation
   { name: 'Flush DB', href: '/flush-db', icon: Trash2, adminOnly: true },
 ];
 
