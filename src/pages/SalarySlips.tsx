@@ -984,52 +984,87 @@ export const SalarySlips: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
-            <FileText className="mr-3 h-8 w-8 text-blue-600" />
-            Salary Slip Generation
-          </h1>
-          <p className="text-gray-600">
-            Generate detailed salary slips for employees with attendance, deductions, and advance salary details
-          </p>
+        {/* Compact Header */}
+        <div className="mb-4">
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg p-4 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 mb-1 flex items-center">
+                  <div className="bg-white p-2 rounded-lg shadow-sm mr-3">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                  </div>
+                  Salary Slip Generation
+                </h1>
+                <p className="text-gray-600 text-sm max-w-xl">
+                  Generate salary slips with attendance and deductions
+                </p>
+              </div>
+              <div className="hidden lg:block">
+                <div className="bg-white/60 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                  <div className="flex items-center space-x-3 text-xs">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                      <span className="text-gray-600">Active</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="w-3 h-3 text-blue-500 mr-1" />
+                      <span className="text-gray-600">{employees.length} Employees</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Salary Slip Generation Controls */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Clock className="mr-2 h-5 w-5" />
-            Generate Salary Slips
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
-              <select
-                value={filters.month}
-                onChange={(e) => updateFilter('month', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              >
-                <option value="">Select Month</option>
-                {monthNames.map((name, index) => (
-                  <option key={index + 1} value={index + 1}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+        {/* Compact Salary Slip Generation Controls */}
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-4">
+          <div className="flex items-center mb-3">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-2 rounded-lg shadow-sm">
+              <Clock className="h-4 w-4 text-white" />
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
-              <input
-                type="number"
-                placeholder="2024"
-                value={filters.year}
-                onChange={(e) => updateFilter('year', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                min="2020"
-                max="2030"
-              />
+            <div className="ml-3">
+              <h2 className="text-lg font-semibold text-gray-900">Generate Salary Slips</h2>
+              <p className="text-xs text-gray-600">Select period to generate salary slips</p>
+            </div>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="flex items-center text-xs font-medium text-gray-700 mb-1">
+                  <Calendar className="w-3 h-3 mr-1 text-blue-500" />
+                  Month
+                </label>
+                <select
+                  value={filters.month}
+                  onChange={(e) => updateFilter('month', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                >
+                  <option value="">Select Month</option>
+                  {monthNames.map((name, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="flex items-center text-xs font-medium text-gray-700 mb-1">
+                  <Calendar className="w-3 h-3 mr-1 text-blue-500" />
+                  Year
+                </label>
+                <input
+                  type="number"
+                  placeholder="2024"
+                  value={filters.year}
+                  onChange={(e) => updateFilter('year', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  min="2020"
+                  max="2030"
+                />
+              </div>
             </div>
           </div>
           
@@ -1037,149 +1072,195 @@ export const SalarySlips: React.FC = () => {
             <button 
               onClick={handleGenerateAllSlips} 
               disabled={loading.all || !filters.month || !filters.year}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors text-lg font-medium"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm font-medium transition-colors"
             >
               {loading.all ? (
                 <>
-                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Generating All Slips...
+                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                  <span>Generating...</span>
                 </>
               ) : (
                 <>
-                  <Users className="mr-2 h-5 w-5" />
-                  Generate Salary Slips {simplifiedSalarySlips ? `(${simplifiedSalarySlips.length} generated)` : `(${filteredEmployees.length} employees)`}
+                  <Users className="h-4 w-4 mr-2" />
+                  <span>
+                    Generate Slips {simplifiedSalarySlips ? `(${simplifiedSalarySlips.length})` : `(${filteredEmployees.length})`}
+                  </span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* Employee Search and Filter */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              Employee Filters ({filteredEmployees.length} employees{simplifiedSalarySlips ? `, ${simplifiedSalarySlips.length} with payroll data` : ''})
-            </h2>
+        {/* Compact Employee Search and Filter */}
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg shadow-sm">
+                <Users className="h-4 w-4 text-white" />
+              </div>
+              <div className="ml-3">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Employee Filters
+                </h2>
+                <p className="text-xs text-gray-600">
+                  {filteredEmployees.length} employees{simplifiedSalarySlips ? `, ${simplifiedSalarySlips.length} with data` : ''}
+                </p>
+              </div>
+            </div>
             {(filters.searchTerm || filters.selectedOffice || filters.selectedPosition) && (
               <button
                 onClick={clearFilters}
-                className="flex items-center px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                className="flex items-center px-3 py-1 text-xs font-medium text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                <Filter className="mr-1 h-4 w-4" />
+                <Filter className="mr-1 h-3 w-3" />
                 Clear Filters
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search employees..."
-                value={filters.searchTerm}
-                onChange={(e) => updateFilter('searchTerm', e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
+          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              {/* Compact Search Input */}
+              <div className="relative">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Name, ID, email..."
+                    value={filters.searchTerm}
+                    onChange={(e) => updateFilter('searchTerm', e.target.value)}
+                    className="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                  />
+                </div>
+              </div>
 
-            {/* Office Filter */}
-            <div>
-              <select
-                value={filters.selectedOffice}
-                onChange={(e) => updateFilter('selectedOffice', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              >
-                <option value="">All Offices</option>
-                {offices.map((office, index) => {
-                  const displayName = typeof office === 'object' 
-                    ? (office.office_name || office.name || office.location || `Office ${index + 1}`)
-                    : String(office);
-                  const optionValue = typeof office === 'object' 
-                    ? (office.office_name || office.name || office.location || displayName)
-                    : String(office);
-                  // Create a unique key using multiple fallbacks
-                  const uniqueKey = `office-${office.office_id || office.id || `${displayName}-${index}`}`;
-                  return (
-                    <option key={uniqueKey} value={optionValue}>
-                      {displayName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+              {/* Compact Office Filter */}
+              <div>
+                <label className="flex items-center text-xs font-medium text-gray-700 mb-1">
+                  <Building className="w-3 h-3 mr-1 text-gray-500" />
+                  Office
+                </label>
+                <select
+                  value={filters.selectedOffice}
+                  onChange={(e) => updateFilter('selectedOffice', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                >
+                  <option value="">All Offices</option>
+                  {offices.map((office, index) => {
+                    const displayName = typeof office === 'object' 
+                      ? (office.office_name || office.name || office.location || `Office ${index + 1}`)
+                      : String(office);
+                    const optionValue = typeof office === 'object' 
+                      ? (office.office_name || office.name || office.location || displayName)
+                      : String(office);
+                    const uniqueKey = `office-${office.office_id || office.id || `${displayName}-${index}`}`;
+                    return (
+                      <option key={uniqueKey} value={optionValue}>
+                        {displayName}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-            {/* Position Filter */}
-            <div>
-              <select
-                value={filters.selectedPosition}
-                onChange={(e) => updateFilter('selectedPosition', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                disabled={!filters.selectedOffice && filteredPositions.length !== positions.length}
-              >
-                <option value="">All Positions</option>
-                {filteredPositions.map((position, index) => {
-                  const displayName = typeof position === 'object' 
-                    ? (position.position_name || position.position_title || position.title || position.name || `Position ${index + 1}`)
-                    : String(position);
-                  const optionValue = typeof position === 'object' 
-                    ? (position.position_name || position.position_title || position.title || position.name || displayName)
-                    : String(position);
-                  // Fix: Ensure unique key by combining id, name/title, and index as fallback
-                  const idPart = (typeof position === 'object' && (position.position_id || position.id)) ? String(position.position_id || position.id) : '';
-                  const namePart = displayName.replace(/\s+/g, '-');
-                  const uniqueKey = `salaryslips-position-${idPart}-${namePart}-${index}`;
-                  return (
-                    <option key={uniqueKey} value={optionValue}>
-                      {displayName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+              {/* Compact Position Filter */}
+              <div>
+                <label className="flex items-center text-xs font-medium text-gray-700 mb-1">
+                  <User className="w-3 h-3 mr-1 text-gray-500" />
+                  Position
+                </label>
+                <select
+                  value={filters.selectedPosition}
+                  onChange={(e) => updateFilter('selectedPosition', e.target.value)}
+                  className={`w-full border border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white ${
+                    !filters.selectedOffice && filteredPositions.length !== positions.length
+                      ? 'text-gray-400 cursor-not-allowed bg-gray-100'
+                      : ''
+                  }`}
+                  disabled={!filters.selectedOffice && filteredPositions.length !== positions.length}
+                >
+                  <option value="">All Positions</option>
+                  {filteredPositions.map((position, index) => {
+                    const displayName = typeof position === 'object' 
+                      ? (position.position_name || position.position_title || position.title || position.name || `Position ${index + 1}`)
+                      : String(position);
+                    const optionValue = typeof position === 'object' 
+                      ? (position.position_name || position.position_title || position.title || position.name || displayName)
+                      : String(position);
+                    const idPart = (typeof position === 'object' && (position.position_id || position.id)) ? String(position.position_id || position.id) : '';
+                    const namePart = displayName.replace(/\s+/g, '-');
+                    const uniqueKey = `salaryslips-position-${idPart}-${namePart}-${index}`;
+                    return (
+                      <option key={uniqueKey} value={optionValue}>
+                        {displayName}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-            {/* Records per page */}
-            <div>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              >
-                <option value={10}>10 per page</option>
-                <option value={25}>25 per page</option>
-                <option value={50}>50 per page</option>
-                <option value={100}>100 per page</option>
-              </select>
+              {/* Compact Records per page */}
+              <div>
+                <label className="flex items-center text-xs font-medium text-gray-700 mb-1">
+                  <FileText className="w-3 h-3 mr-1 text-gray-500" />
+                  Per page
+                </label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Results Summary and Pagination */}
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span className="flex items-center">
-              <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
-              Showing {paginationData.paginatedEmployees.length} of {filteredEmployees.length} employees
-            </span>
-            {paginationData.totalPages > 1 && (
+          {/* Compact Results Summary and Pagination */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                >
-                  Previous
-                </button>
-                <span>Page {currentPage} of {paginationData.totalPages}</span>
-                <button
-                  onClick={() => setCurrentPage(Math.min(paginationData.totalPages, currentPage + 1))}
-                  disabled={currentPage === paginationData.totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                >
-                  Next
-                </button>
+                <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs">
+                  <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                  <span className="font-medium text-green-800">
+                    {paginationData.paginatedEmployees.length} of {filteredEmployees.length} employees
+                  </span>
+                </div>
+                {simplifiedSalarySlips && (
+                  <div className="flex items-center bg-blue-100 px-2 py-1 rounded text-xs">
+                    <FileText className="h-3 w-3 mr-1 text-blue-600" />
+                    <span className="font-medium text-blue-800">
+                      {simplifiedSalarySlips.length} slips
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+              {paginationData.totalPages > 1 && (
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-2 py-1 bg-white border border-gray-300 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium text-gray-700">
+                    {currentPage} / {paginationData.totalPages}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(paginationData.totalPages, currentPage + 1))}
+                    disabled={currentPage === paginationData.totalPages}
+                    className="px-2 py-1 bg-white border border-gray-300 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

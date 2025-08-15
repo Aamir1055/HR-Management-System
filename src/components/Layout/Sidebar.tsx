@@ -99,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 bg-blue-600 text-white">
-            <h1 className="text-xl font-bold">Payroll System</h1>
+            <h1 className="text-xl font-bold">HR  Management      System</h1>
           </div>
           
           {/* Navigation */}

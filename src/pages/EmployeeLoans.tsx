@@ -18,7 +18,10 @@ import {
   History,
   X,
   Calendar,
-  Trash2
+  Trash2,
+  Edit,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -54,6 +57,14 @@ interface AddLoanModalProps {
   loading: boolean;
 }
 
+interface EditLoanModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (loanData: any) => void;
+  loading: boolean;
+  loanData: any;
+}
+
 interface LoanFormData {
   employee_id: string;
   total_amount: string;
@@ -61,6 +72,305 @@ interface LoanFormData {
   start_date: string;
   description: string;
 }
+
+// Custom Date Picker Component
+interface DatePickerProps {
+  value: string; // YYYY-MM-DD format
+  onChange: (date: string) => void;
+  placeholder?: string;
+  error?: boolean;
+  disabled?: boolean;
+}
+
+const DatePicker: React.FC<DatePickerProps> = ({
+  value,
+  onChange,
+  placeholder = "Select date",
+  error = false,
+  disabled = false
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const inputRef = React.useRef<HTMLDivElement>(null);
+  
+  const [viewDate, setViewDate] = useState(() => {
+    if (value) {
+      // Parse the YYYY-MM-DD value directly without timezone issues
+      const [year, month] = value.split('-').map(Number);
+      return new Date(year, month - 1, 1); // month is 0-indexed in Date constructor
+    }
+    return new Date();
+  });
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (value) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day); // Create local date
+    }
+    return null;
+  });
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return placeholder;
+    try {
+      const [year, month, day] = dateStr.split('-');
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return `${day} ${months[parseInt(month) - 1]} ${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Function to determine dropdown position based on available space
+  const determineDropdownPosition = () => {
+    if (!inputRef.current) return 'bottom';
+    
+    const rect = inputRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // Calendar dropdown height is approximately 400px
+    const dropdownHeight = 400;
+    
+    // If there's not enough space below but enough space above, position above
+    if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+      return 'top';
+    }
+    
+    return 'bottom';
+  };
+
+  const handleDateSelect = (date: Date) => {
+    // Use the date components directly to avoid timezone issues
+    // Create a new date in local timezone to ensure no conversion happens
+    const localYear = date.getFullYear();
+    const localMonth = date.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+    const localDay = date.getDate();
+    
+    // Format the date string ensuring we use the exact local values
+    const year = localYear.toString();
+    const month = localMonth.toString().padStart(2, '0');
+    const day = localDay.toString().padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
+    console.log('🗓️ DatePicker - Selected date (fixed):', {
+      originalDate: date,
+      localYear,
+      localMonth,
+      localDay,
+      dateString,
+      note: 'Using local date components to avoid timezone conversion'
+    });
+    
+    // Create a new date object using the exact same components to store in state
+    const exactDate = new Date(localYear, localMonth - 1, localDay);
+    setSelectedDate(exactDate);
+    onChange(dateString);
+    setIsOpen(false);
+  };
+  
+  const handleToggleDropdown = () => {
+    if (!disabled) {
+      const position = determineDropdownPosition();
+      setDropdownPosition(position);
+      setIsOpen(!isOpen);
+    }
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(viewDate);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setViewDate(newDate);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month - Create dates in local timezone
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+
+  const isDateSelected = (date: Date | null) => {
+    if (!date || !selectedDate) return false;
+    return (
+      date.getDate() === selectedDate.getDate() &&
+      date.getMonth() === selectedDate.getMonth() &&
+      date.getFullYear() === selectedDate.getFullYear()
+    );
+  };
+
+  const isToday = (date: Date | null) => {
+    if (!date) return false;
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  // Update selectedDate when value prop changes
+  React.useEffect(() => {
+    if (value) {
+      const [year, month, day] = value.split('-').map(Number);
+      const newSelectedDate = new Date(year, month - 1, day);
+      setSelectedDate(newSelectedDate);
+      // Update view date to show the correct month
+      setViewDate(new Date(year, month - 1, 1));
+    } else {
+      setSelectedDate(null);
+    }
+  }, [value]);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <div className="relative" ref={inputRef}>
+      {/* Date Input */}
+      <div className="relative">
+        <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={formatDisplayDate(value)}
+          onClick={handleToggleDropdown}
+          readOnly
+          disabled={disabled}
+          className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${
+            error ? 'border-red-300 bg-red-50' : 'border-gray-300'
+          } ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'bg-white hover:bg-gray-50'}`}
+          placeholder={placeholder}
+        />
+      </div>
+
+      {/* Calendar Dropdown */}
+      {isOpen && (
+        <div className={`absolute left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-80 ${
+          dropdownPosition === 'top' 
+            ? 'bottom-full mb-1' 
+            : 'top-full mt-1'
+        }`}>
+          {/* Calendar Header */}
+          <div className="flex items-center justify-between p-3 border-b border-gray-200">
+            <button
+              type="button"
+              onClick={() => navigateMonth('prev')}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            
+            <div className="font-medium text-gray-900">
+              {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => navigateMonth('next')}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Calendar Body */}
+          <div className="p-3">
+            {/* Week Days Header */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {weekDays.map(day => (
+                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1">
+              {getDaysInMonth(viewDate).map((date, index) => (
+                <div key={index} className="aspect-square">
+                  {date ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDateSelect(date)}
+                      className={`w-full h-full flex items-center justify-center text-sm rounded transition-colors ${
+                        isDateSelected(date)
+                          ? 'bg-blue-600 text-white'
+                          : isToday(date)
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {date.getDate()}
+                    </button>
+                  ) : (
+                    <div></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center justify-between p-3 border-t border-gray-200 text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                const today = new Date();
+                handleDateSelect(today);
+              }}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Click outside to close */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
 
 // Add Employee Loan Modal Component
 const AddLoanModal: React.FC<AddLoanModalProps> = ({
@@ -243,23 +553,17 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
             </p>
           </div>
 
-          {/* Start Date */}
+          {/* Start Date - Custom Calendar Picker */}
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
               Disbursed Date <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                id="start_date"
-                value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.start_date ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-            </div>
+            <DatePicker
+              value={formData.start_date}
+              onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
+              placeholder="Select disbursed date"
+              error={!!errors.start_date}
+            />
             {errors.start_date && (
               <p className="mt-1 text-sm text-red-600 flex items-center">
                 <AlertCircle className="w-4 h-4 mr-1" />
@@ -310,6 +614,296 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
   );
 };
 
+// Edit Employee Loan Modal Component
+const EditLoanModal: React.FC<EditLoanModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  loading,
+  loanData
+}) => {
+  const [formData, setFormData] = useState<LoanFormData>({
+    employee_id: '',
+    total_amount: '',
+    monthly_deduction: '',
+    start_date: '',
+    description: ''
+  });
+
+  // Create a separate state to handle date display and manipulation
+  const [dateComponents, setDateComponents] = useState({
+    year: '',
+    month: '',
+    day: ''
+  });
+
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    if (isOpen && loanData) {
+      console.log('🔍 EditModal - Received loanData:', loanData);
+      console.log('🔍 EditModal - Raw start_date:', loanData.start_date, 'Type:', typeof loanData.start_date);
+      
+      // Extract date from the raw date string and add +1 day to compensate for timezone offset
+      const extractLocalDate = (dateStr: string): string => {
+        if (!dateStr || dateStr === 'null' || dateStr === 'undefined' || dateStr === '') {
+          return '';
+        }
+
+        // Convert to string and clean
+        const cleaned = String(dateStr).trim();
+        
+        let dateToProcess = '';
+        
+        // If it's an ISO date string with 'T' (e.g., "2025-07-31T18:30:00.000Z")
+        // We want to extract just the date part and treat it as local
+        if (cleaned.includes('T') && cleaned.length > 10) {
+          dateToProcess = cleaned.substring(0, 10); // Gets "2025-07-31"
+        }
+        // Already in YYYY-MM-DD format
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+          dateToProcess = cleaned;
+        }
+        else {
+          // Fallback
+          return '';
+        }
+        
+        // Add +1 day to compensate for timezone offset issue
+        try {
+          const [year, month, day] = dateToProcess.split('-').map(Number);
+          const date = new Date(year, month - 1, day); // Create local date
+          date.setDate(date.getDate() + 1); // Add 1 day
+          
+          const adjustedYear = date.getFullYear();
+          const adjustedMonth = (date.getMonth() + 1).toString().padStart(2, '0');
+          const adjustedDay = date.getDate().toString().padStart(2, '0');
+          
+          const result = `${adjustedYear}-${adjustedMonth}-${adjustedDay}`;
+          console.log('📅 Date compensation applied:', {
+            original: dateToProcess,
+            compensated: result,
+            note: 'Added +1 day to fix timezone offset'
+          });
+          
+          return result;
+        } catch (error) {
+          console.error('❌ Error processing date:', error);
+          return dateToProcess; // Return original if processing fails
+        }
+      };
+      
+      const formattedDate = extractLocalDate(loanData.start_date);
+      console.log('✅ Formatted date for picker:', formattedDate);
+      
+      setFormData({
+        employee_id: loanData.employee_id || '',
+        total_amount: loanData.total_amount || '',
+        monthly_deduction: loanData.monthly_deduction || '',
+        start_date: formattedDate,
+        description: loanData.description || ''
+      });
+      setErrors({});
+    }
+  }, [isOpen, loanData]);
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.employee_id.trim()) {
+      newErrors.employee_id = 'Employee ID is required';
+    }
+
+    const amount = parseFloat(formData.total_amount);
+    if (!formData.total_amount || isNaN(amount) || amount <= 0) {
+      newErrors.total_amount = 'Valid loan amount is required';
+    }
+
+    if (!formData.start_date) {
+      newErrors.start_date = 'Disbursed date is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      const updatedLoanData = {
+        ...formData,
+        total_amount: parseFloat(formData.total_amount)
+      };
+      onSubmit(updatedLoanData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({
+      employee_id: '',
+      total_amount: '',
+      monthly_deduction: '',
+      start_date: '',
+      description: ''
+    });
+    setErrors({});
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-lg">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Edit className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Edit Employee Loan</h2>
+              <p className="text-sm text-gray-600">Update employee loan record</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleClose} 
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Employee ID - Read Only */}
+          <div>
+            <label htmlFor="employee_id" className="block text-sm font-medium text-gray-700 mb-2">
+              Employee ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="employee_id"
+              value={formData.employee_id}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+              placeholder="Employee ID"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Employee ID cannot be changed when editing a loan.
+            </p>
+          </div>
+
+          {/* Loan Amount */}
+          <div>
+            <label htmlFor="total_amount" className="block text-sm font-medium text-gray-700 mb-2">
+              Loan Amount <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500 text-sm">AED</span>
+              <input
+                type="number"
+                id="total_amount"
+                step="0.01"
+                min="0.01"
+                value={formData.total_amount}
+                onChange={(e) => setFormData(prev => ({ ...prev, total_amount: e.target.value }))}
+                className={`w-full pl-12 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.total_amount ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder="0.00"
+              />
+            </div>
+            {errors.total_amount && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.total_amount}
+              </p>
+            )}
+          </div>
+
+          {/* Monthly Deduction */}
+          <div>
+            <label htmlFor="monthly_deduction" className="block text-sm font-medium text-gray-700 mb-2">
+              Monthly Deduction Amount <span className="text-sm text-gray-500">(Optional)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500 text-sm">AED</span>
+              <input
+                type="number"
+                id="monthly_deduction"
+                step="0.01"
+                min="0"
+                value={formData.monthly_deduction}
+                onChange={(e) => setFormData(prev => ({ ...prev, monthly_deduction: e.target.value }))}
+                className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00 (Leave empty for no fixed monthly deduction)"
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Set a fixed monthly deduction amount for payroll processing. Leave empty to allow flexible deductions.
+            </p>
+          </div>
+
+          {/* Start Date - Custom Calendar Picker */}
+          <div>
+            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
+              Disbursed Date <span className="text-red-500">*</span>
+            </label>
+            <DatePicker
+              value={formData.start_date}
+              onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
+              placeholder="Select disbursed date"
+              error={!!errors.start_date}
+            />
+            {errors.start_date && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.start_date}
+              </p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Optional loan description..."
+            />
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {loading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              )}
+              {loading ? 'Updating...' : 'Update Employee Loan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const EmployeeLoans: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<LoanOverview | null>(null);
@@ -321,6 +915,11 @@ const EmployeeLoans: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  
+  // Edit Loan Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editingLoan, setEditingLoan] = useState<any>(null);
 
   useEffect(() => {
     fetchLoanOverview();
@@ -346,6 +945,84 @@ const EmployeeLoans: React.FC = () => {
       toast.error(`Failed to load loans overview: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle edit loan submission
+  const handleEditLoan = async (loanData: any) => {
+    setEditLoading(true);
+    try {
+      console.log('🔄 Updating employee loan:', loanData);
+      
+      // Format the data properly for the backend
+      const formattedData = {
+        ...loanData,
+        monthly_deduction: loanData.monthly_deduction || null,
+        start_date: loanData.start_date // Keep the date as is since it's already in YYYY-MM-DD format
+      };
+      
+      const response = await fetch(`/api/loans/${editingLoan.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(formattedData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update employee loan');
+      }
+
+      const result = await response.json();
+      console.log('✅ Employee loan updated successfully:', result);
+      
+      // Close modal and refresh data
+      setShowEditModal(false);
+      setEditingLoan(null);
+      await fetchLoanOverview();
+      
+      toast.success('🎉 Employee loan updated successfully!');
+      
+    } catch (error: any) {
+      console.error('❌ Error updating employee loan:', error);
+      toast.error(`Failed to update employee loan: ${error.message}`);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Handle opening edit modal
+  const handleOpenEditModal = async (employeeId: string) => {
+    try {
+      console.log('🔄 Fetching loan data for editing:', employeeId);
+      
+      // For simplicity, we'll get the first active loan for this employee
+      // In a more complex scenario, you might want to show a list of loans to choose from
+      const response = await fetch(`/api/loans?employee_id=${employeeId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch employee loans');
+      }
+      
+      const loans = await response.json();
+      
+      if (loans.length === 0) {
+        toast.error('No loans found for this employee');
+        return;
+      }
+      
+      // Get the most recent loan (or you could implement a selector)
+      const loanToEdit = loans[0];
+      console.log('📝 Editing loan:', loanToEdit);
+      
+      setEditingLoan(loanToEdit);
+      setShowEditModal(true);
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching loan for editing:', error);
+      toast.error(`Failed to load loan data: ${error.message}`);
     }
   };
 
@@ -726,13 +1403,16 @@ const EmployeeLoans: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Loans</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outstanding</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Activity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delete</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees.map((employee) => (
-                    <tr key={employee.employee_id} className="hover:bg-gray-50">
+                    <tr 
+                      key={employee.employee_id} 
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/employee-loan-history/${employee.employee_id}`)}
+                    >
                       {/* Employee Info */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -792,30 +1472,38 @@ const EmployeeLoans: React.FC = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => navigate(`/employee-loan-history/${employee.employee_id}`)}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          View Details
-                        </button>
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end space-x-3">
+                          {/* Edit Icon */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click when clicking edit
+                              handleOpenEditModal(employee.employee_id);
+                            }}
+                            disabled={employee.total_loans === 0}
+                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-full transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={employee.total_loans === 0 ? "No loans to edit" : "Edit loan"}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
 
-                      {/* Delete */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleDeleteEmployeeLoan(employee.employee_id)}
-                          disabled={deleteLoading === employee.employee_id}
-                          className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {deleteLoading === employee.employee_id ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                          ) : (
-                            <Trash2 className="w-3 h-3 mr-1" />
-                          )}
-                          {deleteLoading === employee.employee_id ? 'Deleting...' : 'Delete'}
-                        </button>
+                          {/* Delete Icon */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click when clicking delete
+                              handleDeleteEmployeeLoan(employee.employee_id);
+                            }}
+                            disabled={deleteLoading === employee.employee_id}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete all loans for this employee"
+                          >
+                            {deleteLoading === employee.employee_id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -831,6 +1519,18 @@ const EmployeeLoans: React.FC = () => {
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddLoan}
           loading={addLoading}
+        />
+
+        {/* Edit Employee Loan Modal */}
+        <EditLoanModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingLoan(null);
+          }}
+          onSubmit={handleEditLoan}
+          loading={editLoading}
+          loanData={editingLoan}
         />
       </div>
     </MainLayout>

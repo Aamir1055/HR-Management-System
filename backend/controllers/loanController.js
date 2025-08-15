@@ -740,6 +740,7 @@ exports.updateLoan = async (req, res) => {
       total_amount, 
       description, 
       start_date,
+      monthly_deduction,
       status,
       amount_added,
       amount_deducted
@@ -824,6 +825,19 @@ exports.updateLoan = async (req, res) => {
       params.push(start_date);
     }
     
+    // Handle monthly_deduction field
+    if (monthly_deduction !== undefined) {
+      let monthlyDeductionFloat = null;
+      if (monthly_deduction !== null && monthly_deduction !== '' && monthly_deduction !== '0') {
+        monthlyDeductionFloat = parseFloat(monthly_deduction);
+        if (isNaN(monthlyDeductionFloat) || monthlyDeductionFloat < 0) {
+          return res.status(400).json({ error: 'Monthly deduction must be a non-negative number' });
+        }
+      }
+      updateFields.push('monthly_deduction = ?');
+      params.push(monthlyDeductionFloat);
+    }
+    
     if (status !== undefined) {
       if (!['active', 'completed', 'suspended'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status. Must be active, completed, or suspended' });
@@ -856,8 +870,9 @@ exports.updateLoan = async (req, res) => {
         ROUND(amount_added, 2) as amount_added,
         ROUND(amount_deducted, 2) as amount_deducted,
         ROUND(total_loan_amount, 2) as total_loan_amount,
+        ROUND(monthly_deduction, 2) as monthly_deduction,
         description,
-        start_date,
+        DATE_FORMAT(start_date, '%Y-%m-%d') as start_date,
         end_date,
         status,
         ROUND(remaining_amount, 2) as remaining_amount,
