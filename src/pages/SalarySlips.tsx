@@ -1519,12 +1519,13 @@ export const SalarySlips: React.FC = () => {
         {/* Salary Slips Data Table */}
         {simplifiedSalarySlips && (
           <SalarySlipDataTable
-            data={simplifiedSalarySlips}
+            data={salarySlipsPaginationData.paginatedSlips}
             loading={loading.all}
             exportLoading={loading.export}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
             totalPages={salarySlipsPaginationData.totalPages}
+            totalRecords={simplifiedSalarySlips.length}
             onExportPDF={exportSingleSlipToPDF}
             onPageChange={setCurrentPage}
             filters={filters}

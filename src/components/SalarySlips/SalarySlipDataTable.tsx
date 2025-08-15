@@ -24,6 +24,7 @@ interface SalarySlipDataTableProps {
   currentPage: number;
   itemsPerPage: number;
   totalPages: number;
+  totalRecords: number;
   onExportPDF: (slip: SimplifiedSalarySlip) => void;
   onPageChange: (page: number) => void;
   filters: {
@@ -51,6 +52,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
   currentPage,
   itemsPerPage,
   totalPages,
+  totalRecords,
   onExportPDF,
   onPageChange,
   filters,
@@ -117,7 +119,9 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
 
   // Calculate pagination info
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, sortedData.length);
+  const endIndex = Math.min(currentPage * itemsPerPage, totalRecords);
+  const displayedStart = totalRecords === 0 ? 0 : startIndex;
+  const displayedEnd = totalRecords === 0 ? 0 : Math.min(startIndex + sortedData.length - 1, endIndex);
 
   if (loading) {
     return (
@@ -181,7 +185,7 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
               </h3>
               <div className="flex items-center space-x-2 text-xs text-gray-600">
                 <span>
-                  {startIndex}-{endIndex} of {sortedData.length} slips
+                  {displayedStart}-{displayedEnd} of {totalRecords} slips
                 </span>
                 {totalEmployees !== sortedData.length && (
                   <span className="bg-blue-100 px-1 py-0.5 rounded text-blue-700">
@@ -383,9 +387,9 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{startIndex}</span> to{' '}
-              <span className="font-medium">{endIndex}</span> of{' '}
-              <span className="font-medium">{sortedData.length}</span> results
+              Showing <span className="font-medium">{displayedStart}</span> to{' '}
+              <span className="font-medium">{displayedEnd}</span> of{' '}
+              <span className="font-medium">{totalRecords}</span> results
               {sortConfig.field && (
                 <span className="ml-2 text-blue-600">
                   (sorted by {sortConfig.field} {sortConfig.direction === 'asc' ? '↑' : '↓'})
