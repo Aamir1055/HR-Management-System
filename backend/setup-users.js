@@ -1,3 +1,5 @@
+// User setup script for initializing test user accounts with role-based office access
+// Creates admin, HR, and floor manager users with appropriate office permissions for development/testing
 const bcrypt = require('bcrypt');
 const { query } = require('./utils/dbPromise');
 

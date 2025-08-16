@@ -1,3 +1,5 @@
+// Main React application component for PayRoll Management System frontend
+// Handles routing, authentication, role-based access control, and navigation between different modules
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, LoginCredentials } from './context/AuthContext';

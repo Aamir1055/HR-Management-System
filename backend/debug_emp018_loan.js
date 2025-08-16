@@ -1,3 +1,5 @@
+// Specialized debugging script for analyzing loan deduction issues with EMP-018
+// Comprehensive loan validation including date checks, payment history, and salary slip integration testing
 const axios = require('axios');
 
 async function debugEMP018Loan() {

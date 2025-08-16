@@ -1,3 +1,5 @@
+// Comprehensive test suite for advance salary module API endpoints
+// Validates CRUD operations, authentication, filtering, and Excel upload functionality
 const axios = require('axios');
 
 async function testAdvanceSalaryModule() {

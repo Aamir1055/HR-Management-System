@@ -1,3 +1,5 @@
+// Loan deduction debugging tool for comprehensive payroll integration testing
+// Analyzes loan status, date ranges, and salary slip generation with detailed logging for EMP-143
 const axios = require('axios');
 
 async function debugLoanDeductions() {

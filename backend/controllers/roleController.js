@@ -1,3 +1,7 @@
+/**
+ * Role Controller - Manages user accounts, roles, and permissions
+ * Handles user CRUD operations, role assignments, and office access control
+ */
 const bcrypt = require('bcrypt');
 
 // =================== USERNAME VALIDATION ===================

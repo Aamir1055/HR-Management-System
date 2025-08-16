@@ -1,3 +1,5 @@
+// Payroll data diagnostic script to analyze employee attendance and calculation accuracy
+// Inspects payroll table structure and validates attendance calculations for specific employees
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 

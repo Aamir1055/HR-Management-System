@@ -1,3 +1,5 @@
+// TypeScript interface definitions for PayRoll Management System data models
+// Comprehensive type definitions for employees, payroll, attendance, and other system entities
 export interface Employee {
   id: number; // Remove undefined if it's always required
   employeeId: string;

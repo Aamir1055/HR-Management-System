@@ -1,3 +1,7 @@
+/**
+ * Advanced Salary Controller - Manages advance salary requests and Excel file uploads
+ * Handles uploading, validating, and processing advance salary data for employees
+ */
 const db = require('../db');
 const XLSX = require('xlsx');
 

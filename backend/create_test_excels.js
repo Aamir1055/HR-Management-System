@@ -1,4 +1,6 @@
 
+// Test utility to generate sample attendance Excel files for different office combinations
+// Creates realistic test data for attendance upload functionality validation
 const XLSX = require('xlsx');
 const db = require('./db');
 

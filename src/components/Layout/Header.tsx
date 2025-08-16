@@ -1,3 +1,5 @@
+// Header component for page titles and mobile navigation menu trigger
+// Displays page title, optional subtitle, and hamburger menu for mobile responsive design
 import React from 'react';
 import { Menu } from 'lucide-react';
 

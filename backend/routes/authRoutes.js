@@ -1,3 +1,7 @@
+/**
+ * Authentication Routes - Defines API endpoints for user authentication and 2FA
+ * Handles login, registration, profile management, and two-factor authentication
+ */
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');

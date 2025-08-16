@@ -1,4 +1,5 @@
-// Import the database module
+// Payroll data verification script for specific employee records using ES6 modules
+// Displays detailed payroll history including attendance, deductions, and salary calculations
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 

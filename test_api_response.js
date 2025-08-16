@@ -1,3 +1,5 @@
+// API endpoint testing script for salary slip generation with comparative analysis
+// Tests both generate and legacy endpoints to verify loan deduction calculations and response consistency
 // Use built-in fetch for Node.js 18+
 
 async function testSalarySlipAPI() {

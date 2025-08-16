@@ -1,3 +1,7 @@
+/**
+ * Advance Salary Routes - Defines API endpoints for advance salary management
+ * Handles advance salary uploads, tracking, and employee advance salary history
+ */
 const express = require('express');
 const router = express.Router();
 const advanceSalaryController = require('../controllers/advanceSalaryController');

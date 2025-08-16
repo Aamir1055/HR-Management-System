@@ -1,3 +1,5 @@
+// Half-day attendance data update utility for payroll adjustment debugging
+// Modifies half_days column in payroll table and displays before/after calculations for validation
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 

@@ -1,4 +1,7 @@
-// controllers/flushController.js
+/**
+ * Flush Controller - Manages database data clearing and maintenance operations
+ * Handles clearing data from individual tables or entire database for testing/cleanup
+ */
 const db = require('../db'); // Import your DB connection
 
 exports.getTables = async (req, res) => {

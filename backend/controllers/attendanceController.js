@@ -1,3 +1,7 @@
+/**
+ * Attendance Controller - Manages employee attendance data and Excel file uploads
+ * Handles attendance records, punch in/out times, and working day validations
+ */
 const db = require('../db');
 const XLSX = require('xlsx');
 const axios = require('axios');

@@ -1,3 +1,5 @@
+// Main dashboard page displaying comprehensive payroll system overview and key metrics
+// Shows employee count, total monthly payroll, office summaries with interactive charts and data visualization
 import React, { useEffect, useState } from 'react';
 import { MainLayout } from '../components/Layout/MainLayout';
 import { MetricCard } from '../components/Dashboard/MetricCard';

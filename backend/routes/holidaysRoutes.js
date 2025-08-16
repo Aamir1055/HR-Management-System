@@ -1,3 +1,7 @@
+/**
+ * Holidays Routes - Defines API endpoints for holiday management and working days
+ * Handles holiday calendar operations and working day calculations for payroll
+ */
 const express = require('express');
 const router = express.Router();
 const holidaysController = require('../controllers/holidaysController');

@@ -1,3 +1,7 @@
+/**
+ * Comments Routes - Defines API endpoints for employee comment management
+ * Handles CRUD operations for employee-specific comments and feedback
+ */
 const express = require('express');
 const router = express.Router();
 const commentsController = require('../controllers/commentsController');

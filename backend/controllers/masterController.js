@@ -1,3 +1,7 @@
+/**
+ * Master Controller - Manages office and position master data operations
+ * Handles CRUD operations for offices, positions, and organizational structure
+ */
 const { query } = require('../utils/dbPromise');
 
 // ================ OFFICE CONTROLLERS ================

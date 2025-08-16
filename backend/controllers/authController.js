@@ -1,3 +1,7 @@
+/**
+ * Authentication Controller - Manages user login, registration, and two-factor authentication
+ * Handles JWT token generation, 2FA setup/verification, and secure user authentication
+ */
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');

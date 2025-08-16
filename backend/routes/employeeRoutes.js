@@ -1,3 +1,7 @@
+/**
+ * Employee Routes - Defines API endpoints for employee management and data operations
+ * Handles CRUD operations, Excel imports/exports, and employee-related data retrieval
+ */
 const express = require('express');
 const router = express.Router();
 const employeeController = require('../controllers/employeeController');

@@ -1,3 +1,7 @@
+/**
+ * Attendance Routes - Defines API endpoints for employee attendance management
+ * Handles attendance data uploads, CRUD operations, and attendance tracking
+ */
 const express = require('express');
 const router = express.Router();
 const attendanceController = require('../controllers/attendanceController');

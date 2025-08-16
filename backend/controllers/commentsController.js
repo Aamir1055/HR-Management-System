@@ -1,3 +1,7 @@
+/**
+ * Comments Controller - Manages employee comments and feedback system
+ * Handles CRUD operations for employee-specific comments and notes
+ */
 module.exports = {
   // Get all comments for a specific employee
   getCommentsByEmployeeId: async (req, res) => {

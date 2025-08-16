@@ -1,4 +1,5 @@
-// src/api/axios.ts
+// Configured Axios instance for PayRoll Management System API communication
+// Handles authentication tokens, request/response interceptors, and automatic login redirection
 import axios from 'axios';
 
 const axiosInstance = axios.create({

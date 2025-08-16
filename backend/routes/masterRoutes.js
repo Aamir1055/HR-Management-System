@@ -1,3 +1,7 @@
+/**
+ * Master Routes - Defines API endpoints for master data management
+ * Handles offices, positions, platforms, visa types, and organizational structure
+ */
 const express = require('express');
 const router = express.Router();
 const masterController = require('../controllers/masterController');

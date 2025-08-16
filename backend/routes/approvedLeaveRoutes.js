@@ -1,4 +1,7 @@
-// Routes for approved leave functionality
+/**
+ * Approved Leave Routes - Defines API endpoints for approved leave management
+ * Handles adding, removing, and tracking approved employee leaves for payroll
+ */
 const express = require('express');
 const router = express.Router();
 const { verifyToken, addUserOffices } = require('../middleware/auth');

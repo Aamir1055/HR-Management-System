@@ -1,3 +1,5 @@
+// Database migration to add platform column to employees table for tracking employee work platforms
+// Adds indexed platform field to categorize employees by their assigned work platforms or departments
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 

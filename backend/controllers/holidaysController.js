@@ -1,3 +1,7 @@
+/**
+ * Holidays Controller - Manages holiday calendar and working days calculation
+ * Handles CRUD operations for holidays and computes working days for payroll
+ */
 const { query } = require('../utils/dbPromise');
 
 // Helper function to format date as local YYYY-MM-DD string (avoid timezone issues)

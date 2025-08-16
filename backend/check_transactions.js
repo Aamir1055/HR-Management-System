@@ -1,3 +1,5 @@
+// Database inspection utility to analyze loan_transactions table structure and recent transaction records
+// Verifies table existence, displays schema, and shows recent loan transaction history for debugging
 const mysql = require('mysql2/promise');
 
 async function checkTransactions() {

@@ -1,3 +1,5 @@
+// Database diagnostic script to verify employee and payroll data integrity
+// Performs quick checks on database tables to ensure data consistency and relationships
 const mysql = require('mysql2/promise');
 
 async function checkData() {

@@ -1,3 +1,5 @@
+// Legacy JavaScript for PayRoll Management System web interface navigation and functionality
+// Handles dashboard statistics, employee listing, salary slip viewing, and PDF generation with DOM manipulation
 document.addEventListener('DOMContentLoaded', () => {
     const dashboardLink = document.getElementById('dashboard-link');
     const employeesLink = document.getElementById('employees-link');

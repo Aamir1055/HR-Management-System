@@ -1,3 +1,5 @@
+// Database migration to create loan_transactions table for comprehensive loan tracking
+// Records all loan-related transactions including additions, deductions, and balance changes
 const mysql = require('mysql2/promise');
 
 async function createLoanTransactionsTable() {

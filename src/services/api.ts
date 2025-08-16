@@ -1,3 +1,5 @@
+// Centralized API service configuration with Axios for consistent HTTP requests
+// Handles authentication, error handling, and request/response interceptors for all API calls
 import axios from 'axios';
 
 // Create axios instance with base configuration

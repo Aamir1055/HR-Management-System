@@ -1,7 +1,7 @@
 {
   "name": "payroll-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend server for PayRoll Management System with Express.js, MySQL, and comprehensive HR features including employee management, payroll processing, loan tracking, and attendance monitoring",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

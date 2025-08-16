@@ -1,3 +1,5 @@
+// Express.js server for PayRoll Management System with comprehensive employee and payroll features
+// Provides REST API endpoints for authentication, employee management, attendance, payroll processing, loans, and reporting
 const express = require('express');
 const app = express();
 const cors = require('cors');

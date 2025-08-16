@@ -1,3 +1,7 @@
+/**
+ * Salary Slip Routes - Defines API endpoints for salary slip generation and management
+ * Handles individual and bulk salary slip generation, PDF creation, and payroll reports
+ */
 const express = require('express');
 const router = express.Router();
 const { verifyToken, requireManager } = require('../middleware/auth');

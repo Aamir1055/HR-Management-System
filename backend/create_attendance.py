@@ -1,3 +1,5 @@
+# Python utility script to generate sample attendance Excel files for payroll testing
+# Creates formatted attendance sheets with employee data and working day calculations
 import openpyxl
 from datetime import datetime, timedelta
 

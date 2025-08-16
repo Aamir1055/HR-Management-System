@@ -1,3 +1,5 @@
+// Employee data extraction utility for displaying employee-office relationships
+// Quick database query tool to view employees organized by office for debugging and verification
 const db = require('./db');
 
 async function getEmployeeData() {

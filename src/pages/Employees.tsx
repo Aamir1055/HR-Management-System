@@ -1,3 +1,5 @@
+// Employee management page with comprehensive CRUD operations and data import/export functionality
+// Handles employee listing, filtering, searching, Excel import/export, pagination, and bulk operations
 import { Employee } from '../types';
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '../components/Layout/MainLayout';

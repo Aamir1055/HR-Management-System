@@ -1,3 +1,5 @@
+// Database INSERT operation testing utility for employee_loans table debugging
+// Validates SQL INSERT statement structure and parameter matching for loan creation troubleshooting
 const { query } = require('./utils/dbPromise');
 
 async function testInsert() {

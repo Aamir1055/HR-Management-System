@@ -1,3 +1,5 @@
+// Comprehensive loan data verification tool for debugging payroll loan deduction issues
+// Tests loan API endpoints and validates SQL query conditions for accurate loan processing
 const axios = require('axios');
 
 async function checkRawLoanData() {

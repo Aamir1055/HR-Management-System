@@ -1,3 +1,5 @@
+// Debug utility script to test salary slip generation and examine loan deduction processing
+// Makes authenticated API calls to generate salary slips and verify loan calculation accuracy
 const axios = require('axios');
 
 async function checkDebugLogs() {

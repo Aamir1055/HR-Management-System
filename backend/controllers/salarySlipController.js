@@ -1,3 +1,7 @@
+/**
+ * Salary Slip Controller - Manages salary slip generation and PDF creation
+ * Handles salary calculations, loan deductions, and detailed pay slip generation
+ */
 console.log("==> salarySlipController.js loaded - with loan integration and skip month support");
 
 const moment = require('moment');

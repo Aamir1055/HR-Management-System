@@ -1,3 +1,5 @@
+// Two-Factor Authentication TOTP code generator utility for testing and debugging
+// Generates time-based one-time passwords for user authentication verification
 const speakeasy = require('speakeasy');
 
 // Get the secret from command line or use the admin user's secret

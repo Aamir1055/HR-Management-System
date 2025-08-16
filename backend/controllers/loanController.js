@@ -1,4 +1,7 @@
-
+/**
+ * Loan Controller - Manages employee loan operations and payment tracking
+ * Handles loan creation, updates, payments, and status management
+ */
 const { query } = require('../utils/dbPromise');
 const moment = require('moment');
 

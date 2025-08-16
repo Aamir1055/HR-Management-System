@@ -1,3 +1,5 @@
+// Database migration to create loan_deduction_skips table for payroll system
+// Manages months when loan deductions should be skipped for specific employees
 const db = require('../db');
 
 /**

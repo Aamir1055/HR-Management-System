@@ -1,3 +1,5 @@
+// Database migration script to create employee_comments table for HR feedback system
+// Establishes table structure for storing employee comments with foreign key relationships and timestamps
 const mysql = require('mysql2/promise');
 
 async function createCommentsTable() {

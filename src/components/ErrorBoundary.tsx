@@ -1,3 +1,5 @@
+// React error boundary component to catch and handle JavaScript errors in the component tree
+// Provides user-friendly error UI with recovery options instead of showing broken page
 import React from 'react';
 
 interface ErrorBoundaryState {

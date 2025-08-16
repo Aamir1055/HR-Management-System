@@ -1,3 +1,5 @@
+// Custom React hook for employee data management with CRUD operations
+// Provides centralized state management for employee list, create, update, delete with error handling
 import { useState, useEffect } from 'react';
 import { Employee } from '../types';
 

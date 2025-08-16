@@ -1,4 +1,5 @@
-// db.js
+// MySQL database connection pool configuration for PayRoll Management System
+// Provides optimized connection pooling with environment-based configuration for scalable database access
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 

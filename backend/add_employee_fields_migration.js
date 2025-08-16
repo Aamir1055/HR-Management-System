@@ -1,3 +1,5 @@
+// Database migration script to add new employee fields to the employees table
+// Safely adds columns for WhatsApp, visa expiry, languages, marital status, hiring source, and contact information
 const pool = require('./db');
 
 async function addNewEmployeeFields() {

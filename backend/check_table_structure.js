@@ -1,3 +1,5 @@
+// Database schema inspection utility to examine employee_loans table structure
+// Displays detailed column information including types, constraints, and defaults for database debugging
 const { query } = require('./utils/dbPromise');
 
 async function checkTableStructure() {

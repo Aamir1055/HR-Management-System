@@ -1,3 +1,5 @@
+// Attendance sample data generator for testing office-based access control
+// Creates realistic attendance Excel files for all offices and specific office combinations
 const XLSX = require('xlsx');
 const db = require('./db');
 

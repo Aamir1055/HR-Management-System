@@ -1,3 +1,5 @@
+// Loan analysis script for finding and testing loans active during July 2025
+// Identifies loans within date range and validates salary slip integration for proper deduction calculation
 const axios = require('axios');
 
 async function findJulyLoans() {

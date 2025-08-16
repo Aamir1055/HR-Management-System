@@ -1,3 +1,5 @@
+// Main application layout component providing consistent structure across all pages
+// Combines sidebar navigation, header with title/subtitle, and scrollable content area
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';

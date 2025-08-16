@@ -1,3 +1,5 @@
+// ESLint configuration for PayRoll Management System with TypeScript and React support
+// Enables strict linting rules for code quality, React hooks validation, and development best practices
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';

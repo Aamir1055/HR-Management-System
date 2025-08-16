@@ -1,3 +1,7 @@
+/**
+ * Loan Routes - Defines API endpoints for employee loan management and tracking
+ * Handles loan operations, payments, skip months, and loan deduction processing
+ */
 const express = require('express');
 const router = express.Router();
 const loanController = require('../controllers/loanController');

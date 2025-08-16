@@ -1,4 +1,7 @@
-// Controller for handling approved leaves with separate table
+/**
+ * Approved Leave Controller - Manages approved employee leaves and payroll integration
+ * Handles CRUD operations for approved leaves and payroll calculations
+ */
 const db = require('../db');
 const moment = require('moment');
 

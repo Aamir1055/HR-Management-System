@@ -1,3 +1,7 @@
+/**
+ * Authentication Middleware - Handles JWT token verification and role-based access control
+ * Provides middleware functions for authentication, authorization, and office-based data filtering
+ */
 const jwt = require('jsonwebtoken');
 const { query } = require('../utils/dbPromise');
 

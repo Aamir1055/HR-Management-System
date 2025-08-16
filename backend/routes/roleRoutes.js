@@ -1,3 +1,7 @@
+/**
+ * Role Routes - Defines API endpoints for user and role management
+ * Handles user CRUD operations, role assignments, and office access control
+ */
 const express = require('express');
 const router = express.Router();
 const roleController = require('../controllers/roleController');

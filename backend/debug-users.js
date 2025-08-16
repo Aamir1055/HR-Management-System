@@ -1,3 +1,5 @@
+// Debug utility script for troubleshooting user office assignments and role permissions
+// Helps identify database inconsistencies in user-office relationships for access control
 const { query } = require('./utils/dbPromise');
 
 async function debugUsers() {

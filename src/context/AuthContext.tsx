@@ -1,3 +1,5 @@
+// Authentication context provider for user session management and role-based access control
+// Handles login, logout, JWT token storage, 2FA authentication, and permission checking across the application
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface User {

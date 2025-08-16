@@ -1,3 +1,5 @@
+// Database migration to add monthly_deduction column to employee_loans table
+// Enables optional fixed monthly deduction amounts for loan repayment tracking
 const db = require('../db');
 
 /**

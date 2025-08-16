@@ -1,3 +1,7 @@
+/**
+ * Employee Controller - Manages employee data operations and Excel file imports
+ * Handles CRUD operations for employee records including bulk imports and data validation
+ */
 const XLSX = require('xlsx');
 const fs = require('fs');
 

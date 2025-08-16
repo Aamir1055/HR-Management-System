@@ -1,5 +1,6 @@
 {
   "name": "vite-react-typescript-starter",
+  "description": "Frontend package for PayRoll Management System built with React, TypeScript, Vite, and Tailwind CSS. Provides comprehensive HR management interface with employee CRUD, payroll processing, attendance tracking, and data visualization features.",
   "private": true,
   "version": "0.0.0",
   "type": "module",
