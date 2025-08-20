@@ -176,8 +176,10 @@ export const Employees: React.FC = () => {
   const handleDownloadSampleExcel = () => {
     const sampleData = [
       {
-        'Employee ID': 'EMP-999',
-        Name: 'John Smith',
+        'Employee ID': '999',
+        nationality: 'UAE',
+        first_name	: 'John',
+        last_name	: 'Doe',
         Email: 'john@example.com',
         'Office ID': 19,
         'Position ID': 57,
@@ -190,7 +192,6 @@ export const Employees: React.FC = () => {
         'Visa Type': '1',
         'Visa Expiry': '2030-12-31',
         Platform: '1',
-        Address: '123 Main St',
         'Current Address': '456 Current St',
         Phone: '5551234567',
         WhatsApp: '5557891234',
@@ -200,8 +201,7 @@ export const Employees: React.FC = () => {
         'Marital Status': 'Single',
         'Hiring Source': 'Job Portal',
         'Salary Currency': 'AED',
-        'Emirates ID': '784-1990-1234567-8',
-        'Emergency Contact': '+971501234567',
+        'emergency_contact_relation': ' 9109087654 Brother',
       },
     ];
 
