@@ -7,19 +7,83 @@ const fs = require('fs');
 
 // --- Helpers ---
 function excelDateToJSDate(serial) {
-  if (typeof serial === 'number') {
-    const utc_days = Math.floor(serial - 25569);
-    const utc_value = utc_days * 86400;
-    const date_info = new Date(utc_value * 1000);
-    const fractional_day = serial - Math.floor(serial) + 0.0000001;
-    let total_seconds = Math.floor(86400 * fractional_day);
-    const seconds = total_seconds % 60;
-    total_seconds -= seconds;
-    const hours = Math.floor(total_seconds / 3600);
-    const minutes = Math.floor(total_seconds / 60) % 60;
-    const d = new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
-    return d.toISOString().split('T')[0];
+  // If it's already a string in date format, normalize it properly and add +1 day
+  if (typeof serial === 'string' && (serial.includes('-') || serial.includes('/'))) {
+    try {
+      const parts = serial.split(/[-\/]/);
+      if (parts.length === 3) {
+        let day, month, year;
+        
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD or YYYY/MM/DD format
+          year = parseInt(parts[0]);
+          month = parseInt(parts[1]) - 1; // 0-indexed for Date constructor
+          day = parseInt(parts[2]);
+        } else {
+          // DD-MM-YYYY, DD/MM/YYYY, MM-DD-YYYY, or MM/DD/YYYY format
+          year = parseInt(parts[2].length === 2 ? `20${parts[2]}` : parts[2]);
+          
+          // For DD/MM or MM/DD disambiguation, use context clues
+          const first = parseInt(parts[0]);
+          const second = parseInt(parts[1]);
+          
+          if (first > 12) {
+            // First part > 12, must be DD-MM format
+            day = first;
+            month = second - 1; // 0-indexed for Date constructor
+          } else if (second > 12) {
+            // Second part > 12, must be MM-DD format  
+            month = first - 1; // 0-indexed for Date constructor
+            day = second;
+          } else {
+            // Both <= 12, assume DD-MM format (common in many regions)
+            day = first;
+            month = second - 1; // 0-indexed for Date constructor
+          }
+        }
+        
+        // Create date and add +1 day to compensate for timezone shift
+        const dateObj = new Date(year, month, day);
+        dateObj.setDate(dateObj.getDate() + 1);
+        
+        // Format as YYYY-MM-DD
+        const finalYear = dateObj.getFullYear();
+        const finalMonth = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        const finalDay = dateObj.getDate().toString().padStart(2, '0');
+        
+        console.log(`📊 EXCEL String Date: ${serial} → ${finalYear}-${finalMonth}-${finalDay} (with +1 day)`);
+        return `${finalYear}-${finalMonth}-${finalDay}`;
+      }
+    } catch (e) {
+      console.warn(`Failed to parse date string: ${serial}`, e);
+    }
+    return serial;
   }
+  
+  // Handle Excel date serial numbers and add +1 day
+  if (typeof serial === 'number') {
+    // Excel date serial calculation (1900-based system)
+    const EXCEL_EPOCH_DIFF = 25569; // Days between 1900-01-01 and 1970-01-01
+    const MS_PER_DAY = 86400000;
+    
+    // Convert serial to milliseconds since Unix epoch
+    const dateMs = (serial - EXCEL_EPOCH_DIFF) * MS_PER_DAY;
+    
+    // Create date object from milliseconds
+    const date = new Date(dateMs);
+    
+    // Add +1 day to compensate for timezone shift
+    date.setDate(date.getDate() + 1);
+    
+    // Extract date components using UTC to avoid any timezone conversion
+    const year = date.getUTCFullYear();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    
+    console.log(`📊 EXCEL Serial Date: ${serial} → ${year}-${month}-${day} (with +1 day)`);
+    return `${year}-${month}-${day}`;
+  }
+  
   return serial;
 }
 
@@ -429,11 +493,41 @@ module.exports = {
       
       sql += ` ORDER BY e.employeeId`;
       
+      // Helper function to subtract 1 day from stored dates for display
+      const adjustDateForDisplay = (dateStr) => {
+        if (!dateStr) return null;
+        
+        try {
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) return dateStr;
+          
+          // SUBTRACT 1 DAY to reverse the +1 day we added during storage
+          date.setDate(date.getDate() - 1);
+          
+          // Format as YYYY-MM-DD
+          const year = date.getFullYear();
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const day = date.getDate().toString().padStart(2, '0');
+          
+          const result = `${year}-${month}-${day}`;
+          console.log(`🔄 Display adjustment: ${dateStr} → ${result} (-1 day)`);
+          return result;
+        } catch (error) {
+          console.warn(`⚠️ Error adjusting date for display: ${dateStr}`, error);
+          return dateStr;
+        }
+      };
+      
       const [employees] = await req.db.query(sql, params);
       const processedEmployees = employees.map(emp => ({
         ...emp,
         status: emp.status === 1 || emp.status === true || emp.status === 'active',
-        position_name: emp.position_title
+        position_name: emp.position_title,
+        // Adjust dates for display by subtracting 1 day
+        joiningDate: adjustDateForDisplay(emp.joiningDate),
+        dob: adjustDateForDisplay(emp.dob),
+        passport_expiry: adjustDateForDisplay(emp.passport_expiry),
+        visa_expiry: adjustDateForDisplay(emp.visa_expiry)
       }));
       res.json(processedEmployees);
     } catch (err) {
@@ -584,9 +678,18 @@ module.exports = {
   },
   createEmployee: async (req, res) => {
     try {
-      const { employeeId, name, email, office_name, position_name, monthlySalary, joiningDate, status,
+      console.log('🔍 CREATE - Raw request body:', req.body);
+      const { employeeId, name, first_name, last_name, nationality, email, office_name, position_name, monthlySalary, joiningDate, status,
         dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact } = req.body;
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation } = req.body;
+      
+      console.log('🔍 CREATE - Extracted fields:');
+      console.log('  - first_name:', first_name);
+      console.log('  - last_name:', last_name);
+      console.log('  - nationality:', nationality);
+      console.log('  - emergency_contact_relation:', emergency_contact_relation);
+      console.log('  - joiningDate (raw):', joiningDate);
+      
       if (!employeeId || !office_name || !position_name) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
@@ -605,18 +708,98 @@ module.exports = {
       if (typeof status === 'boolean') statusValue = status ? 1 : 0;
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
+      
+      // Simple date handling with +1 day to compensate for timezone shift
+      const safeFormatDate = (dateStr) => {
+        if (!dateStr) return null;
+        
+        console.log(`🔍 SafeFormatDate processing: '${dateStr}' (type: ${typeof dateStr})`);
+        
+        try {
+          let parsedDate;
+          
+          // Handle different input formats
+          if (typeof dateStr === 'string') {
+            // Remove any time portion first
+            const dateOnly = dateStr.split('T')[0].split(' ')[0];
+            
+            // Try to create a date from the string
+            if (dateOnly.includes('/')) {
+              // Handle DD/MM/YYYY or MM/DD/YYYY format
+              const parts = dateOnly.split('/');
+              if (parts.length === 3) {
+                // Assume DD/MM/YYYY format (more common)
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Month is 0-indexed in Date
+                const year = parseInt(parts[2]);
+                parsedDate = new Date(year, month, day);
+              } else {
+                parsedDate = new Date(dateStr);
+              }
+            } else {
+              parsedDate = new Date(dateStr);
+            }
+          } else {
+            parsedDate = new Date(dateStr);
+          }
+          
+          if (isNaN(parsedDate.getTime())) {
+            console.warn(`❌ Invalid date: ${dateStr}`);
+            return null;
+          }
+          
+          // ADD +1 DAY to compensate for timezone shift
+          parsedDate.setDate(parsedDate.getDate() + 1);
+          
+          // Format as YYYY-MM-DD
+          const year = parsedDate.getFullYear();
+          const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+          const day = parsedDate.getDate().toString().padStart(2, '0');
+          
+          const result = `${year}-${month}-${day}`;
+          console.log(`✅ Date with +1 day: ${dateStr} → ${result}`);
+          return result;
+          
+        } catch (error) {
+          console.warn(`❌ Error parsing date '${dateStr}':`, error.message);
+          return null;
+        }
+      };
+      
+      const fixedJoiningDate = safeFormatDate(joiningDate);
+      const fixedDob = safeFormatDate(dob);
+      const fixedPassportExpiry = safeFormatDate(passport_expiry);
+      const fixedVisaExpiry = safeFormatDate(visa_expiry);
+      
+      console.log('🔍 CREATE - Processed dates:');
+      console.log('  - joiningDate:', joiningDate, '->', fixedJoiningDate);
+      console.log('  - dob:', dob, '->', fixedDob);
+      console.log('  - passport_expiry:', passport_expiry, '->', fixedPassportExpiry);
+      console.log('  - visa_expiry:', visa_expiry, '->', fixedVisaExpiry);
+      
+      // First try to add the columns if they don't exist
+      try {
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS first_name VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS nationality VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_relation VARCHAR(50) NULL`);
+        console.log('✅ Columns added or already exist');
+      } catch (alterError) {
+        console.log('⚠️ Column alteration failed (columns might already exist):', alterError.message);
+      }
+      
       await db.query(`
         INSERT INTO employees 
-        (employeeId, name, email, office_id, position_id, monthlySalary, joiningDate, status,
+        (employeeId, name, first_name, last_name, nationality, email, office_id, position_id, monthlySalary, joiningDate, status,
           dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?)
+          ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        employeeId, name, email, office_id, position_id, monthlySalary, joiningDate, statusValue,
-        dob || null, passport_number || null, passport_expiry || null, visa_type || null, visa_expiry || null, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
-        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null
+        employeeId, name, first_name || null, last_name || null, nationality || null, email, office_id, position_id, monthlySalary, fixedJoiningDate, statusValue,
+        fixedDob, passport_number || null, fixedPassportExpiry, visa_type || null, fixedVisaExpiry, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null
       ]);
       const [newEmployee] = await db.query(`
         SELECT e.*, o.name AS office_name, p.title AS position_title,
@@ -651,6 +834,38 @@ module.exports = {
         const emp = employee[0];
         emp.status = emp.status === 1;
         emp.position_name = emp.position_title;
+        
+        // Helper function to subtract 1 day from stored dates for display
+        const adjustDateForDisplay = (dateStr) => {
+          if (!dateStr) return null;
+          
+          try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            
+            // SUBTRACT 1 DAY to reverse the +1 day we added during storage
+            date.setDate(date.getDate() - 1);
+            
+            // Format as YYYY-MM-DD
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            
+            const result = `${year}-${month}-${day}`;
+            console.log(`🔄 Form display adjustment: ${dateStr} → ${result} (-1 day)`);
+            return result;
+          } catch (error) {
+            console.warn(`⚠️ Error adjusting date for form display: ${dateStr}`, error);
+            return dateStr;
+          }
+        };
+        
+        // Adjust dates for form display by subtracting 1 day
+        emp.joiningDate = adjustDateForDisplay(emp.joiningDate);
+        emp.dob = adjustDateForDisplay(emp.dob);
+        emp.passport_expiry = adjustDateForDisplay(emp.passport_expiry);
+        emp.visa_expiry = adjustDateForDisplay(emp.visa_expiry);
+        
         res.json(emp);
       } else {
         res.status(404).json({ error: 'Employee not found' });
@@ -662,11 +877,20 @@ module.exports = {
   },
   updateEmployee: async (req, res) => {
     try {
+      console.log('🔍 UPDATE - Raw request body:', req.body);
       const {
-        name, email, office_name, position_name, monthlySalary, joiningDate, status,
+        name, first_name, last_name, nationality, email, office_name, position_name, monthlySalary, joiningDate, status,
         dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation
       } = req.body;
+      
+      console.log('🔍 UPDATE - Extracted fields:');
+      console.log('  - first_name:', first_name);
+      console.log('  - last_name:', last_name);
+      console.log('  - nationality:', nationality);
+      console.log('  - emergency_contact_relation:', emergency_contact_relation);
+      console.log('  - joiningDate (raw):', joiningDate);
+      
       const db = req.db;
       const office_id = await getOfficeIdByName(office_name, db);
       const position_id = await getPositionIdByName(position_name, db);
@@ -674,17 +898,97 @@ module.exports = {
       if (typeof status === 'boolean') statusValue = status ? 1 : 0;
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
+      
+      // Simple date handling with +1 day to compensate for timezone shift
+      const safeFormatDate = (dateStr) => {
+        if (!dateStr) return null;
+        
+        console.log(`🔍 UPDATE SafeFormatDate processing: '${dateStr}' (type: ${typeof dateStr})`);
+        
+        try {
+          let parsedDate;
+          
+          // Handle different input formats
+          if (typeof dateStr === 'string') {
+            // Remove any time portion first
+            const dateOnly = dateStr.split('T')[0].split(' ')[0];
+            
+            // Try to create a date from the string
+            if (dateOnly.includes('/')) {
+              // Handle DD/MM/YYYY or MM/DD/YYYY format
+              const parts = dateOnly.split('/');
+              if (parts.length === 3) {
+                // Assume DD/MM/YYYY format (more common)
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Month is 0-indexed in Date
+                const year = parseInt(parts[2]);
+                parsedDate = new Date(year, month, day);
+              } else {
+                parsedDate = new Date(dateStr);
+              }
+            } else {
+              parsedDate = new Date(dateStr);
+            }
+          } else {
+            parsedDate = new Date(dateStr);
+          }
+          
+          if (isNaN(parsedDate.getTime())) {
+            console.warn(`❌ UPDATE Invalid date: ${dateStr}`);
+            return null;
+          }
+          
+          // ADD +1 DAY to compensate for timezone shift
+          parsedDate.setDate(parsedDate.getDate() + 1);
+          
+          // Format as YYYY-MM-DD
+          const year = parsedDate.getFullYear();
+          const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+          const day = parsedDate.getDate().toString().padStart(2, '0');
+          
+          const result = `${year}-${month}-${day}`;
+          console.log(`✅ UPDATE Date with +1 day: ${dateStr} → ${result}`);
+          return result;
+          
+        } catch (error) {
+          console.warn(`❌ UPDATE Error parsing date '${dateStr}':`, error.message);
+          return null;
+        }
+      };
+      
+      const fixedJoiningDate = safeFormatDate(joiningDate);
+      const fixedDob = safeFormatDate(dob);
+      const fixedPassportExpiry = safeFormatDate(passport_expiry);
+      const fixedVisaExpiry = safeFormatDate(visa_expiry);
+      
+      console.log('🔍 UPDATE - Processed dates:');
+      console.log('  - joiningDate:', joiningDate, '->', fixedJoiningDate);
+      console.log('  - dob:', dob, '->', fixedDob);
+      console.log('  - passport_expiry:', passport_expiry, '->', fixedPassportExpiry);
+      console.log('  - visa_expiry:', visa_expiry, '->', fixedVisaExpiry);
+      
+      // Ensure columns exist before updating
+      try {
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS first_name VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS nationality VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_relation VARCHAR(50) NULL`);
+        console.log('✅ Columns verified or added');
+      } catch (alterError) {
+        console.log('⚠️ Column verification failed (columns might already exist):', alterError.message);
+      }
+      
       const [result] = await db.query(`
         UPDATE employees SET
-          name = ?, email = ?, office_id = ?, position_id = ?,
+          name = ?, first_name = ?, last_name = ?, nationality = ?, email = ?, office_id = ?, position_id = ?,
           monthlySalary = ?, joiningDate = ?, status = ?,
           dob = ?, passport_number = ?, passport_expiry = ?, visa_type = ?, visa_expiry = ?, platform = ?, address = ?, current_address = ?, phone = ?, whatsapp = ?, gender = ?,
-          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?
+          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?, emergency_contact_relation = ?
         WHERE employeeId = ?
       `, [
-        name, email, office_id, position_id, monthlySalary, joiningDate, statusValue,
-        dob || null, passport_number || null, passport_expiry || null, visa_type || null, visa_expiry || null, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
-        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null,
+        name, first_name || null, last_name || null, nationality || null, email, office_id, position_id, monthlySalary, fixedJoiningDate, statusValue,
+        fixedDob, passport_number || null, fixedPassportExpiry, visa_type || null, fixedVisaExpiry, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null,
         req.params.employeeId
       ]);
       if (!result.affectedRows) return res.status(404).json({ error: 'Employee not found' });

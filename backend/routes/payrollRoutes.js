@@ -2,6 +2,8 @@
  * Payroll Routes - Defines API endpoints for payroll processing and reporting
  * Handles payroll calculations, attendance tracking, and half-day shift management
  */
+// payroleManagement2/backend/routes/payrollRoutes.js
+// This file defines the routes for payroll management, including employee payroll details, reports, and half-day shift management.
 const express = require('express');
 const router = express.Router();
 const payrollController = require('../controllers/payrollController');

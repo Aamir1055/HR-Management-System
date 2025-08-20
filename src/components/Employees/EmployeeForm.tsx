@@ -59,6 +59,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       id: undefined,
       employeeId: '',
       name: '',
+      first_name: '',
+      last_name: '',
+      nationality: '',
       email: '',
       office_id: 0,
       office_name: '',
@@ -87,12 +90,23 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       salary_currency: 'AED',
       emirates_id: '',
       emergency_contact: '',
+      emergency_contact_relation: '',
     },
   });
 
+  const watchedFirstName = watch('first_name');
+  const watchedLastName = watch('last_name');
   const statusValue = watch('status');
   const officeId = watch('office_id');
   const positionId = watch('position_id');
+
+  // Automatically update the `name` field when first_name or last_name changes
+  useEffect(() => {
+    const firstName = watchedFirstName || '';
+    const lastName = watchedLastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    setValue('name', fullName);
+  }, [watchedFirstName, watchedLastName, setValue]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -168,6 +182,11 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             statusBoolean = employee.status.toLowerCase() === 'active' || employee.status === '1';
           }
 
+          // Split name into first_name and last_name if needed
+          const nameParts = (employee.name || '').trim().split(' ');
+          const firstName = employee.first_name || nameParts[0] || '';
+          const lastName = employee.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+          
           reset({
             ...employee,
             office_id: officeObj?.id ?? 0,
@@ -196,6 +215,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             salary_currency: employee.salary_currency || 'AED',
             emirates_id: employee.emirates_id || '',
             emergency_contact: employee.emergency_contact || '',
+            emergency_contact_relation: employee.emergency_contact_relation || '',
+            nationality: employee.nationality || '',
+            first_name: firstName,
+            last_name: lastName,
           });
 
           setReportingTime(employee.reporting_time?.toString() || 'Not set');
@@ -283,13 +306,25 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
   const handleFormSubmit = async (formData: Employee) => {
     try {
+      // Debug: Log the raw form data to see what we're receiving
+      console.log('🔍 Raw form data received:', formData);
+      console.log('🔍 First Name:', formData.first_name);
+      console.log('🔍 Last Name:', formData.last_name);
+      console.log('🔍 Nationality:', formData.nationality);
+      console.log('🔍 Emergency Contact Relation:', formData.emergency_contact_relation);
+      
       const office = offices.find(o => String(o.id) === String(formData.office_id));
       const position = filteredPositions.find(p => String(p.id) === String(formData.position_id));
       const visaType = visaTypes.find(v => String(v.id) === String(formData.visa_type_id));
       const platform = platforms.find(p => String(p.id) === String(formData.platform_id));
       const completeEmployeeData: any = {
+        // Add ID for existing employees
+        ...(employee?.id && { id: employee.id }),
         employeeId: formData.employeeId,
-        name: formData.name,
+        name: formData.name, // This will be the concatenated name from first_name + last_name
+        first_name: formData.first_name || '',
+        last_name: formData.last_name || '',
+        nationality: formData.nationality || '',
         email: formData.email,
         office_name: office?.name || '',
         position_name: position?.title || '',
@@ -314,7 +349,11 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         salary_currency: formData.salary_currency || 'AED',
         emirates_id: formData.emirates_id || null,
         emergency_contact: formData.emergency_contact || null,
+        emergency_contact_relation: formData.emergency_contact_relation || '',
       };
+      
+      // Debug: Log the complete data being sent to backend
+      console.log('📤 Complete data being sent to backend:', completeEmployeeData);
 
       if (onSubmit) {
         const result = await onSubmit(completeEmployeeData);
@@ -346,24 +385,51 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   // --- GROUPED FIELDS START ---
   const personalFields = (
     <>
+      {/* Employee ID */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID <span className="text-red-600">*</span></label>
         <input
           {...register('employeeId', { required: 'Employee ID is required' })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white-100"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
         {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
       </div>
+      
+      {/* Nationality */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-600">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
         <input
-          {...register('name', { required: 'Full Name is required' })}
+          {...register('nationality')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., UAE, India, Pakistan"
+        />
+      </div>
+      
+      {/* First Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-600">*</span></label>
+        <input
+          {...register('first_name', { required: 'First name is required' })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
       </div>
+      
+      {/* Last Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-600">*</span></label>
+        <input
+          {...register('last_name', { required: 'Last name is required' })}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
+        {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
+      </div>
+      
+      {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-600">*</span></label>
         <input
@@ -380,6 +446,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
       </div>
+      
+      {/* Date of Birth */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
         <input
@@ -389,51 +457,30 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Permanent Address</label>
-        <input
-          {...register('address')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
-        <input
-          {...register('current_address')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
-        />
-      </div>
+      
+      {/* Phone Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
         <input
           {...register('phone')}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
+          placeholder="e.g., +971-50-1234567"
         />
       </div>
+      
+      {/* WhatsApp Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
         <input
           {...register('whatsapp')}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
+          placeholder="e.g., +971-50-1234567"
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-        <input
-          {...register('emergency_contact')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
-        />
-      </div>
+      
+      {/* Gender */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
         <select
@@ -447,6 +494,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           <option value="Other">Other</option>
         </select>
       </div>
+      
+      {/* Marital Status */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
         <select
@@ -461,6 +510,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           <option value="Widowed">Widowed</option>
         </select>
       </div>
+      
+      {/* Primary Language */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Primary Language</label>
         <input
@@ -470,6 +521,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., English, Arabic"
         />
       </div>
+      
+      {/* Secondary Language */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Language</label>
         <input
@@ -479,20 +532,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., Hindi, Urdu"
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Emirates ID</label>
-        <input
-          {...register('emirates_id')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="784-XXXX-XXXXXXX-X"
-        />
-      </div>
     </>
   );
 
   const employmentFields = (
     <>
+      {/* DOJ - Date of Joining */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining (DOJ) <span className="text-red-600">*</span></label>
+        <input
+          type="date"
+          {...register('joiningDate', { required: 'Joining date is required' })}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
+        {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
+      </div>
+      
+      {/* Office */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Office <span className="text-red-600">*</span></label>
         <select
@@ -512,6 +569,27 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </select>
         {errors.office_id && <p className="text-red-500 text-sm mt-1">{errors.office_id.message}</p>}
       </div>
+      
+      {/* Platform */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+        <select
+          {...register('platform_id', {
+            setValueAs: value => value === '' ? 0 : parseInt(value, 10)
+          })}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        >
+          <option value={0}>Select Platform</option>
+          {platforms.map(platform => (
+            <option key={platform.id} value={platform.id}>
+              {platform.platform_name}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Position */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Position <span className="text-red-600">*</span></label>
         <select
@@ -533,6 +611,19 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </select>
         {errors.position_id && <p className="text-red-500 text-sm mt-1">{errors.position_id.message}</p>}
       </div>
+      
+      {/* Currency */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+        <input
+          {...register('salary_currency')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., AED, USD, EUR"
+        />
+      </div>
+      
+      {/* Salary */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Salary <span className="text-red-600">*</span></label>
         <input
@@ -546,50 +637,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.monthlySalary && <p className="text-red-500 text-sm mt-1">{errors.monthlySalary.message}</p>}
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Salary Currency</label>
-        <input
-          {...register('salary_currency')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="e.g., AED, USD, EUR"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Hiring Source</label>
-        <input
-          {...register('hiring_source')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="e.g., Referral, Job Board, Direct"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date <span className="text-red-600">*</span></label>
-        <input
-          type="date"
-          {...register('joiningDate', { required: 'Joining date is required' })}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-        />
-        {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Status <span className="text-red-600">*</span>
-        </label>
-        <select
-          {...register('status', { required: 'Status is required' })}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-        >
-          <option value="">Select Status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-        {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>}
-      </div>
-
+      
+      {/* Reporting Time (display only) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Reporting Time</label>
         <input
@@ -599,57 +648,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100"
         />
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Duty Hours</label>
-        <input
-          type="text"
-          value={dutyHours}
-          disabled
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-        <select
-          {...register('platform_id', {
-            setValueAs: value => value === '' ? 0 : parseInt(value, 10)
-          })}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-        >
-          <option value={0}>Select Platform</option>
-          {platforms.map(platform => (
-            <option key={platform.id} value={platform.id}>
-              {platform.platform_name}
-            </option>
-          ))}
-        </select>
-      </div>
     </>
   );
 
-  const visaFields = (
+  const additionalDetailsFields = (
     <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Passport Number</label>
-        <input
-          {...register('passport_number')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          autoComplete="off"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Passport Expiry</label>
-        <input
-          type="date"
-          {...register('passport_expiry')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-        />
-      </div>
+      {/* Visa type */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Visa Type</label>
         <select
@@ -667,6 +671,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           ))}
         </select>
       </div>
+      
+      {/* Visa expiry */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Visa Expiry Date</label>
         <input
@@ -676,8 +682,80 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
       </div>
-      </>
-    );
+      
+      {/* Passport no. */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Passport Number</label>
+        <input
+          {...register('passport_number')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., A1234567"
+        />
+      </div>
+      
+      {/* Passport expiry */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Passport Expiry</label>
+        <input
+          type="date"
+          {...register('passport_expiry')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
+      </div>
+      
+      {/* Hiring source */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Hiring Source</label>
+        <input
+          {...register('hiring_source')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., Referral, Job Board, Direct"
+        />
+      </div>
+      
+      {/* Emergency contact relation */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Relation</label>
+        <input
+          {...register('emergency_contact_relation')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g., Father, Mother, Spouse, Brother"
+        />
+      </div>
+      
+      {/* Current address */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
+        <input
+          {...register('current_address')}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="Current residential address"
+        />
+      </div>
+      
+      {/* Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Status <span className="text-red-600">*</span>
+        </label>
+        <select
+          {...register('status', { required: 'Status is required' })}
+          disabled={viewOnly}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        >
+          <option value="">Select Status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>}
+      </div>
+    </>
+  );
 
   // --- GROUPED FIELDS END ---
   const allGroupedFields = (
@@ -695,14 +773,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       {personalFields}
       {/* --- Employment --- */}
       <div className="md:col-span-2">
-        <h3 className="text-lg font-semibold mt-5 mb-3 text-gray-800">Employment Details</h3>
+        <h3 className="text-lg font-semibold mt-5 mb-3 text-gray-800">Employee Details</h3>
       </div>
       {employmentFields}
-      {/* --- Visa --- */}
+      {/* --- Additional Details --- */}
       <div className="md:col-span-2">
-        <h3 className="text-lg font-semibold mt-5 mb-3 text-gray-800">Visa Details</h3>
+        <h3 className="text-lg font-semibold mt-5 mb-3 text-gray-800">Additional Details</h3>
       </div>
-      {visaFields}
+      {additionalDetailsFields}
     </>
   );
 

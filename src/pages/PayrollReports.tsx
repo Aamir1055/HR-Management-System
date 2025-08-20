@@ -1,3 +1,12 @@
+// payroleManagement2/src/pages/PayrollReports.tsx
+/**
+ * Payroll Reports Page
+ * Displays payroll reports for employees based on selected month, office, and position
+ * Includes export functionality and half-day management
+ */
+
+
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "../components/Layout/MainLayout";

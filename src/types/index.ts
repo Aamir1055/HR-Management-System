@@ -3,7 +3,10 @@
 export interface Employee {
   id: number; // Remove undefined if it's always required
   employeeId: string;
-  name: string; // Backend field name
+  name: string; // Backend field name (concatenated from first_name + last_name)
+  first_name?: string; // New field for form input
+  last_name?: string; // New field for form input
+  nationality?: string; // New field
   fullName?: string; // Frontend display name (maps to 'name')
   email: string;
   office_id: number;
@@ -38,6 +41,7 @@ export interface Employee {
   salary_currency?: string;
   emirates_id?: string;
   emergency_contact?: string;
+  emergency_contact_relation?: string; // New field for emergency contact relation
 }
 
 export interface AttendanceRecord {
