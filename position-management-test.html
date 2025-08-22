@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Position Management - Multiple Office Selection Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        .office-selection {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .office-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .office-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .office-details {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f8ff;
+            border-radius: 4px;
+        }
+        .office-details.active {
+            display: block;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            background-color: #d1ecf1;
+            border: 1px solid #b6d4db;
+            color: #0c5460;
+        }
+        .offices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 5px 5px 0 0;
+            overflow: hidden;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: #e9ecef;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .tab-button.active {
+            background: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            padding: 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Position Management - Multiple Office Selection Test</h1>
+        <p>This interface allows you to test the new optimized position creation feature that supports multiple office selection.</p>
+        
+        <!-- Tab container -->
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('multiple')">Multiple Offices (New)</button>
+                <button class="tab-button" onclick="switchTab('single')">Single Office (Legacy)</button>
+                <button class="tab-button" onclick="switchTab('view')">View Data</button>
+            </div>
+            
+            <!-- Multiple Office Form -->
+            <div id="multiple-tab" class="tab-content active">
+                <div class="form-section">
+                    <h2>Create Position with Multiple Offices</h2>
+                    <form id="multiple-office-form">
+                        <div class="form-group">
+                            <label for="multi-title">Position Title:</label>
+                            <input type="text" id="multi-title" name="title" required placeholder="e.g., Senior Developer">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="multi-description">Description:</label>
+                            <textarea id="multi-description" name="description" placeholder="Optional position description"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Select Offices:</label>
+                            <button type="button" class="btn" onclick="loadOffices()">Load Available Offices</button>
+                            <div id="offices-container" class="offices-grid">
+                                <!-- Offices will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">Create Position with Selected Offices</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Single Office Form -->
+            <div id="single-tab" class="tab-content">
+                <div class="form-section">
+                    <h2>Create Position with Single Office (Legacy)</h2>
+                    <form id="single-office-form">
+                        <div class="form-group">
+                            <label for="single-title">Position Title:</label>
+                            <input type="text" id="single-title" name="title" required placeholder="e.g., Junior Developer">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="single-description">Description:</label>
+                            <textarea id="single-description" name="description" placeholder="Optional position description"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="office-name">Office Name:</label>
+                            <input type="text" id="office-name" name="office_name" placeholder="e.g., Main Office">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reporting-time">Reporting Time:</label>
+                            <input type="time" id="reporting-time" name="reporting_time" value="09:00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="duty-hours">Duty Hours:</label>
+                            <input type="number" id="duty-hours" name="duty_hours" step="0.5" min="1" max="12" value="8">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">Create Position (Single Office)</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- View Data Tab -->
+            <div id="view-tab" class="tab-content">
+                <div class="form-section">
+                    <h2>View Current Data</h2>
+                    <button type="button" class="btn" onclick="viewOffices()">View All Offices</button>
+                    <button type="button" class="btn" onclick="viewPositions()">View All Positions</button>
+                    <button type="button" class="btn" onclick="viewOfficePositions()">View Office-Position Relationships</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Response area -->
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/masters';
+        let availableOffices = [];
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Show response
+        function showResponse(message, type = 'success') {
+            const responseDiv = document.getElementById('response');
+            responseDiv.textContent = message;
+            responseDiv.className = 'response ' + type;
+            responseDiv.style.display = 'block';
+            responseDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Load offices for multiple selection
+        async function loadOffices() {
+            showResponse('Loading offices...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/offices');
+                if (!response.ok) throw new Error('Failed to fetch offices');
+                
+                const offices = await response.json();
+                availableOffices = offices;
+                
+                const container = document.getElementById('offices-container');
+                container.innerHTML = '';
+                
+                offices.forEach(office => {
+                    const officeDiv = document.createElement('div');
+                    officeDiv.className = 'office-selection';
+                    officeDiv.innerHTML = `
+                        <div class="office-item">
+                            <input type="checkbox" id="office-${office.office_id}" value="${office.office_id}" 
+                                   onchange="toggleOfficeDetails(${office.office_id})">
+                            <label for="office-${office.office_id}" style="margin-bottom: 0; font-weight: normal;">
+                                <strong>${office.office_name}</strong> - ${office.location || 'No location'}
+                                <small>(${office.employeeCount} employees)</small>
+                            </label>
+                        </div>
+                        <div id="details-${office.office_id}" class="office-details">
+                            <div style="display: flex; gap: 15px;">
+                                <div style="flex: 1;">
+                                    <label>Reporting Time:</label>
+                                    <input type="time" id="time-${office.office_id}" value="09:00">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Duty Hours:</label>
+                                    <input type="number" id="hours-${office.office_id}" step="0.5" min="1" max="12" value="8.0">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(officeDiv);
+                });
+                
+                showResponse(`Loaded ${offices.length} offices successfully!`, 'success');
+            } catch (error) {
+                showResponse('Error loading offices: ' + error.message, 'error');
+            }
+        }
+
+        // Toggle office details visibility
+        function toggleOfficeDetails(officeId) {
+            const checkbox = document.getElementById(`office-${officeId}`);
+            const details = document.getElementById(`details-${officeId}`);
+            
+            if (checkbox.checked) {
+                details.classList.add('active');
+            } else {
+                details.classList.remove('active');
+            }
+        }
+
+        // Handle multiple office form submission
+        document.getElementById('multiple-office-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const title = formData.get('title');
+            const description = formData.get('description');
+            
+            // Get selected offices with their details
+            const selectedOffices = [];
+            availableOffices.forEach(office => {
+                const checkbox = document.getElementById(`office-${office.office_id}`);
+                if (checkbox && checkbox.checked) {
+                    const reportingTime = document.getElementById(`time-${office.office_id}`).value;
+                    const dutyHours = parseFloat(document.getElementById(`hours-${office.office_id}`).value);
+                    
+                    selectedOffices.push({
+                        office_id: office.office_id,
+                        reporting_time: reportingTime,
+                        duty_hours: dutyHours
+                    });
+                }
+            });
+            
+            if (selectedOffices.length === 0) {
+                showResponse('Please select at least one office!', 'error');
+                return;
+            }
+            
+            const payload = {
+                title,
+                description,
+                offices: selectedOffices
+            };
+            
+            showResponse('Creating position with multiple offices...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/positions-multiple-offices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResponse('SUCCESS!\n\n' + JSON.stringify(result, null, 2), 'success');
+                    e.target.reset();
+                    document.getElementById('offices-container').innerHTML = '';
+                } else {
+                    showResponse('ERROR!\n\n' + JSON.stringify(result, null, 2), 'error');
+                }
+            } catch (error) {
+                showResponse('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // Handle single office form submission
+        document.getElementById('single-office-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const payload = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                office_name: formData.get('office_name'),
+                reporting_time: formData.get('reporting_time'),
+                duty_hours: parseFloat(formData.get('duty_hours'))
+            };
+            
+            showResponse('Creating position with single office...', 'loading');
+            
+            try {
+                const response = await fetch(API_BASE + '/positions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResponse('SUCCESS!\n\n' + JSON.stringify(result, null, 2), 'success');
+                    e.target.reset();
+                } else {
+                    showResponse('ERROR!\n\n' + JSON.stringify(result, null, 2), 'error');
+                }
+            } catch (error) {
+                showResponse('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // View functions
+        async function viewOffices() {
+            showResponse('Loading offices...', 'loading');
+            try {
+                const response = await fetch(API_BASE + '/offices');
+                const data = await response.json();
+                showResponse('OFFICES:\n\n' + JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                showResponse('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function viewPositions() {
+            showResponse('Loading positions...', 'loading');
+            try {
+                const response = await fetch(API_BASE + '/positions');
+                const data = await response.json();
+                showResponse('POSITIONS:\n\n' + JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                showResponse('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function viewOfficePositions() {
+            showResponse('Loading office-position relationships...', 'loading');
+            try {
+                const response = await fetch(API_BASE + '/office-positions');
+                const data = await response.json();
+                showResponse('OFFICE-POSITION RELATIONSHIPS:\n\n' + JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                showResponse('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-load offices on page load
+        window.addEventListener('load', () => {
+            setTimeout(loadOffices, 500);
+        });
+    </script>
+</body>
+</html>

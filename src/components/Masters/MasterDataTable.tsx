@@ -213,6 +213,11 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
                            dataType === 'platform' ? item.id :
                            item.id;
               
+              // ✅ FIXED: Create unique keys for positions (which can have same position_id for different offices)
+              const uniqueKey = dataType === 'position' 
+                ? `${item.position_id || item.id}-${item.office_id || 'no-office'}-${index}`
+                : (itemId || index);
+              
               // For loan rows, make entire row clickable
               const isLoanRow = dataType === 'loan';
               const rowClickHandler = isLoanRow 
@@ -229,7 +234,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
 
               return (
                 <tr 
-                  key={itemId || index} 
+                  key={uniqueKey}
                   className={`transition-all duration-150 ${
                     isLoanRow 
                       ? 'hover:bg-blue-50 cursor-pointer hover:shadow-md border-l-4 border-transparent hover:border-l-blue-400 transform hover:-translate-y-0.5' 

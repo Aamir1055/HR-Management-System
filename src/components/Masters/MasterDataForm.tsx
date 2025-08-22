@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useOffices } from '../../hooks/useOffices';
 import { useEmployees } from '../../hooks/useEmployees';
+import PositionOfficeSelection from './PositionOfficeSelection';
 
 interface MasterDataFormProps {
   isOpen: boolean;
@@ -179,60 +180,91 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
                 <p className="mt-1 text-sm text-red-600">{errors.title.message as string}</p>
               )}
             </div>
+            
             <div className="mb-4">
-              <label htmlFor="office_name" className="block text-sm font-medium text-gray-700">
-                Office <span className="text-red-500">*</span>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
               </label>
-              <select
-                id="office_name"
-                {...register('office_name', { required: mode !== 'view' ? 'Office selection is required' : false })}
+              <textarea
+                id="description"
+                {...register('description')}
                 disabled={mode === 'view'}
+                rows={3}
+                placeholder="Optional position description..."
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
-              >
-                <option value="">Select an office</option>
-                {offices && offices.map((office: any) => (
-                  <option key={office.office_id} value={office.office_name}>{office.office_name}</option>
-                ))}
-              </select>
-              {errors.office_name && (
-                <p className="mt-1 text-sm text-red-600">{errors.office_name.message as string}</p>
-              )}
+              ></textarea>
             </div>
-            <div className="mb-4">
-              <label htmlFor="reporting_time" className="block text-sm font-medium text-gray-700">
-                Reporting Time <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="time"
-                id="reporting_time"
-                {...register('reporting_time', { required: mode !== 'view' ? 'Reporting time is required' : false })}
+
+            {/* Enhanced Multiple Office Selection with Checkboxes */}
+            {mode === 'add' ? (
+              <PositionOfficeSelection 
+                offices={offices}
+                officesLoading={officesLoading}
                 disabled={mode === 'view'}
-                defaultValue="09:00"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
               />
-              {errors.reporting_time && (
-                <p className="mt-1 text-sm text-red-600">{errors.reporting_time.message as string}</p>
-              )}
-            </div>
-            <div className="mb-4">
-              <label htmlFor="duty_hours" className="block text-sm font-medium text-gray-700">
-                Duty Hours <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                id="duty_hours"
-                step="0.25"
-                min="0"
-                max="24"
-                {...register('duty_hours', { required: mode !== 'view' ? 'Duty hours is required' : false })}
-                disabled={mode === 'view'}
-                defaultValue="8.00"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
-              />
-              {errors.duty_hours && (
-                <p className="mt-1 text-sm text-red-600">{errors.duty_hours.message as string}</p>
-              )}
-            </div>
+            ) : (
+              // For edit/view mode, show single office (legacy support)
+              <>
+                <div className="mb-4">
+                  <label htmlFor="office_name" className="block text-sm font-medium text-gray-700">
+                    Office <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="office_name"
+                    {...register('office_name', { required: mode !== 'view' ? 'Office selection is required' : false })}
+                    disabled={mode === 'view'}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                  >
+                    <option value="">Select an office</option>
+                    {offices && offices.map((office: any) => (
+                      <option key={office.office_id} value={office.office_name}>{office.office_name}</option>
+                    ))}
+                  </select>
+                  {errors.office_name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.office_name.message as string}</p>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="reporting_time" className="block text-sm font-medium text-gray-700">
+                    Reporting Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    id="reporting_time"
+                    {...register('reporting_time', { required: mode !== 'view' ? 'Reporting time is required' : false })}
+                    disabled={mode === 'view'}
+                    defaultValue="09:00"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                  />
+                  {errors.reporting_time && (
+                    <p className="mt-1 text-sm text-red-600">{errors.reporting_time.message as string}</p>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="duty_hours" className="block text-sm font-medium text-gray-700">
+                    Duty Hours <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="duty_hours"
+                    step="0.25"
+                    min="0"
+                    max="24"
+                    {...register('duty_hours', { required: mode !== 'view' ? 'Duty hours is required' : false })}
+                    disabled={mode === 'view'}
+                    defaultValue="8.00"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+                  />
+                  {errors.duty_hours && (
+                    <p className="mt-1 text-sm text-red-600">{errors.duty_hours.message as string}</p>
+                  )}
+                </div>
+              </>
+            )}
           </>
         );
 

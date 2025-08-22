@@ -415,12 +415,12 @@ export const Employees: React.FC = () => {
           </div>
 
           {/* Other buttons */}
-          <div className="flex flex-wrap gap-2 justify-start md:justify-end items-center w-full md:w-auto">
+          <div className="flex gap-2 justify-start md:justify-end items-center w-full md:w-auto">
 
             {/* Import Excel */}
             <label
               htmlFor="importExcel"
-              className="flex items-center justify-center h-10 px-3 min-w-[130px] text-base font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[130px] text-base font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
@@ -436,7 +436,7 @@ export const Employees: React.FC = () => {
             {/* Import Secondary Data */}
             <label
               htmlFor="importSecondaryExcel"
-              className="flex items-center justify-center h-10 px-3 min-w-[150px] text-base font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[150px] text-base font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Secondary Data
@@ -452,7 +452,7 @@ export const Employees: React.FC = () => {
             {/* Add New Employee */}
             <button
               onClick={handleAddEmployee}
-              className="flex items-center justify-center h-10 px-3 min-w-[140px] text-base font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[140px] text-base font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add New Employee
