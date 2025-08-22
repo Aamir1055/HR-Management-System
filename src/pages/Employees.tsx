@@ -176,8 +176,10 @@ export const Employees: React.FC = () => {
   const handleDownloadSampleExcel = () => {
     const sampleData = [
       {
-        'Employee ID': 'EMP-999',
-        Name: 'John Smith',
+        'Employee ID': '999',
+        nationality: 'UAE',
+        first_name	: 'John',
+        last_name	: 'Doe',
         Email: 'john@example.com',
         'Office ID': 19,
         'Position ID': 57,
@@ -190,7 +192,6 @@ export const Employees: React.FC = () => {
         'Visa Type': '1',
         'Visa Expiry': '2030-12-31',
         Platform: '1',
-        Address: '123 Main St',
         'Current Address': '456 Current St',
         Phone: '5551234567',
         WhatsApp: '5557891234',
@@ -200,8 +201,7 @@ export const Employees: React.FC = () => {
         'Marital Status': 'Single',
         'Hiring Source': 'Job Portal',
         'Salary Currency': 'AED',
-        'Emirates ID': '784-1990-1234567-8',
-        'Emergency Contact': '+971501234567',
+        'emergency_contact_relation': ' 9109087654 Brother',
       },
     ];
 
@@ -415,12 +415,12 @@ export const Employees: React.FC = () => {
           </div>
 
           {/* Other buttons */}
-          <div className="flex flex-wrap gap-2 justify-start md:justify-end items-center w-full md:w-auto">
+          <div className="flex gap-2 justify-start md:justify-end items-center w-full md:w-auto">
 
             {/* Import Excel */}
             <label
               htmlFor="importExcel"
-              className="flex items-center justify-center h-10 px-3 min-w-[130px] text-base font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[130px] text-base font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
@@ -436,7 +436,7 @@ export const Employees: React.FC = () => {
             {/* Import Secondary Data */}
             <label
               htmlFor="importSecondaryExcel"
-              className="flex items-center justify-center h-10 px-3 min-w-[150px] text-base font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[150px] text-base font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Secondary Data
@@ -452,7 +452,7 @@ export const Employees: React.FC = () => {
             {/* Add New Employee */}
             <button
               onClick={handleAddEmployee}
-              className="flex items-center justify-center h-10 px-3 min-w-[140px] text-base font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-3 min-w-[140px] text-base font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add New Employee

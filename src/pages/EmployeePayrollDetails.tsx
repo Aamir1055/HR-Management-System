@@ -1,3 +1,11 @@
+  // payroleManagement2/src/pages/EmployeePayrollDetails.tsx
+  /**
+   * Employee Payroll Details Page
+   * Displays detailed payroll information for a specific employee
+   * Includes attendance records, salary calculations, and export functionality
+   */
+  
+  
   import React, { useEffect, useState, useCallback, useMemo } from 'react';
   import { useParams, useNavigate } from 'react-router-dom';
   import { MainLayout } from '../components/Layout/MainLayout';

@@ -101,10 +101,32 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
     try {
       console.log(`➕ Creating ${dataType}:`, itemData);
       
-      const response = await fetch(getApiEndpoint(), {
+      // For positions with multiple offices, use the specialized endpoint
+      let endpoint = getApiEndpoint();
+      let body = itemData;
+      
+      // Fix field mapping for office creation
+      if (dataType === 'office') {
+        body = {
+          name: itemData.office_name || itemData.name,
+          location: itemData.location
+        };
+      } else if (dataType === 'position' && itemData.offices && Array.isArray(itemData.offices) && itemData.offices.length > 0) {
+        console.log('🏢 Using multiple office position creation endpoint');
+        endpoint = '/api/masters/positions-multiple-offices';
+        
+        // Transform the data for the multiple office endpoint
+        body = {
+          title: itemData.title,
+          description: itemData.description || null,
+          offices: itemData.offices
+        };
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(itemData)
+        body: JSON.stringify(body)
       });
       
       if (!response.ok) {
@@ -115,7 +137,13 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
       const result = await response.json();
       console.log(`✅ ${dataType} created successfully:`, result);
       
-      toast.success(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} created successfully`);
+      // Show appropriate success message based on creation type
+      if (dataType === 'position' && itemData.offices && itemData.offices.length > 1) {
+        toast.success(`Position "${itemData.title}" created successfully for ${itemData.offices.length} offices`);
+      } else {
+        toast.success(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} created successfully`);
+      }
+      
       await fetchData();
       return result;
     } catch (err: any) {
@@ -201,11 +229,20 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         }
       }
 
+      // Fix field mapping for office updates
+      let updateBody = itemData;
+      if (dataType === 'office') {
+        updateBody = {
+          name: itemData.office_name || itemData.name,
+          location: itemData.location
+        };
+      }
+
       // Make the update API call
       const response = await fetch(`${getApiEndpoint()}/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify(itemData)
+        body: JSON.stringify(updateBody)
       });
 
       if (!response.ok) {

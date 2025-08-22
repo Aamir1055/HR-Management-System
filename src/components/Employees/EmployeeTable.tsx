@@ -97,17 +97,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 onClick={() => handleSort('office_name')}
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               >
-                Office & Position
+                OFFICE & POSITION
                 {sortField === 'office_name' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </th>
-              <th
-                onClick={() => handleSort('position_title')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              >
-                Position
-                {sortField === 'position_title' && (
                   <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                 )}
               </th>
@@ -167,8 +158,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     <div className="text-sm text-gray-900 font-medium">
                       {employee.office_name || 'Not assigned'}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
                       {employee.position_title || 'Not assigned'}
                     </div>
@@ -240,7 +229,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             })}
             {sortedEmployees.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500 text-sm">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 text-sm">
                   No employees found.
                 </td>
               </tr>

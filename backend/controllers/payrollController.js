@@ -2,6 +2,9 @@
  * Payroll Controller - Manages payroll calculation, generation, and processing
  * Handles salary calculations, deductions, bonuses, and payroll reports
  */
+
+//Just a simple log to indicate this file is loaded
+
 console.log("==> payrollController.js loaded");
 
 const db = require('../db');

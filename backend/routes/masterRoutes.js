@@ -22,6 +22,7 @@ router.get('/office-position-details/:officeId/:positionId', masterController.ge
 // -------- POSITION ROUTES --------
 router.get('/positions', masterController.getAllPositions);
 router.post('/positions', masterController.createPosition);
+router.post('/positions-multiple-offices', masterController.createPositionWithMultipleOffices);
 router.put('/positions/:id', masterController.updatePosition);
 router.delete('/positions/:id', masterController.deletePosition);
 router.post('/office-specific-position', masterController.createOfficeSpecificPosition);
