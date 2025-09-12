@@ -7,7 +7,7 @@ const fs = require('fs');
 
 // --- Helpers ---
 function excelDateToJSDate(serial) {
-  // If it's already a string in date format, normalize it properly and add +1 day
+  // If it's already a string in date format, normalize it properly
   if (typeof serial === 'string' && (serial.includes('-') || serial.includes('/'))) {
     try {
       const parts = serial.split(/[-\/]/);
@@ -23,35 +23,38 @@ function excelDateToJSDate(serial) {
           // DD-MM-YYYY, DD/MM/YYYY, MM-DD-YYYY, or MM/DD/YYYY format
           year = parseInt(parts[2].length === 2 ? `20${parts[2]}` : parts[2]);
           
-          // For DD/MM or MM/DD disambiguation, use context clues
+          // Always treat as DD/MM/YYYY format for consistency
+          // This ensures the Excel data is processed in the same format we expect
           const first = parseInt(parts[0]);
           const second = parseInt(parts[1]);
           
-          if (first > 12) {
-            // First part > 12, must be DD-MM format
-            day = first;
-            month = second - 1; // 0-indexed for Date constructor
-          } else if (second > 12) {
-            // Second part > 12, must be MM-DD format  
+          // Check for obviously wrong DD/MM interpretation
+          if (first > 31) {
+            // First part > 31, cannot be day, likely MM/DD/YYYY format
+            console.warn(`⚠️ Date ${serial} appears to be MM/DD/YYYY but we expect DD/MM/YYYY`);
             month = first - 1; // 0-indexed for Date constructor
             day = second;
+          } else if (second > 12) {
+            // Second part > 12, must be DD/MM format
+            day = first;
+            month = second - 1; // 0-indexed for Date constructor
           } else {
-            // Both <= 12, assume DD-MM format (common in many regions)
+            // Both <= 12, ALWAYS assume DD/MM format
+            // This ensures consistent behavior - all dates are treated as DD/MM/YYYY
             day = first;
             month = second - 1; // 0-indexed for Date constructor
           }
         }
         
-        // Create date and add +1 day to compensate for timezone shift
+        // Create date without timezone manipulation
         const dateObj = new Date(year, month, day);
-        dateObj.setDate(dateObj.getDate() + 1);
         
         // Format as YYYY-MM-DD
         const finalYear = dateObj.getFullYear();
         const finalMonth = (dateObj.getMonth() + 1).toString().padStart(2, '0');
         const finalDay = dateObj.getDate().toString().padStart(2, '0');
         
-        console.log(`📊 EXCEL String Date: ${serial} → ${finalYear}-${finalMonth}-${finalDay} (with +1 day)`);
+        console.log(`📊 EXCEL String Date: ${serial} → ${finalYear}-${finalMonth}-${finalDay}`);
         return `${finalYear}-${finalMonth}-${finalDay}`;
       }
     } catch (e) {
@@ -60,7 +63,7 @@ function excelDateToJSDate(serial) {
     return serial;
   }
   
-  // Handle Excel date serial numbers and add +1 day
+  // Handle Excel date serial numbers
   if (typeof serial === 'number') {
     // Excel date serial calculation (1900-based system)
     const EXCEL_EPOCH_DIFF = 25569; // Days between 1900-01-01 and 1970-01-01
@@ -72,15 +75,12 @@ function excelDateToJSDate(serial) {
     // Create date object from milliseconds
     const date = new Date(dateMs);
     
-    // Add +1 day to compensate for timezone shift
-    date.setDate(date.getDate() + 1);
-    
     // Extract date components using UTC to avoid any timezone conversion
     const year = date.getUTCFullYear();
     const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = date.getUTCDate().toString().padStart(2, '0');
     
-    console.log(`📊 EXCEL Serial Date: ${serial} → ${year}-${month}-${day} (with +1 day)`);
+    console.log(`📊 EXCEL Serial Date: ${serial} → ${year}-${month}-${day}`);
     return `${year}-${month}-${day}`;
   }
   
@@ -504,21 +504,18 @@ module.exports = {
         req.db.query('SELECT id, typeofvisa FROM visa_types'),
         req.db.query('SELECT id, platform_name FROM platforms')
       ]);
-      // Helper function to subtract 1 day from template dates so they show correctly after import
-      const adjustTemplateDate = (dateStr) => {
+      // Helper function to format template dates as DD/MM/YYYY
+      const formatTemplateDate = (dateStr) => {
         try {
           const date = new Date(dateStr);
           if (isNaN(date.getTime())) return dateStr;
           
-          // SUBTRACT 1 DAY from template dates to compensate for +1 day during import
-          date.setDate(date.getDate() - 1);
-          
-          // Format as DD-MM-YYYY (common format for Excel templates)
+          // Format as DD/MM/YYYY for Excel templates
           const day = date.getDate().toString().padStart(2, '0');
           const month = (date.getMonth() + 1).toString().padStart(2, '0');
           const year = date.getFullYear();
           
-          return `${day}-${month}-${year}`;
+          return `${day}/${month}/${year}`;
         } catch (error) {
           return dateStr;
         }
@@ -536,11 +533,11 @@ module.exports = {
         'Office ID': 19,
         'Position ID': 21,
         'Salary': 4000,
-        'Joining Date': adjustTemplateDate('2023-01-01'), // Will show 31-12-2022 but import as 01-01-2023
+        'Joining Date': formatTemplateDate('2023-01-01'), // Shows 01/01/2023 and imports as 01-01-2023
         'Status': 'active',
         
         // Personal Info
-        'DOB': adjustTemplateDate('1990-01-15'), // Will show 14-01-1990 but import as 15-01-1990
+        'DOB': formatTemplateDate('1990-01-15'), // Shows 15/01/1990 and imports as 15-01-1990
         'Gender': 'Male',
         'Phone': '+971501234567',
         'WhatsApp': '+971507891234',
@@ -550,9 +547,9 @@ module.exports = {
         
         // Documents & Visa
         'Passport Number': 'P1234567',
-        'Passport Expiry': adjustTemplateDate('2030-01-01'), // Will show 31-12-2029 but import as 01-01-2030
+        'Passport Expiry': formatTemplateDate('2030-01-01'), // Shows 01/01/2030 and imports as 01-01-2030
         'Visa Type': 1,
-        'Visa Expiry': adjustTemplateDate('2030-12-31'), // Will show 30-12-2030 but import as 31-12-2030
+        'Visa Expiry': formatTemplateDate('2030-12-31'), // Shows 31/12/2030 and imports as 31-12-2030
         'Hiring Source': 'Job Portal',
         
         // Emergency Contact
@@ -571,7 +568,7 @@ module.exports = {
       
       }];
       
-      console.log('📋 Template dates adjusted for import compensation:', {
+      console.log('📋 Template dates formatted as DD/MM/YYYY:', {
         'Joining Date': template[0]['Joining Date'],
         'DOB': template[0]['DOB'],
         'Passport Expiry': template[0]['Passport Expiry'],
@@ -613,42 +610,19 @@ module.exports = {
       
       sql += ` ORDER BY e.employeeId`;
       
-      // Helper function to subtract 1 day from stored dates for display
-      const adjustDateForDisplay = (dateStr) => {
-        if (!dateStr) return null;
-        
-        try {
-          const date = new Date(dateStr);
-          if (isNaN(date.getTime())) return dateStr;
-          
-          // SUBTRACT 1 DAY to reverse the +1 day we added during storage
-          date.setDate(date.getDate() - 1);
-          
-          // Format as YYYY-MM-DD
-          const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const day = date.getDate().toString().padStart(2, '0');
-          
-          const result = `${year}-${month}-${day}`;
-          console.log(`🔄 Display adjustment: ${dateStr} → ${result} (-1 day)`);
-          return result;
-        } catch (error) {
-          console.warn(`⚠️ Error adjusting date for display: ${dateStr}`, error);
-          return dateStr;
-        }
-      };
-      
       const [employees] = await req.db.query(sql, params);
-      const processedEmployees = employees.map(emp => ({
-        ...emp,
-        status: emp.status === 1 || emp.status === true || emp.status === 'active',
-        position_name: emp.position_title,
-        // Adjust dates for display by subtracting 1 day
-        joiningDate: adjustDateForDisplay(emp.joiningDate),
-        dob: adjustDateForDisplay(emp.dob),
-        passport_expiry: adjustDateForDisplay(emp.passport_expiry),
-        visa_expiry: adjustDateForDisplay(emp.visa_expiry)
-      }));
+      const processedEmployees = employees.map(emp => {
+        return {
+          ...emp,
+          status: emp.status === 1 || emp.status === true || emp.status === 'active',
+          position_name: emp.position_title,
+          // Return dates as strings (YYYY-MM-DD format) from database
+          joiningDate: emp.joiningDate || null,
+          dob: emp.dob || null,
+          passport_expiry: emp.passport_expiry || null,
+          visa_expiry: emp.visa_expiry || null
+        };
+      });
       res.json(processedEmployees);
     } catch (err) {
       console.error('Error:', err);
@@ -829,7 +803,7 @@ module.exports = {
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
       
-      // Simple date handling with +1 day to compensate for timezone shift
+      // Simple date handling without timezone manipulation
       const safeFormatDate = (dateStr) => {
         if (!dateStr) return null;
         
@@ -868,16 +842,13 @@ module.exports = {
             return null;
           }
           
-          // ADD +1 DAY to compensate for timezone shift
-          parsedDate.setDate(parsedDate.getDate() + 1);
-          
-          // Format as YYYY-MM-DD
+          // Format as YYYY-MM-DD without any manipulation
           const year = parsedDate.getFullYear();
           const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
           const day = parsedDate.getDate().toString().padStart(2, '0');
           
           const result = `${year}-${month}-${day}`;
-          console.log(`✅ Date with +1 day: ${dateStr} → ${result}`);
+          console.log(`✅ Date formatted: ${dateStr} → ${result}`);
           return result;
           
         } catch (error) {
@@ -933,6 +904,13 @@ module.exports = {
       const employee = newEmployee[0];
       employee.status = employee.status === 1;
       employee.position_name = employee.position_title;
+      
+      // Return dates as strings directly from database
+      employee.joiningDate = employee.joiningDate || null;
+      employee.dob = employee.dob || null;
+      employee.passport_expiry = employee.passport_expiry || null;
+      employee.visa_expiry = employee.visa_expiry || null;
+      
       res.status(201).json(employee);
     } catch (err) {
       console.error('Error:', err);
@@ -955,36 +933,11 @@ module.exports = {
         emp.status = emp.status === 1;
         emp.position_name = emp.position_title;
         
-        // Helper function to subtract 1 day from stored dates for display
-        const adjustDateForDisplay = (dateStr) => {
-          if (!dateStr) return null;
-          
-          try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return dateStr;
-            
-            // SUBTRACT 1 DAY to reverse the +1 day we added during storage
-            date.setDate(date.getDate() - 1);
-            
-            // Format as YYYY-MM-DD
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            
-            const result = `${year}-${month}-${day}`;
-            console.log(`🔄 Form display adjustment: ${dateStr} → ${result} (-1 day)`);
-            return result;
-          } catch (error) {
-            console.warn(`⚠️ Error adjusting date for form display: ${dateStr}`, error);
-            return dateStr;
-          }
-        };
-        
-        // Adjust dates for form display by subtracting 1 day
-        emp.joiningDate = adjustDateForDisplay(emp.joiningDate);
-        emp.dob = adjustDateForDisplay(emp.dob);
-        emp.passport_expiry = adjustDateForDisplay(emp.passport_expiry);
-        emp.visa_expiry = adjustDateForDisplay(emp.visa_expiry);
+        // Return dates as strings directly from database
+        emp.joiningDate = emp.joiningDate || null;
+        emp.dob = emp.dob || null;
+        emp.passport_expiry = emp.passport_expiry || null;
+        emp.visa_expiry = emp.visa_expiry || null;
         
         res.json(emp);
       } else {
@@ -1019,7 +972,7 @@ module.exports = {
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
       
-      // Simple date handling with +1 day to compensate for timezone shift
+      // Simple date handling without timezone manipulation
       const safeFormatDate = (dateStr) => {
         if (!dateStr) return null;
         
@@ -1058,16 +1011,13 @@ module.exports = {
             return null;
           }
           
-          // ADD +1 DAY to compensate for timezone shift
-          parsedDate.setDate(parsedDate.getDate() + 1);
-          
-          // Format as YYYY-MM-DD
+          // Format as YYYY-MM-DD without any manipulation
           const year = parsedDate.getFullYear();
           const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
           const day = parsedDate.getDate().toString().padStart(2, '0');
           
           const result = `${year}-${month}-${day}`;
-          console.log(`✅ UPDATE Date with +1 day: ${dateStr} → ${result}`);
+          console.log(`✅ UPDATE Date formatted: ${dateStr} → ${result}`);
           return result;
           
         } catch (error) {
@@ -1124,6 +1074,13 @@ module.exports = {
       const employee = updatedEmployee[0];
       employee.status = employee.status === 1;
       employee.position_name = employee.position_title;
+      
+      // Return dates as strings directly from database
+      employee.joiningDate = employee.joiningDate || null;
+      employee.dob = employee.dob || null;
+      employee.passport_expiry = employee.passport_expiry || null;
+      employee.visa_expiry = employee.visa_expiry || null;
+      
       res.json(employee);
     } catch (err) {
       console.error('Error:', err);
@@ -1161,6 +1118,82 @@ module.exports = {
     } catch (err) {
       console.error('Error:', err);
       res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Export employees to Excel with same format as database
+  exportEmployees: async (req, res) => {
+    try {
+      const { buildOfficeFilter } = require('../middleware/auth');
+      const { whereClause, params } = buildOfficeFilter(req, 'e');
+      
+      let sql = `
+        SELECT e.*, o.name AS office_name, p.title AS position_title,
+               op.reporting_time, op.duty_hours, e.visa_type AS visa_type_name
+        FROM employees e
+        LEFT JOIN offices o ON e.office_id = o.id
+        LEFT JOIN positions p ON e.position_id = p.id
+        LEFT JOIN office_positions op ON e.office_id = op.office_id AND e.position_id = op.position_id
+      `;
+      
+      if (whereClause) {
+        sql += ` WHERE ${whereClause}`;
+      }
+      
+      sql += ` ORDER BY e.employeeId`;
+      
+      const [employees] = await req.db.query(sql, params);
+      
+      // Format data for export - keep same format as database
+      // Excluding: Address, Emergency Contact, Emirates ID as requested
+      const exportData = employees.map(emp => ({
+        'Employee ID': emp.employeeId,
+        'Name': emp.name || '',
+        'First Name': emp.first_name || '',
+        'Last Name': emp.last_name || '',
+        'Nationality': emp.nationality || '',
+        'Email': emp.email || '',
+        'Office': emp.office_name || '',
+        'Position': emp.position_title || '',
+        'Monthly Salary': emp.monthlySalary || 0,
+        'Salary Currency': emp.salary_currency || 'AED',
+        'Joining Date': emp.joiningDate || '',
+        'Status': emp.status === 1 ? 'Active' : 'Inactive',
+        'Date of Birth': emp.dob || '',
+        'Gender': emp.gender || '',
+        'Marital Status': emp.marital_status || '',
+        'Primary Language': emp.primary_language || '',
+        'Secondary Language': emp.secondary_language || '',
+        'Current Address': emp.current_address || '',
+        'Phone': emp.phone || '',
+        'WhatsApp': emp.whatsapp || '',
+        'Emergency Contact Relation': emp.emergency_contact_relation || '',
+        'Passport Number': emp.passport_number || '',
+        'Passport Expiry': emp.passport_expiry || '',
+        'Visa Type': emp.visa_type_name || emp.visa_type || '',
+        'Visa Expiry': emp.visa_expiry || '',
+        'Platform': emp.platform || '',
+        'Hiring Source': emp.hiring_source || '',
+        'Reporting Time': emp.reporting_time || '',
+        'Duty Hours': emp.duty_hours ? `${emp.duty_hours} hours` : ''
+      }));
+      
+      // Create Excel file
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+      
+      // Set response headers for file download
+      const fileName = `employees_${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      // Send the Excel file
+      res.end(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+      
+    } catch (err) {
+      console.error('Export error:', err);
+      res.status(500).json({ error: 'Failed to export employees: ' + err.message });
     }
   }
 };

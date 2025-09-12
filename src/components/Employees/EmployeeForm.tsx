@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { Employee } from '../../types';
+import { formatDateForInput } from '../../utils/dateUtils';
 
 interface Office {
   id: number;
@@ -195,13 +196,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             platform_id: platformObj?.id ?? 0,
             office_name: employee.office_name || officeObj?.name || '',
             position_name: employee.position_name || employee.position_title || positionObj?.title || '',
-            joiningDate: employee.joiningDate ? employee.joiningDate.split('T')[0] : '',
+            joiningDate: employee.joiningDate || '', // Use DD/MM/YYYY directly from database
             status: statusBoolean,
-            dob: employee.dob ? employee.dob.split('T')[0] : '',
+            dob: employee.dob || '', // Use DD/MM/YYYY directly from database
             passport_number: employee.passport_number || '',
-            passport_expiry: employee.passport_expiry ? employee.passport_expiry.split('T')[0] : '',
+            passport_expiry: employee.passport_expiry || '', // Use DD/MM/YYYY directly from database
             visa_type: employee.visa_type || visaTypeObj?.typeofvisa || '',
-            visa_expiry: employee.visa_expiry ? employee.visa_expiry.split('T')[0] : '',
+            visa_expiry: employee.visa_expiry || '', // Use DD/MM/YYYY directly from database
             platform: employee.platform || platformObj?.platform_name || '',
             address: employee.address || '',
             current_address: employee.current_address || '',
@@ -329,7 +330,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         office_name: office?.name || '',
         position_name: position?.title || '',
         monthlySalary: formData.monthlySalary,
-        joiningDate: formData.joiningDate ? new Date(formData.joiningDate).toISOString().split('T')[0] : '',
+        joiningDate: formData.joiningDate || '', // Send DD/MM/YYYY directly to backend
         status: formData.status,
         dob: formData.dob || null,
         passport_number: formData.passport_number || null,
@@ -451,11 +452,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
         <input
-          type="date"
-          {...register('dob')}
+          type="text"
+          {...register('dob', {
+            pattern: {
+              value: /^\d{2}\/\d{2}\/\d{4}$/,
+              message: 'Date must be in DD/MM/YYYY format'
+            }
+          })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="DD/MM/YYYY"
         />
+        {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob.message}</p>}
       </div>
       
       {/* Phone Number */}
@@ -541,10 +549,17 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining (DOJ) <span className="text-red-600">*</span></label>
         <input
-          type="date"
-          {...register('joiningDate', { required: 'Joining date is required' })}
+          type="text"
+          {...register('joiningDate', { 
+            required: 'Joining date is required',
+            pattern: {
+              value: /^\d{2}\/\d{2}\/\d{4}$/,
+              message: 'Date must be in DD/MM/YYYY format'
+            }
+          })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="DD/MM/YYYY"
         />
         {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
       </div>
@@ -676,11 +691,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Visa Expiry Date</label>
         <input
-          type="date"
-          {...register('visa_expiry')}
+          type="text"
+          {...register('visa_expiry', {
+            pattern: {
+              value: /^\d{2}\/\d{2}\/\d{4}$/,
+              message: 'Date must be in DD/MM/YYYY format'
+            }
+          })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="DD/MM/YYYY"
         />
+        {errors.visa_expiry && <p className="text-red-500 text-sm mt-1">{errors.visa_expiry.message}</p>}
       </div>
       
       {/* Passport no. */}
@@ -698,11 +720,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Passport Expiry</label>
         <input
-          type="date"
-          {...register('passport_expiry')}
+          type="text"
+          {...register('passport_expiry', {
+            pattern: {
+              value: /^\d{2}\/\d{2}\/\d{4}$/,
+              message: 'Date must be in DD/MM/YYYY format'
+            }
+          })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="DD/MM/YYYY"
         />
+        {errors.passport_expiry && <p className="text-red-500 text-sm mt-1">{errors.passport_expiry.message}</p>}
       </div>
       
       {/* Hiring source */}

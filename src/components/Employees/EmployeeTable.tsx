@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Employee } from '../../types';
 import { Edit, Trash2, Eye, MessageCircle } from 'lucide-react';
 import EmployeeComments from './EmployeeComments';
+import { formatDateFromEpoch } from '../../utils/dateUtils';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -171,9 +172,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {employee.joiningDate && !isNaN(new Date(employee.joiningDate).getTime())
-                        ? new Date(employee.joiningDate).toLocaleDateString('en-GB')
-                        : 'Invalid Date'}
+                      {formatDateFromEpoch(employee.joiningDate)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

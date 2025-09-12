@@ -123,53 +123,38 @@ export const Employees: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleExportToExcel = () => {
-    if (filteredEmployees.length === 0) {
-      alert('No employee data to export.');
-      return;
-    }
-    const exportData = filteredEmployees.map((emp) => ({
-      'Employee ID': emp.employeeId,
-      'Name': emp.name,
-      'Email': emp.email,
-      'Office': getDisplayName(emp.office_name, 'name', 'office_name'),
-      'Position': emp.position_title || emp.position_name || '',
-      'Monthly Salary': Number(emp.monthlySalary || 0).toFixed(2),
-      'Salary Currency': emp.salary_currency || 'AED',
-      'Joining Date': emp.joiningDate ? new Date(emp.joiningDate).toISOString().split('T')[0] : '',
-      'Status': emp.status ? 'Active' : 'Inactive',
-      'Date of Birth': emp.dob ? new Date(emp.dob).toISOString().split('T')[0] : '',
-      'Gender': emp.gender || '',
-      'Marital Status': emp.marital_status || '',
-      'Primary Language': emp.primary_language || '',
-      'Secondary Language': emp.secondary_language || '',
-      'Permanent Address': emp.address || '',
-      'Current Address': emp.current_address || '',
-      'Phone': emp.phone || '',
-      'WhatsApp': emp.whatsapp || '',
-      'Emergency Contact': emp.emergency_contact || '',
-      'Emirates ID': emp.emirates_id || '',
-      'Passport Number': emp.passport_number || '',
-      'Passport Expiry': emp.passport_expiry ? new Date(emp.passport_expiry).toISOString().split('T')[0] : '',
-      'Visa Type': emp.visa_type_name || emp.visa_type || '',
-      'Visa Expiry': emp.visa_expiry ? new Date(emp.visa_expiry).toISOString().split('T')[0] : '',
-      'Platform': emp.platform || '',
-      'Hiring Source': emp.hiring_source || '',
-      'Reporting Time': emp.reporting_time || '',
-      'Duty Hours': emp.duty_hours ? `${emp.duty_hours} hours` : '',
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/employees/export', {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array',
-    });
-    const blob = new Blob([excelBuffer], {
-      type: 'application/octet-stream',
-    });
-    saveAs(blob, `employees_${new Date().toISOString().split('T')[0]}.xlsx`);
+      if (!response.ok) {
+        throw new Error('Failed to export employees');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `employees_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess('Success', 'Employee data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      showError('Error', 'Failed to export employee data. Please try again.');
+    }
   };
 
   // --- SAMPLE DOWNLOAD: now includes all key secondary fields ---

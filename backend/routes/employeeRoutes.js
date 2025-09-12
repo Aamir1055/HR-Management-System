@@ -39,6 +39,7 @@ const upload = multer({
 
 // =================== IMPORT/EXPORT ROUTES FIRST ===================
 router.get('/template', employeeController.exportEmployeesTemplate);
+router.get('/export', requireAuth, addUserOffices, employeeController.exportEmployees);
 router.post('/import', upload.single('file'), employeeController.importEmployees);
 router.post('/import-secondary', upload.single('file'), employeeController.importSecondaryEmployeeData);
 
