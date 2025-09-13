@@ -7,13 +7,13 @@ require('dotenv').config();
 
 const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'payroll_system2',
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+  queueLimit: parseInt(process.env.DB_QUEUE_LIMIT) || 0,
   rowsAsArray: false  
 });
 
@@ -43,11 +43,15 @@ const loanRoutes = require('./routes/loanRoutes'); // NEW - EMPLOYEE LOANS
 const commentsRoutes = require('./routes/commentsRoutes'); // NEW - EMPLOYEE COMMENTS
 
 // Middleware
+const corsOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      `http://localhost:${process.env.VITE_PORT || 5173}` // Vite dev server
+    ];
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:5173' // Vite dev server
-  ],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
