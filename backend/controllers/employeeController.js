@@ -102,7 +102,7 @@ const getPositionIdByName = async (position_name, db) => {
 const getVisaTypeIdByName = async (visa_type_name, db) => {
   if (!db) throw new Error('Database connection is missing in getVisaTypeIdByName');
   if (!visa_type_name) return null; // Allow null visa types
-  const [visaType] = await db.query('SELECT id FROM visa_types WHERE name = ?', [visa_type_name]);
+  const [visaType] = await db.query('SELECT id FROM visa_types WHERE typeofvisa = ?', [visa_type_name]);
   if (!visaType || !visaType[0]) throw new Error('Invalid visa_type_name: ' + visa_type_name);
   return visaType[0].id;
 };
@@ -112,6 +112,28 @@ const getPlatformNameById = async (platform_id, db) => {
   const [platform] = await db.query('SELECT platform_name FROM platforms WHERE id = ?', [platform_id]);
   if (!platform || !platform[0]) throw new Error('Invalid platform_id: ' + platform_id);
   return platform[0].platform_name;
+};
+
+const getPlatformIdByName = async (platform_name, db) => {
+  if (!db) throw new Error('Database connection is missing in getPlatformIdByName');
+  if (!platform_name) return null; // Allow null platforms
+  const [platform] = await db.query('SELECT id FROM platforms WHERE platform_name = ?', [platform_name]);
+  if (!platform || !platform[0]) throw new Error('Invalid platform_name: ' + platform_name);
+  return platform[0].id;
+};
+
+// Helper function to format YYYY-MM-DD dates to DD/MM/YYYY for frontend display
+const formatDateForDisplay = (dateStr) => {
+  if (!dateStr) return null;
+  
+  // If it's already in YYYY-MM-DD format (from database)
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  
+  // Return as-is if not in expected format
+  return dateStr;
 };
 
 
@@ -129,16 +151,16 @@ module.exports = {
       const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
       console.log('[IMPORT] Read data rows:', data.length);
 
-      // Check for required columns with flexible naming
+      // Check for required columns with flexible naming - UPDATED to accept names instead of IDs
       const requiredColumnsMap = {
         'Employee ID': ['Employee ID', 'employee_id', 'employeeId'],
         'First Name': ['First Name', 'first_name', 'firstName'],
         'Last Name': ['Last Name', 'last_name', 'lastName'],
         'Email': ['Email', 'email'],
-        'Office ID': ['Office ID', 'office_id', 'officeId'],
-        'Position ID': ['Position ID', 'position_id', 'positionId'], 
-        'Salary': ['Salary', 'salary', 'monthlySalary'],
-        'Joining Date': ['Joining Date', 'joining_date', 'joiningDate'],
+        'Office Name': ['Office Name', 'office_name', 'officeName', 'Office', 'Office ID', 'office_id', 'officeId'], // Accept Office, Office Name, and Office ID
+        'Position Name': ['Position Name', 'position_name', 'positionName', 'Position', 'Position ID', 'position_id', 'positionId'], // Accept Position, Position Name, and Position ID
+        'Salary': ['Salary', 'salary', 'monthlySalary', 'Monthly Salary'],
+        'Joining Date': ['Joining Date', 'joining_date', 'joiningDate', 'Date of Joining (DD/MM/YYYY)', 'Date of Joining'],
         'Status': ['Status', 'status']
       };
       
@@ -180,15 +202,37 @@ module.exports = {
         };
 
         const employeeId = getColumnValue('Employee ID');
-        const officeId = getColumnValue('Office ID');
-        const positionId = getColumnValue('Position ID');
+        const officeValue = getColumnValue('Office Name'); // Now using Office Name instead of Office ID
+        const positionValue = getColumnValue('Position Name'); // Now using Position Name instead of Position ID
 
-        if (!employeeId || !officeId || !positionId) continue;
+        if (!employeeId || !officeValue || !positionValue) continue;
         try {
-          const office_id = Number(officeId);
-          const position_id = Number(positionId);
-          if (isNaN(office_id) || isNaN(position_id)) {
-            throw new Error(`Invalid Office ID or Position ID for employee ${employeeId}`);
+          // Convert office name/ID to office ID
+          let office_id;
+          if (typeof officeValue === 'string' && isNaN(Number(officeValue))) {
+            // It's a name, convert to ID
+            office_id = await getOfficeIdByName(officeValue, db);
+            console.log(`[IMPORT] Office name '${officeValue}' → ID ${office_id}`);
+          } else {
+            // It's a number ID (backward compatibility)
+            office_id = Number(officeValue);
+            if (isNaN(office_id)) {
+              throw new Error(`Invalid office value '${officeValue}' for employee ${employeeId}`);
+            }
+          }
+          
+          // Convert position name/ID to position ID
+          let position_id;
+          if (typeof positionValue === 'string' && isNaN(Number(positionValue))) {
+            // It's a name, convert to ID
+            position_id = await getPositionIdByName(positionValue, db);
+            console.log(`[IMPORT] Position name '${positionValue}' → ID ${position_id}`);
+          } else {
+            // It's a number ID (backward compatibility)
+            position_id = Number(positionValue);
+            if (isNaN(position_id)) {
+              throw new Error(`Invalid position value '${positionValue}' for employee ${employeeId}`);
+            }
           }
           
           const statusRaw = getColumnValue('Status');
@@ -204,49 +248,75 @@ module.exports = {
           // Parse secondary date fields with explicit logging
           const joiningDateRaw = getColumnValue('Joining Date');
           const joiningDate = excelDateToJSDate(joiningDateRaw);
-          const dobRaw = row['DOB'] || null;
+          
+          // Handle DOB with flexible column names
+          const dobRaw = row['DOB'] || row['Date of Birth (DD/MM/YYYY)'] || row['Date of Birth'] || null;
           const dobParsed = dobRaw ? excelDateToJSDate(dobRaw) : null;
-          const passportExpiryRaw = row['Passport Expiry'] || null;
+          
+          // Handle Passport Expiry with flexible column names
+          const passportExpiryRaw = row['Passport Expiry'] || row['Passport Expiry (DD/MM/YYYY)'] || null;
           const passportExpiryParsed = passportExpiryRaw ? excelDateToJSDate(passportExpiryRaw) : null;
-          const visaExpiryRaw = row['Visa Expiry'] || null;
+          
+          // Handle Visa Expiry with flexible column names  
+          const visaExpiryRaw = row['Visa Expiry'] || row['Visa Expiry (DD/MM/YYYY)'] || null;
           const visaExpiryParsed = visaExpiryRaw ? excelDateToJSDate(visaExpiryRaw) : null;
 
-          // Parse visa type - convert ID to name
+          // Parse visa type - handle both names and IDs
           let visaTypeName = null;
           if (row['Visa Type']) {
-            const visaTypeId = Number(row['Visa Type']);
-            if (isNaN(visaTypeId)) {
-              console.warn(`[IMPORT] Warning: Invalid Visa Type ID '${row['Visa Type']}' for employee ${employeeId}`);
-              visaTypeName = null;
+            console.log(`[IMPORT] Processing Visa Type: '${row['Visa Type']}' (type: ${typeof row['Visa Type']})`);
+            if (typeof row['Visa Type'] === 'string' && isNaN(Number(row['Visa Type']))) {
+              // It's already a name, use directly
+              visaTypeName = row['Visa Type'];
+              console.log(`[IMPORT] Visa Type name '${visaTypeName}' used directly for employee ${employeeId}`);
             } else {
-              // Get visa type name from database
-              const [visaTypeResult] = await db.query('SELECT typeofvisa FROM visa_types WHERE id = ?', [visaTypeId]);
-              if (visaTypeResult && visaTypeResult[0]) {
-                visaTypeName = visaTypeResult[0].typeofvisa;
-              } else {
-                console.warn(`[IMPORT] Warning: No visa type found for ID '${visaTypeId}' for employee ${employeeId}`);
+              // It's an ID, convert to name
+              const visaTypeId = Number(row['Visa Type']);
+              if (isNaN(visaTypeId)) {
+                console.warn(`[IMPORT] Warning: Invalid Visa Type value '${row['Visa Type']}' for employee ${employeeId}`);
                 visaTypeName = null;
+              } else {
+                // Get visa type name from database
+                const [visaTypeResult] = await db.query('SELECT typeofvisa FROM visa_types WHERE id = ?', [visaTypeId]);
+                if (visaTypeResult && visaTypeResult[0]) {
+                  visaTypeName = visaTypeResult[0].typeofvisa;
+                  console.log(`[IMPORT] Visa Type ID ${visaTypeId} → name '${visaTypeName}' for employee ${employeeId}`);
+                } else {
+                  console.warn(`[IMPORT] Warning: No visa type found for ID '${visaTypeId}' for employee ${employeeId}`);
+                  visaTypeName = null;
+                }
               }
             }
           }
 
-          // Parse platform - convert ID to name (similar to visa type)
+          // Parse platform - handle both names and IDs
           let platformName = null;
           if (row['Platform']) {
-            const platformId = Number(row['Platform']);
-            if (isNaN(platformId)) {
-              console.warn(`[IMPORT] Warning: Invalid Platform ID '${row['Platform']}' for employee ${employeeId}`);
-              platformName = null;
+            console.log(`[IMPORT] Processing Platform: '${row['Platform']}' (type: ${typeof row['Platform']})`);
+            if (typeof row['Platform'] === 'string' && isNaN(Number(row['Platform']))) {
+              // It's already a name, use directly
+              platformName = row['Platform'];
+              console.log(`[IMPORT] Platform name '${platformName}' used directly for employee ${employeeId}`);
             } else {
-              // Get platform name from database
-              const [platformResult] = await db.query('SELECT platform_name FROM platforms WHERE id = ?', [platformId]);
-              if (platformResult && platformResult[0]) {
-                platformName = platformResult[0].platform_name;
-              } else {
-                console.warn(`[IMPORT] Warning: No platform found for ID '${platformId}' for employee ${employeeId}`);
+              // It's an ID, convert to name
+              const platformId = Number(row['Platform']);
+              if (isNaN(platformId)) {
+                console.warn(`[IMPORT] Warning: Invalid Platform value '${row['Platform']}' for employee ${employeeId}`);
                 platformName = null;
+              } else {
+                // Get platform name from database
+                const [platformResult] = await db.query('SELECT platform_name FROM platforms WHERE id = ?', [platformId]);
+                if (platformResult && platformResult[0]) {
+                  platformName = platformResult[0].platform_name;
+                  console.log(`[IMPORT] Platform ID ${platformId} → name '${platformName}' for employee ${employeeId}`);
+                } else {
+                  console.warn(`[IMPORT] Warning: No platform found for ID '${platformId}' for employee ${employeeId}`);
+                  platformName = null;
+                }
               }
             }
+          } else {
+            console.log(`[IMPORT] No Platform data for employee ${employeeId}`);
           }
 
           // Log conversions
@@ -406,18 +476,26 @@ module.exports = {
         if ('Visa Type' in row) {
           let visaTypeName = null;
           if (row['Visa Type']) {
-            const visaTypeId = Number(row['Visa Type']);
-            if (isNaN(visaTypeId)) {
-              console.warn(`[SEC IMPORT] Warning: Invalid Visa Type ID '${row['Visa Type']}' for employee ${employeeId}`);
-              visaTypeName = null;
+            if (typeof row['Visa Type'] === 'string' && isNaN(Number(row['Visa Type']))) {
+              // It's already a name, use directly
+              visaTypeName = row['Visa Type'];
+              console.log(`[SEC IMPORT] Visa Type name '${visaTypeName}' used directly for employee ${employeeId}`);
             } else {
-              // Get visa type name from database
-              const [visaTypeResult] = await db.query('SELECT typeofvisa FROM visa_types WHERE id = ?', [visaTypeId]);
-              if (visaTypeResult && visaTypeResult[0]) {
-                visaTypeName = visaTypeResult[0].typeofvisa;
-              } else {
-                console.warn(`[SEC IMPORT] Warning: No visa type found for ID '${visaTypeId}' for employee ${employeeId}`);
+              // It's an ID, convert to name
+              const visaTypeId = Number(row['Visa Type']);
+              if (isNaN(visaTypeId)) {
+                console.warn(`[SEC IMPORT] Warning: Invalid Visa Type value '${row['Visa Type']}' for employee ${employeeId}`);
                 visaTypeName = null;
+              } else {
+                // Get visa type name from database
+                const [visaTypeResult] = await db.query('SELECT typeofvisa FROM visa_types WHERE id = ?', [visaTypeId]);
+                if (visaTypeResult && visaTypeResult[0]) {
+                  visaTypeName = visaTypeResult[0].typeofvisa;
+                  console.log(`[SEC IMPORT] Visa Type ID ${visaTypeId} → name '${visaTypeName}' for employee ${employeeId}`);
+                } else {
+                  console.warn(`[SEC IMPORT] Warning: No visa type found for ID '${visaTypeId}' for employee ${employeeId}`);
+                  visaTypeName = null;
+                }
               }
             }
           }
@@ -445,18 +523,26 @@ module.exports = {
         if ('Platform' in row) {
           let platformName = null;
           if (row['Platform']) {
-            const platformId = Number(row['Platform']);
-            if (isNaN(platformId)) {
-              console.warn(`[SEC IMPORT] Warning: Invalid Platform ID '${row['Platform']}' for employee ${employeeId}`);
-              platformName = null;
+            if (typeof row['Platform'] === 'string' && isNaN(Number(row['Platform']))) {
+              // It's already a name, use directly
+              platformName = row['Platform'];
+              console.log(`[SEC IMPORT] Platform name '${platformName}' used directly for employee ${employeeId}`);
             } else {
-              // Get platform name from database
-              const [platformResult] = await db.query('SELECT platform_name FROM platforms WHERE id = ?', [platformId]);
-              if (platformResult && platformResult[0]) {
-                platformName = platformResult[0].platform_name;
-              } else {
-                console.warn(`[SEC IMPORT] Warning: No platform found for ID '${platformId}' for employee ${employeeId}`);
+              // It's an ID, convert to name
+              const platformId = Number(row['Platform']);
+              if (isNaN(platformId)) {
+                console.warn(`[SEC IMPORT] Warning: Invalid Platform value '${row['Platform']}' for employee ${employeeId}`);
                 platformName = null;
+              } else {
+                // Get platform name from database
+                const [platformResult] = await db.query('SELECT platform_name FROM platforms WHERE id = ?', [platformId]);
+                if (platformResult && platformResult[0]) {
+                  platformName = platformResult[0].platform_name;
+                  console.log(`[SEC IMPORT] Platform ID ${platformId} → name '${platformName}' for employee ${employeeId}`);
+                } else {
+                  console.warn(`[SEC IMPORT] Warning: No platform found for ID '${platformId}' for employee ${employeeId}`);
+                  platformName = null;
+                }
               }
             }
           }
@@ -616,11 +702,11 @@ module.exports = {
           ...emp,
           status: emp.status === 1 || emp.status === true || emp.status === 'active',
           position_name: emp.position_title,
-          // Return dates as strings (YYYY-MM-DD format) from database
-          joiningDate: emp.joiningDate || null,
-          dob: emp.dob || null,
-          passport_expiry: emp.passport_expiry || null,
-          visa_expiry: emp.visa_expiry || null
+          // Return dates formatted as DD/MM/YYYY for frontend display
+          joiningDate: formatDateForDisplay(emp.joiningDate),
+          dob: formatDateForDisplay(emp.dob),
+          passport_expiry: formatDateForDisplay(emp.passport_expiry),
+          visa_expiry: formatDateForDisplay(emp.visa_expiry)
         };
       });
       res.json(processedEmployees);
@@ -905,11 +991,11 @@ module.exports = {
       employee.status = employee.status === 1;
       employee.position_name = employee.position_title;
       
-      // Return dates as strings directly from database
-      employee.joiningDate = employee.joiningDate || null;
-      employee.dob = employee.dob || null;
-      employee.passport_expiry = employee.passport_expiry || null;
-      employee.visa_expiry = employee.visa_expiry || null;
+      // Return dates formatted as DD/MM/YYYY for frontend display
+      employee.joiningDate = formatDateForDisplay(employee.joiningDate);
+      employee.dob = formatDateForDisplay(employee.dob);
+      employee.passport_expiry = formatDateForDisplay(employee.passport_expiry);
+      employee.visa_expiry = formatDateForDisplay(employee.visa_expiry);
       
       res.status(201).json(employee);
     } catch (err) {
@@ -933,11 +1019,11 @@ module.exports = {
         emp.status = emp.status === 1;
         emp.position_name = emp.position_title;
         
-        // Return dates as strings directly from database
-        emp.joiningDate = emp.joiningDate || null;
-        emp.dob = emp.dob || null;
-        emp.passport_expiry = emp.passport_expiry || null;
-        emp.visa_expiry = emp.visa_expiry || null;
+        // Return dates formatted as DD/MM/YYYY for frontend display
+        emp.joiningDate = formatDateForDisplay(emp.joiningDate);
+        emp.dob = formatDateForDisplay(emp.dob);
+        emp.passport_expiry = formatDateForDisplay(emp.passport_expiry);
+        emp.visa_expiry = formatDateForDisplay(emp.visa_expiry);
         
         res.json(emp);
       } else {
@@ -1075,11 +1161,11 @@ module.exports = {
       employee.status = employee.status === 1;
       employee.position_name = employee.position_title;
       
-      // Return dates as strings directly from database
-      employee.joiningDate = employee.joiningDate || null;
-      employee.dob = employee.dob || null;
-      employee.passport_expiry = employee.passport_expiry || null;
-      employee.visa_expiry = employee.visa_expiry || null;
+      // Return dates formatted as DD/MM/YYYY for frontend display
+      employee.joiningDate = formatDateForDisplay(employee.joiningDate);
+      employee.dob = formatDateForDisplay(employee.dob);
+      employee.passport_expiry = formatDateForDisplay(employee.passport_expiry);
+      employee.visa_expiry = formatDateForDisplay(employee.visa_expiry);
       
       res.json(employee);
     } catch (err) {
@@ -1140,42 +1226,83 @@ module.exports = {
         sql += ` WHERE ${whereClause}`;
       }
       
-      sql += ` ORDER BY e.employeeId`;
+      sql += ` ORDER BY CAST(e.employeeId AS UNSIGNED), e.employeeId`;
       
       const [employees] = await req.db.query(sql, params);
       
-      // Format data for export - keep same format as database
-      // Excluding: Address, Emergency Contact, Emirates ID as requested
+      // Helper function to format dates to DD/MM/YYYY for export
+      const formatDateForExport = (dateStr) => {
+        if (!dateStr) return '';
+        
+        try {
+          let date;
+          
+          // Handle different input formats
+          if (typeof dateStr === 'string') {
+            // If it's already in YYYY-MM-DD format (from database)
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              const [year, month, day] = dateStr.split('-');
+              return `${day}/${month}/${year}`;
+            }
+            // If it's in YYYY/MM/DD format
+            else if (dateStr.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+              const [year, month, day] = dateStr.split('/');
+              return `${day}/${month}/${year}`;
+            }
+            // If it's already in DD/MM/YYYY format, return as is
+            else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+              return dateStr;
+            }
+            // Try to parse as a general date
+            else {
+              date = new Date(dateStr);
+            }
+          } else {
+            date = new Date(dateStr);
+          }
+          
+          // If we have a valid date object, format it
+          if (date && !isNaN(date.getTime())) {
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+          }
+          
+          return dateStr; // Return original if can't format
+        } catch (error) {
+          console.warn(`Warning: Could not format date '${dateStr}':`, error.message);
+          return dateStr;
+        }
+      };
+      
+      // Format data for export - only specific columns in exact order as requested
       const exportData = employees.map(emp => ({
         'Employee ID': emp.employeeId,
-        'Name': emp.name || '',
         'First Name': emp.first_name || '',
         'Last Name': emp.last_name || '',
+        'Date of Birth': formatDateForExport(emp.dob),
+        'Date of Joining': formatDateForExport(emp.joiningDate),
         'Nationality': emp.nationality || '',
-        'Email': emp.email || '',
+        'Passport Number': emp.passport_number || '',
+        'Passport Expiry': formatDateForExport(emp.passport_expiry),
+        'Visa Type': emp.visa_type_name || emp.visa_type || '',
+        'Visa Expiry': formatDateForExport(emp.visa_expiry),
         'Office': emp.office_name || '',
+        'Platform': emp.platform || '',
         'Position': emp.position_title || '',
         'Monthly Salary': emp.monthlySalary || 0,
-        'Salary Currency': emp.salary_currency || 'AED',
-        'Joining Date': emp.joiningDate || '',
-        'Status': emp.status === 1 ? 'Active' : 'Inactive',
-        'Date of Birth': emp.dob || '',
+        'Email': emp.email || '',
+        'Phone': emp.phone || '',
+        'WhatsApp': emp.whatsapp || '',
         'Gender': emp.gender || '',
         'Marital Status': emp.marital_status || '',
         'Primary Language': emp.primary_language || '',
         'Secondary Language': emp.secondary_language || '',
-        'Current Address': emp.current_address || '',
-        'Phone': emp.phone || '',
-        'WhatsApp': emp.whatsapp || '',
-        'Emergency Contact Relation': emp.emergency_contact_relation || '',
-        'Passport Number': emp.passport_number || '',
-        'Passport Expiry': emp.passport_expiry || '',
-        'Visa Type': emp.visa_type_name || emp.visa_type || '',
-        'Visa Expiry': emp.visa_expiry || '',
-        'Platform': emp.platform || '',
         'Hiring Source': emp.hiring_source || '',
-        'Reporting Time': emp.reporting_time || '',
-        'Duty Hours': emp.duty_hours ? `${emp.duty_hours} hours` : ''
+        'Current Address': emp.current_address || '',
+        'Emergency Contact Relation': emp.emergency_contact_relation || '',
+        'Status': emp.status === 1 ? 'Active' : 'Inactive'
       }));
       
       // Create Excel file

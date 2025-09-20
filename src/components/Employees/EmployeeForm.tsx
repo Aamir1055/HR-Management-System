@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { Employee } from '../../types';
-import { formatDateForInput } from '../../utils/dateUtils';
+import { formatDateForInput, formatDateFromEpoch } from '../../utils/dateUtils';
 
 interface Office {
   id: number;
@@ -196,13 +196,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             platform_id: platformObj?.id ?? 0,
             office_name: employee.office_name || officeObj?.name || '',
             position_name: employee.position_name || employee.position_title || positionObj?.title || '',
-            joiningDate: employee.joiningDate || '', // Use DD/MM/YYYY directly from database
+            joiningDate: formatDateFromEpoch(employee.joiningDate) === 'No Date' ? '' : formatDateFromEpoch(employee.joiningDate),
             status: statusBoolean,
-            dob: employee.dob || '', // Use DD/MM/YYYY directly from database
+            dob: formatDateFromEpoch(employee.dob) === 'No Date' ? '' : formatDateFromEpoch(employee.dob),
             passport_number: employee.passport_number || '',
-            passport_expiry: employee.passport_expiry || '', // Use DD/MM/YYYY directly from database
+            passport_expiry: formatDateFromEpoch(employee.passport_expiry) === 'No Date' ? '' : formatDateFromEpoch(employee.passport_expiry),
             visa_type: employee.visa_type || visaTypeObj?.typeofvisa || '',
-            visa_expiry: employee.visa_expiry || '', // Use DD/MM/YYYY directly from database
+            visa_expiry: formatDateFromEpoch(employee.visa_expiry) === 'No Date' ? '' : formatDateFromEpoch(employee.visa_expiry),
             platform: employee.platform || platformObj?.platform_name || '',
             address: employee.address || '',
             current_address: employee.current_address || '',

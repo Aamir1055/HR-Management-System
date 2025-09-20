@@ -10,28 +10,70 @@
  * @returns Date string as-is from database, or "No Date" if empty
  */
 export const formatDateFromEpoch = (dateValue: number | string | Date | null | undefined): string => {
-  if (!dateValue) return 'No Date';
+  // Enhanced debug logging - always log in production for troubleshooting
+  console.log('🔍 formatDateFromEpoch input:', { 
+    dateValue, 
+    type: typeof dateValue, 
+    isNull: dateValue === null, 
+    isUndefined: dateValue === undefined,
+    toString: dateValue?.toString(),
+    length: typeof dateValue === 'string' ? dateValue.length : 'N/A'
+  });
   
-  // If it's already a string from database (DD/MM/YYYY format), return it directly
+  // Handle null, undefined, empty string, or whitespace-only strings
+  if (!dateValue || (typeof dateValue === 'string' && dateValue.trim() === '')) {
+    return 'No Date';
+  }
+  
+  // If it's already a string from database
   if (typeof dateValue === 'string') {
-    // Check if it's in DD/MM/YYYY format (our database format)
-    if (dateValue.includes('/') && dateValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      return dateValue; // Return DD/MM/YYYY directly
+    const trimmedValue = dateValue.trim();
+    
+    // Check if it's in DD/MM/YYYY format (our expected display format)
+    if (trimmedValue.includes('/') && trimmedValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      return trimmedValue; // Return DD/MM/YYYY directly
     }
     
-    // Handle legacy YYYY-MM-DD format (convert to DD/MM/YYYY)
-    if (dateValue.includes('-') && dateValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+    // Handle YYYY-MM-DD format (convert to DD/MM/YYYY)
+    if (trimmedValue.includes('-') && trimmedValue.match(/^\d{4}-\d{2}-\d{2}/)) {
       try {
-        const [year, month, day] = dateValue.split('T')[0].split('-');
-        return `${day}/${month}/${year}`;
+        const datePart = trimmedValue.split('T')[0]; // Remove time if present
+        const [year, month, day] = datePart.split('-');
+        
+        // Validate the extracted parts
+        if (year && month && day && year.length === 4 && month.length <= 2 && day.length <= 2) {
+          const paddedMonth = month.padStart(2, '0');
+          const paddedDay = day.padStart(2, '0');
+          const result = `${paddedDay}/${paddedMonth}/${year}`;
+          
+          // Validate the result is a proper date
+          const testDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(testDate.getTime())) {
+            return result;
+          }
+        }
       } catch (error) {
-        console.error('Error converting legacy date format:', error);
-        return dateValue; // Return as-is if conversion fails
+        console.error('Error converting YYYY-MM-DD date format:', error, 'Input:', dateValue);
       }
     }
     
-    // If it's some other string format, return as-is
-    return dateValue;
+    // Try to parse as a general date string if it's not in expected formats
+    try {
+      const parsedDate = new Date(trimmedValue);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing date string:', error, 'Input:', dateValue);
+    }
+    
+    // If all parsing fails, return the original value
+    console.warn('Unable to parse date string, returning as-is:', dateValue);
+    return trimmedValue;
   }
   
   // Handle legacy epoch time (convert to DD/MM/YYYY)

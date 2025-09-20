@@ -193,11 +193,17 @@ const useEmployeeData = () => {
         'Authorization': token ? `Bearer ${token}` : ''
       };
 
+      // Get API base URL from environment
+      const getApiUrl = (endpoint: string) => {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_BACKEND_PORT || '5000'}`;
+        return `${baseUrl}/api${endpoint}`;
+      };
+
       // Parallel fetch for better performance
       const [employeesResponse, officesResponse, positionsResponse] = await Promise.allSettled([
         api.get('/employees'),
-        fetch('http://localhost:5000/api/masters/offices', { headers }).then(r => r.ok ? r.json() : []),
-        fetch('http://localhost:5000/api/masters/positions', { headers }).then(r => r.ok ? r.json() : [])
+        fetch(getApiUrl('/masters/offices'), { headers }).then(r => r.ok ? r.json() : []),
+        fetch(getApiUrl('/masters/positions'), { headers }).then(r => r.ok ? r.json() : [])
       ]);
 
       // Handle employees

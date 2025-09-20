@@ -7,8 +7,9 @@ const getAuthHeaders = () => {
 };
 
 const getFullUrl = (url: string) => {
-  const baseUrl = 'http://localhost:5000/api';
-  return url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_BACKEND_PORT || '5000'}`;
+  const apiUrl = `${baseUrl}/api`;
+  return url.startsWith('/') ? `${apiUrl}${url}` : `${apiUrl}/${url}`;
 };
 
 export const api = {

@@ -256,11 +256,17 @@ const AdvanceSalary: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
+  // Get API base URL from environment
+  const getApiUrl = (endpoint: string) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_BACKEND_PORT || '5000'}`;
+    return `${baseUrl}/api${endpoint}`;
+  };
+
   // Fetch advance overview
   const fetchAdvanceOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/advance-salary/overview', {
+      const response = await fetch(getApiUrl('/advance-salary/overview'), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -288,7 +294,7 @@ const AdvanceSalary: React.FC = () => {
   // Fetch all employees for manual add
   const fetchEmployees = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/employees', {
+      const response = await fetch(getApiUrl('/employees'), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -319,7 +325,7 @@ const AdvanceSalary: React.FC = () => {
   const handleAddAdvance = async (advanceData: any) => {
     setAddLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/advance-salary', {
+      const response = await fetch(getApiUrl('/advance-salary'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -357,7 +363,7 @@ const AdvanceSalary: React.FC = () => {
 
     setDeleteLoading(employeeId);
     try {
-      const response = await fetch(`http://localhost:5000/api/advance-salary/employee/${employeeId}`, {
+      const response = await fetch(getApiUrl(`/advance-salary/employee/${employeeId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

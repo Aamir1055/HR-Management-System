@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
   { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
-  { name: 'Holidays', href: '/api/holidays', icon: Calendar },
+  { name: 'Holidays', href: '/holidays', icon: Calendar },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Role Management', href: '/roles', icon: UserCog }, // Changed icon for better distinction
   { name: 'Master Data', href: '/master-data', icon: Settings }, // New Master Data route
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       case '/role-management':
         // Only admins should see role management
         return user?.role === 'admin';
-      case '/api/holidays':
+      case '/holidays':
         return hasPermission('manage_holidays');
       case '/employees':
         return hasPermission('manage_employees');
