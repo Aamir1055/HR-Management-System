@@ -1,0 +1,14 @@
+﻿# Environment-specific files (DO NOT COMMIT)
+backend/.env
+backend/node_modules/
+backend/uploads/
+backend/logs/
+*.log
+.DS_Store
+Thumbs.db
+
+# Keep these local development files
+backend/fix_*.js
+backend/test_*.js
+backend/*.backup*
+backend/controllers/*.backup*

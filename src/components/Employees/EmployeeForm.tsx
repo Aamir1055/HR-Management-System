@@ -457,12 +457,36 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             pattern: {
               value: /^\d{2}\/\d{2}\/\d{4}$/,
               message: 'Date must be in DD/MM/YYYY format'
+            },
+            validate: (value) => {
+              if (!value) return true; // Optional field
+              const parts = value.split('/');
+              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]);
+              const year = parseInt(parts[2]);
+              if (day < 1 || day > 31) return 'Day must be between 1-31';
+              if (month < 1 || month > 12) return 'Month must be between 1-12';
+              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
+              return true;
             }
           })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="DD/MM/YYYY"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-blue-50 focus:bg-white"
+          placeholder="DD/MM/YYYY (e.g., 15/01/1990)"
+          onInput={(e) => {
+            // Auto-format as user types
+            let value = e.currentTarget.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+              value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            if (value.length >= 5) {
+              value = value.substring(0, 5) + '/' + value.substring(5, 9);
+            }
+            e.currentTarget.value = value;
+          }}
         />
+        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
         {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob.message}</p>}
       </div>
       
@@ -555,12 +579,36 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             pattern: {
               value: /^\d{2}\/\d{2}\/\d{4}$/,
               message: 'Date must be in DD/MM/YYYY format'
+            },
+            validate: (value) => {
+              if (!value) return 'Joining date is required';
+              const parts = value.split('/');
+              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]);
+              const year = parseInt(parts[2]);
+              if (day < 1 || day > 31) return 'Day must be between 1-31';
+              if (month < 1 || month > 12) return 'Month must be between 1-12';
+              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
+              return true;
             }
           })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="DD/MM/YYYY"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-green-50 focus:bg-white"
+          placeholder="DD/MM/YYYY (e.g., 15/01/2023)"
+          onInput={(e) => {
+            // Auto-format as user types
+            let value = e.currentTarget.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+              value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            if (value.length >= 5) {
+              value = value.substring(0, 5) + '/' + value.substring(5, 9);
+            }
+            e.currentTarget.value = value;
+          }}
         />
+        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY (Required)</div>
         {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
       </div>
       
@@ -696,12 +744,36 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             pattern: {
               value: /^\d{2}\/\d{2}\/\d{4}$/,
               message: 'Date must be in DD/MM/YYYY format'
+            },
+            validate: (value) => {
+              if (!value) return true; // Optional field
+              const parts = value.split('/');
+              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]);
+              const year = parseInt(parts[2]);
+              if (day < 1 || day > 31) return 'Day must be between 1-31';
+              if (month < 1 || month > 12) return 'Month must be between 1-12';
+              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
+              return true;
             }
           })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="DD/MM/YYYY"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-purple-50 focus:bg-white"
+          placeholder="DD/MM/YYYY (e.g., 30/06/2025)"
+          onInput={(e) => {
+            // Auto-format as user types
+            let value = e.currentTarget.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+              value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            if (value.length >= 5) {
+              value = value.substring(0, 5) + '/' + value.substring(5, 9);
+            }
+            e.currentTarget.value = value;
+          }}
         />
+        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
         {errors.visa_expiry && <p className="text-red-500 text-sm mt-1">{errors.visa_expiry.message}</p>}
       </div>
       
@@ -725,12 +797,36 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             pattern: {
               value: /^\d{2}\/\d{2}\/\d{4}$/,
               message: 'Date must be in DD/MM/YYYY format'
+            },
+            validate: (value) => {
+              if (!value) return true; // Optional field
+              const parts = value.split('/');
+              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]);
+              const year = parseInt(parts[2]);
+              if (day < 1 || day > 31) return 'Day must be between 1-31';
+              if (month < 1 || month > 12) return 'Month must be between 1-12';
+              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
+              return true;
             }
           })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="DD/MM/YYYY"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-yellow-50 focus:bg-white"
+          placeholder="DD/MM/YYYY (e.g., 31/12/2030)"
+          onInput={(e) => {
+            // Auto-format as user types
+            let value = e.currentTarget.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+              value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            if (value.length >= 5) {
+              value = value.substring(0, 5) + '/' + value.substring(5, 9);
+            }
+            e.currentTarget.value = value;
+          }}
         />
+        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
         {errors.passport_expiry && <p className="text-red-500 text-sm mt-1">{errors.passport_expiry.message}</p>}
       </div>
       

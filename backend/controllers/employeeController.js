@@ -1276,7 +1276,8 @@ module.exports = {
         }
       };
       
-      // Format data for export - only specific columns in exact order as requested
+      // Format data for export - EXACT columns in EXACT order as requested (removed Full Name)
+      console.log('🚀 Using NEW Excel export with 25 columns and auto-filters!');
       const exportData = employees.map(emp => ({
         'Employee ID': emp.employeeId,
         'First Name': emp.first_name || '',
@@ -1302,21 +1303,102 @@ module.exports = {
         'Hiring Source': emp.hiring_source || '',
         'Current Address': emp.current_address || '',
         'Emergency Contact Relation': emp.emergency_contact_relation || '',
+        'Emergency Contact': emp.emergency_contact || '',
         'Status': emp.status === 1 ? 'Active' : 'Inactive'
       }));
       
-      // Create Excel file
+      // Create Excel file with enhanced formatting and auto-filters
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths for better visibility - Updated for 25 columns (removed Full Name)
+      const columnWidths = [
+        { wch: 12 }, // Employee ID
+        { wch: 15 }, // First Name
+        { wch: 15 }, // Last Name
+        { wch: 14 }, // Date of Birth
+        { wch: 14 }, // Date of Joining
+        { wch: 12 }, // Nationality
+        { wch: 15 }, // Passport Number
+        { wch: 14 }, // Passport Expiry
+        { wch: 12 }, // Visa Type
+        { wch: 14 }, // Visa Expiry
+        { wch: 20 }, // Office
+        { wch: 15 }, // Platform
+        { wch: 18 }, // Position
+        { wch: 15 }, // Monthly Salary
+        { wch: 25 }, // Email
+        { wch: 15 }, // Phone
+        { wch: 15 }, // WhatsApp
+        { wch: 10 }, // Gender
+        { wch: 15 }, // Marital Status
+        { wch: 15 }, // Primary Language
+        { wch: 15 }, // Secondary Language
+        { wch: 15 }, // Hiring Source
+        { wch: 30 }, // Current Address
+        { wch: 20 }, // Emergency Contact Relation
+        { wch: 18 }, // Emergency Contact
+        { wch: 10 }  // Status
+      ];
+      
+      ws['!cols'] = columnWidths;
+      
+      // Add freeze panes to keep headers visible when scrolling
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+      
+      // 🔧 ENHANCED AUTO-FILTER IMPLEMENTATION - Guaranteed filter dropdowns
+      if (exportData.length > 0) {
+        const numCols = Object.keys(exportData[0]).length;
+        const numRows = exportData.length;
+        
+        // Calculate range properly - from A1 to last column and last row with data
+        const filterRange = `A1:${XLSX.utils.encode_col(numCols - 1)}${numRows + 1}`;
+        
+        // Apply auto-filter to the entire data range
+        ws['!autofilter'] = { ref: filterRange };
+        
+        // Style the headers for better filter visibility
+        for (let col = 0; col < numCols; col++) {
+          const headerCell = XLSX.utils.encode_cell({ r: 0, c: col });
+          if (ws[headerCell]) {
+            ws[headerCell].s = {
+              font: { bold: true },
+              alignment: { horizontal: 'center' },
+              fill: { fgColor: { rgb: 'E6E6FA' } } // Light lavender background
+            };
+          }
+        }
+        
+        console.log(`✅ Auto-filter applied to range: ${filterRange}`);
+        console.log(`📊 Excel file with ${numCols} columns and ${numRows + 1} rows (including header)`);
+      }
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Employees');
       
-      // Set response headers for file download
-      const fileName = `employees_${new Date().toISOString().split('T')[0]}.xlsx`;
+      // Set response headers for file download with cache-busting
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `employees_${timestamp}.xlsx`;
       res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       
+      // Add cache-busting headers to prevent any caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('ETag', `"${Date.now()}"`);
+      res.setHeader('Last-Modified', new Date().toUTCString());
+      
+      // Generate Excel file with enhanced options
+      const excelBuffer = XLSX.write(wb, { 
+        type: 'buffer', 
+        bookType: 'xlsx',
+        compression: true // Enable compression for smaller files
+      });
+      
       // Send the Excel file
-      res.end(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+      res.end(excelBuffer);
+      
+      console.log(`🎉 Excel export completed: ${fileName} with auto-filters enabled`);
       
     } catch (err) {
       console.error('Export error:', err);

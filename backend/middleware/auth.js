@@ -3,7 +3,6 @@
  * Provides middleware functions for authentication, authorization, and office-based data filtering
  */
 const jwt = require('jsonwebtoken');
-const { query } = require('../utils/dbPromise');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -96,13 +95,13 @@ const addUserOffices = async (req, res, next) => {
   try {
     // Admin users have access to all offices
     if (req.user.role === 'admin') {
-      const allOffices = await query('SELECT id FROM offices');
+      const [allOffices] = await req.db.query('SELECT id FROM offices');
       req.userOffices = allOffices.map(office => office.id);
       return next();
     }
 
     // Get user's assigned offices for HR and floor_manager roles
-    const userOffices = await query(
+    const [userOffices] = await req.db.query(
       'SELECT office_id FROM user_offices WHERE user_id = ?',
       [req.user.userId]
     );
