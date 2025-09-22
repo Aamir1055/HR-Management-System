@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿# Environment-specific files (DO NOT COMMIT)
 backend/.env
 backend/node_modules/
@@ -12,3 +13,16 @@ backend/fix_*.js
 backend/test_*.js
 backend/*.backup*
 backend/controllers/*.backup*
+=======
+node_modules/
+node_modules/
+dist/
+.env.development
+.env.production
+*.log
+.cache/
+build/
+node_modules/
+.env
+backend/.env
+>>>>>>> fc91206ca7692363626861a400903382adb2b80a
