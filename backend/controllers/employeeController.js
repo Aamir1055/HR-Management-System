@@ -1230,9 +1230,9 @@ module.exports = {
       
       const [employees] = await req.db.query(sql, params);
       
-      // Helper function to format dates to DD/MM/YYYY for export
-      const formatDateForExport = (dateStr) => {
-        if (!dateStr) return '';
+      // Helper function to convert dates to Excel serial numbers
+      const dateToExcelSerial = (dateStr) => {
+        if (!dateStr) return null;
         
         try {
           let date;
@@ -1241,38 +1241,42 @@ module.exports = {
           if (typeof dateStr === 'string') {
             // If it's already in YYYY-MM-DD format (from database)
             if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-              const [year, month, day] = dateStr.split('-');
-              return `${day}/${month}/${year}`;
+              date = new Date(dateStr + 'T00:00:00');
             }
             // If it's in YYYY/MM/DD format
             else if (dateStr.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
-              const [year, month, day] = dateStr.split('/');
-              return `${day}/${month}/${year}`;
+              date = new Date(dateStr + 'T00:00:00');
             }
-            // If it's already in DD/MM/YYYY format, return as is
+            // If it's in DD/MM/YYYY format, parse correctly
             else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-              return dateStr;
+              const [day, month, year] = dateStr.split('/');
+              date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
             }
             // Try to parse as a general date
             else {
-              date = new Date(dateStr);
+              date = new Date(dateStr + 'T00:00:00');
             }
           } else {
             date = new Date(dateStr);
           }
           
-          // If we have a valid date object, format it
+          // Return Excel serial number or null
           if (date && !isNaN(date.getTime())) {
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
+            // Excel date serial calculation (1900-based system)
+            const EXCEL_EPOCH = new Date(1899, 11, 30); // December 30, 1899
+            const MS_PER_DAY = 86400000;
+            
+            const timeDiff = date.getTime() - EXCEL_EPOCH.getTime();
+            const excelSerial = Math.floor(timeDiff / MS_PER_DAY) + 1;
+            
+            console.log(`📅 Date conversion: ${dateStr} → Excel serial ${excelSerial}`);
+            return excelSerial;
           }
           
-          return dateStr; // Return original if can't format
+          return null;
         } catch (error) {
-          console.warn(`Warning: Could not format date '${dateStr}':`, error.message);
-          return dateStr;
+          console.warn(`Warning: Could not parse date '${dateStr}':`, error.message);
+          return null;
         }
       };
       
@@ -1282,13 +1286,13 @@ module.exports = {
         'Employee ID': emp.employeeId,
         'First Name': emp.first_name || '',
         'Last Name': emp.last_name || '',
-        'Date of Birth': formatDateForExport(emp.dob),
-        'Date of Joining': formatDateForExport(emp.joiningDate),
+        'Date of Birth': dateToExcelSerial(emp.dob),
+        'Date of Joining': dateToExcelSerial(emp.joiningDate),
         'Nationality': emp.nationality || '',
         'Passport Number': emp.passport_number || '',
-        'Passport Expiry': formatDateForExport(emp.passport_expiry),
+        'Passport Expiry': dateToExcelSerial(emp.passport_expiry),
         'Visa Type': emp.visa_type_name || emp.visa_type || '',
-        'Visa Expiry': formatDateForExport(emp.visa_expiry),
+        'Visa Expiry': dateToExcelSerial(emp.visa_expiry),
         'Office': emp.office_name || '',
         'Platform': emp.platform || '',
         'Position': emp.position_title || '',
@@ -1310,6 +1314,29 @@ module.exports = {
       // Create Excel file with enhanced formatting and auto-filters
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Post-process the worksheet to set date cell types and formatting for proper sorting
+      const dateColumns = ['D', 'E', 'H', 'J']; // Date of Birth, Date of Joining, Passport Expiry, Visa Expiry
+      for (let row = 2; row <= exportData.length + 1; row++) {
+        for (const col of dateColumns) {
+          const cellRef = `${col}${row}`;
+          if (ws[cellRef] && ws[cellRef].v && typeof ws[cellRef].v === 'number') {
+            // Set as date type with proper formatting for Excel sorting
+            ws[cellRef].t = 'd'; // Date type (not number)
+            ws[cellRef].z = 'dd/mm/yyyy'; // DD/MM/YYYY format
+            
+            // Convert Excel serial number back to JavaScript Date object
+            const EXCEL_EPOCH = new Date(1899, 11, 30);
+            const MS_PER_DAY = 86400000;
+            const dateValue = new Date(EXCEL_EPOCH.getTime() + (ws[cellRef].v * MS_PER_DAY));
+            
+            // Set the cell value as a Date object for proper Excel recognition
+            ws[cellRef].v = dateValue;
+            
+            console.log(`📅 Cell ${cellRef}: Serial ${ws[cellRef].v} → Date object for sorting`);
+          }
+        }
+      }
       
       // Set column widths for better visibility - Updated for 25 columns (removed Full Name)
       const columnWidths = [

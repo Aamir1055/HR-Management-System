@@ -123,136 +123,34 @@ export const Employees: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // Helper function to parse date string (DD/MM/YYYY or YYYY-MM-DD) to actual Date object
-  const parseEmployeeDate = (dateString: string | null | undefined): Date | null => {
-    if (!dateString || dateString.trim() === '') return null;
-    
-    const trimmed = dateString.trim();
-    
-    // Handle DD/MM/YYYY format
-    if (trimmed.includes('/') && trimmed.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-      const [day, month, year] = trimmed.split('/');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return isNaN(date.getTime()) ? null : date;
-    }
-    
-    // Handle YYYY-MM-DD format
-    if (trimmed.includes('-') && trimmed.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-      const date = new Date(trimmed);
-      return isNaN(date.getTime()) ? null : date;
-    }
-    
-    // Try to parse as-is
-    const date = new Date(trimmed);
-    return isNaN(date.getTime()) ? null : date;
-  };
-
   const handleExportToExcel = async () => {
     try {
-      showSuccess('Info', 'Preparing Excel export with proper date formatting...');
-      
-      // Prepare data with proper date objects for Excel
-      const exportData = filteredEmployees.map(emp => {
-        // Parse date fields into actual Date objects
-        const joiningDateObj = parseEmployeeDate(emp.joiningDate);
-        const dobObj = parseEmployeeDate(emp.dob);
-        const passportExpiryObj = parseEmployeeDate(emp.passport_expiry);
-        const visaExpiryObj = parseEmployeeDate(emp.visa_expiry);
-        
-        return {
-          'Employee ID': emp.employeeId || '',
-          'First Name': emp.first_name || '',
-          'Last Name': emp.last_name || '',
-          'Full Name': emp.name || '',
-          'Email': emp.email || '',
-          'Office': getDisplayName(emp.office_name, 'name', 'office_name'),
-          'Position': emp.position_name || emp.position_title || '',
-          'Monthly Salary': emp.monthlySalary || 0,
-          'Date of Joining': joiningDateObj, // Real Date object for proper sorting
-          'Date of Birth': dobObj, // Real Date object for proper sorting
-          'Passport Number': emp.passport_number || '',
-          'Passport Expiry': passportExpiryObj, // Real Date object for proper sorting
-          'Visa Type': emp.visa_type_name || emp.visa_type || '',
-          'Visa Expiry': visaExpiryObj, // Real Date object for proper sorting
-          'Platform': emp.platform || '',
-          'Nationality': emp.nationality || '',
-          'Phone': emp.phone || '',
-          'WhatsApp': emp.whatsapp || '',
-          'Gender': emp.gender || '',
-          'Marital Status': emp.marital_status || '',
-          'Primary Language': emp.primary_language || '',
-          'Secondary Language': emp.secondary_language || '',
-          'Current Address': emp.current_address || '',
-          'Hiring Source': emp.hiring_source || '',
-          'Salary Currency': emp.salary_currency || 'AED',
-          'Emirates ID': emp.emirates_id || '',
-          'Emergency Contact': emp.emergency_contact || '',
-          'Emergency Contact Relation': emp.emergency_contact_relation || '',
-          'Status': emp.status ? 'Active' : 'Inactive',
-          'Reporting Time': emp.reporting_time || '',
-          'Duty Hours': emp.duty_hours || ''
-        };
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/employees/export', {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to export employees');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
       
-      // Create worksheet with proper date formatting
-      const worksheet = XLSX.utils.json_to_sheet(exportData, {
-        cellDates: true, // This ensures dates are treated as Date objects in Excel
-        dateNF: 'dd/mm/yyyy' // This formats dates as DD/MM/YYYY in Excel
-      });
-      
-      // Set column widths for better readability
-      const columnWidths = [
-        { wch: 12 }, // Employee ID
-        { wch: 15 }, // First Name
-        { wch: 15 }, // Last Name
-        { wch: 25 }, // Full Name
-        { wch: 25 }, // Email
-        { wch: 20 }, // Office
-        { wch: 20 }, // Position
-        { wch: 15 }, // Monthly Salary
-        { wch: 15 }, // Date of Joining
-        { wch: 15 }, // Date of Birth
-        { wch: 15 }, // Passport Number
-        { wch: 15 }, // Passport Expiry
-        { wch: 15 }, // Visa Type
-        { wch: 15 }, // Visa Expiry
-        { wch: 15 }, // Platform
-        { wch: 15 }, // Nationality
-        { wch: 15 }, // Phone
-        { wch: 15 }, // WhatsApp
-        { wch: 10 }, // Gender
-        { wch: 15 }, // Marital Status
-        { wch: 15 }, // Primary Language
-        { wch: 15 }, // Secondary Language
-        { wch: 30 }, // Current Address
-        { wch: 15 }, // Hiring Source
-        { wch: 10 }, // Salary Currency
-        { wch: 20 }, // Emirates ID
-        { wch: 15 }, // Emergency Contact
-        { wch: 20 }, // Emergency Contact Relation
-        { wch: 10 }, // Status
-        { wch: 12 }, // Reporting Time
-        { wch: 12 }  // Duty Hours
-      ];
-      
-      worksheet['!cols'] = columnWidths;
-      
-      // Create workbook and add worksheet
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
-      
-      // Generate Excel file
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: 'xlsx',
-        type: 'array',
-        cellDates: true // Ensure dates are preserved as Date objects
-      });
-      
-      // Save file
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `employees_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
-      showSuccess('Success', `Employee data exported successfully! Date columns will now sort properly in Excel.`);
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `employees_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess('Success', 'Employee data exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
       showError('Error', 'Failed to export employee data. Please try again.');
