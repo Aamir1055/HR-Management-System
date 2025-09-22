@@ -268,7 +268,7 @@ const AppRoutes: React.FC = () => {
       {/* === END PAYROLL ROUTES === */}
 
       <Route
-        path="/api/holidays"
+        path="/holidays"
         element={
           <ProtectedRoute permission="manage_holidays">
             <Holidays />
