@@ -1,9 +1,7 @@
-deployer@vultr:~/HR-Management-System/src/components/Employees$ cat EmployeeForm.tsx
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { Employee } from '../../types';
-import { formatDateForInput, formatDateFromEpoch } from '../../utils/dateUtils';
 
 interface Office {
   id: number;
@@ -188,7 +186,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           const nameParts = (employee.name || '').trim().split(' ');
           const firstName = employee.first_name || nameParts[0] || '';
           const lastName = employee.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
-
+          
           reset({
             ...employee,
             office_id: officeObj?.id ?? 0,
@@ -197,13 +195,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             platform_id: platformObj?.id ?? 0,
             office_name: employee.office_name || officeObj?.name || '',
             position_name: employee.position_name || employee.position_title || positionObj?.title || '',
-            joiningDate: formatDateFromEpoch(employee.joiningDate) === 'No Date' ? '' : formatDateFromEpoch(employee.joiningDate),
+            joiningDate: employee.joiningDate ? employee.joiningDate.split('T')[0] : '',
             status: statusBoolean,
-            dob: formatDateFromEpoch(employee.dob) === 'No Date' ? '' : formatDateFromEpoch(employee.dob),
+            dob: employee.dob ? employee.dob.split('T')[0] : '',
             passport_number: employee.passport_number || '',
-            passport_expiry: formatDateFromEpoch(employee.passport_expiry) === 'No Date' ? '' : formatDateFromEpoch(employee.passport_expiry),
+            passport_expiry: employee.passport_expiry ? employee.passport_expiry.split('T')[0] : '',
             visa_type: employee.visa_type || visaTypeObj?.typeofvisa || '',
-            visa_expiry: formatDateFromEpoch(employee.visa_expiry) === 'No Date' ? '' : formatDateFromEpoch(employee.visa_expiry),
+            visa_expiry: employee.visa_expiry ? employee.visa_expiry.split('T')[0] : '',
             platform: employee.platform || platformObj?.platform_name || '',
             address: employee.address || '',
             current_address: employee.current_address || '',
@@ -239,7 +237,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     };
     fetchOptions();
     // eslint-disable-next-line
-  }, [employee?.id, viewOnly]); // Only reset when employee ID changes, not on every employee object change
+  }, [employee, viewOnly, reset]);
 
   useEffect(() => {
     if (officeId && officeId !== 0) {
@@ -255,7 +253,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       setDutyHours('Select office and position');
     }
     // eslint-disable-next-line
-    }, [officeId, allPositions, employee?.office_id, setValue]);
+  }, [officeId, allPositions, employee, setValue]);
 
   useEffect(() => {
     const fetchOfficePositionData = async () => {
@@ -314,7 +312,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       console.log('🔍 Last Name:', formData.last_name);
       console.log('🔍 Nationality:', formData.nationality);
       console.log('🔍 Emergency Contact Relation:', formData.emergency_contact_relation);
-
+      
       const office = offices.find(o => String(o.id) === String(formData.office_id));
       const position = filteredPositions.find(p => String(p.id) === String(formData.position_id));
       const visaType = visaTypes.find(v => String(v.id) === String(formData.visa_type_id));
@@ -331,7 +329,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         office_name: office?.name || '',
         position_name: position?.title || '',
         monthlySalary: formData.monthlySalary,
-        joiningDate: formData.joiningDate || '', // Send DD/MM/YYYY directly to backend
+        joiningDate: formData.joiningDate ? new Date(formData.joiningDate).toISOString().split('T')[0] : '',
         status: formData.status,
         dob: formData.dob || null,
         passport_number: formData.passport_number || null,
@@ -353,7 +351,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         emergency_contact: formData.emergency_contact || null,
         emergency_contact_relation: formData.emergency_contact_relation || '',
       };
-
+      
       // Debug: Log the complete data being sent to backend
       console.log('📤 Complete data being sent to backend:', completeEmployeeData);
 
@@ -397,7 +395,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
       </div>
-
+      
       {/* Nationality */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
@@ -408,7 +406,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., UAE, India, Pakistan"
         />
       </div>
-
+      
       {/* First Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-600">*</span></label>
@@ -419,7 +417,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
       </div>
-
+      
       {/* Last Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-600">*</span></label>
@@ -430,7 +428,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
       </div>
-
+      
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-600">*</span></label>
@@ -448,49 +446,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
       </div>
-
+      
       {/* Date of Birth */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
         <input
-          type="text"
-          {...register('dob', {
-            pattern: {
-              value: /^\d{2}\/\d{2}\/\d{4}$/,
-              message: 'Date must be in DD/MM/YYYY format'
-            },
-            validate: (value) => {
-              if (!value) return true; // Optional field
-              const parts = value.split('/');
-              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]);
-              const year = parseInt(parts[2]);
-              if (day < 1 || day > 31) return 'Day must be between 1-31';
-              if (month < 1 || month > 12) return 'Month must be between 1-12';
-              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-              return true;
-            }
-          })}
+          type="date"
+          {...register('dob')}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-blue-50 focus:bg-white"
-          placeholder="DD/MM/YYYY (e.g., 15/01/1990)"
-          onInput={(e) => {
-            // Auto-format as user types
-            let value = e.currentTarget.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-              value = value.substring(0, 2) + '/' + value.substring(2);
-            }
-            if (value.length >= 5) {
-              value = value.substring(0, 5) + '/' + value.substring(5, 9);
-            }
-            e.currentTarget.value = value;
-          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
-        {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob.message}</p>}
       </div>
-
+      
       {/* Phone Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
@@ -501,7 +468,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., +971-50-1234567"
         />
       </div>
-
+      
       {/* WhatsApp Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
@@ -512,7 +479,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., +971-50-1234567"
         />
       </div>
-
+      
       {/* Gender */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -527,7 +494,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           <option value="Other">Other</option>
         </select>
       </div>
-
+      
       {/* Marital Status */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
@@ -543,7 +510,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           <option value="Widowed">Widowed</option>
         </select>
       </div>
-
+      
       {/* Primary Language */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Primary Language</label>
@@ -554,7 +521,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., English, Arabic"
         />
       </div>
-
+      
       {/* Secondary Language */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Language</label>
@@ -574,45 +541,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining (DOJ) <span className="text-red-600">*</span></label>
         <input
-          type="text"
-          {...register('joiningDate', {
-            required: 'Joining date is required',
-            pattern: {
-              value: /^\d{2}\/\d{2}\/\d{4}$/,
-              message: 'Date must be in DD/MM/YYYY format'
-            },
-            validate: (value) => {
-              if (!value) return 'Joining date is required';
-              const parts = value.split('/');
-              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]);
-              const year = parseInt(parts[2]);
-              if (day < 1 || day > 31) return 'Day must be between 1-31';
-              if (month < 1 || month > 12) return 'Month must be between 1-12';
-              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-              return true;
-            }
-          })}
+          type="date"
+          {...register('joiningDate', { required: 'Joining date is required' })}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-green-50 focus:bg-white"
-          placeholder="DD/MM/YYYY (e.g., 15/01/2023)"
-          onInput={(e) => {
-            // Auto-format as user types
-            let value = e.currentTarget.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-              value = value.substring(0, 2) + '/' + value.substring(2);
-            }
-            if (value.length >= 5) {
-              value = value.substring(0, 5) + '/' + value.substring(5, 9);
-            }
-            e.currentTarget.value = value;
-          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY (Required)</div>
         {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
       </div>
-
+      
       {/* Office */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Office <span className="text-red-600">*</span></label>
@@ -633,7 +569,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </select>
         {errors.office_id && <p className="text-red-500 text-sm mt-1">{errors.office_id.message}</p>}
       </div>
-
+      
       {/* Platform */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
@@ -652,7 +588,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           ))}
         </select>
       </div>
-
+      
       {/* Position */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Position <span className="text-red-600">*</span></label>
@@ -675,7 +611,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </select>
         {errors.position_id && <p className="text-red-500 text-sm mt-1">{errors.position_id.message}</p>}
       </div>
-
+      
       {/* Currency */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
@@ -686,7 +622,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., AED, USD, EUR"
         />
       </div>
-
+      
       {/* Salary */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Salary <span className="text-red-600">*</span></label>
@@ -701,7 +637,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
         {errors.monthlySalary && <p className="text-red-500 text-sm mt-1">{errors.monthlySalary.message}</p>}
       </div>
-
+      
       {/* Reporting Time (display only) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Reporting Time</label>
@@ -735,49 +671,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           ))}
         </select>
       </div>
-
+      
       {/* Visa expiry */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Visa Expiry Date</label>
         <input
-          type="text"
-          {...register('visa_expiry', {
-            pattern: {
-              value: /^\d{2}\/\d{2}\/\d{4}$/,
-              message: 'Date must be in DD/MM/YYYY format'
-            },
-            validate: (value) => {
-              if (!value) return true; // Optional field
-              const parts = value.split('/');
-              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]);
-              const year = parseInt(parts[2]);
-              if (day < 1 || day > 31) return 'Day must be between 1-31';
-              if (month < 1 || month > 12) return 'Month must be between 1-12';
-              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-              return true;
-            }
-          })}
+          type="date"
+          {...register('visa_expiry')}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-purple-50 focus:bg-white"
-          placeholder="DD/MM/YYYY (e.g., 30/06/2025)"
-          onInput={(e) => {
-            // Auto-format as user types
-            let value = e.currentTarget.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-              value = value.substring(0, 2) + '/' + value.substring(2);
-            }
-            if (value.length >= 5) {
-              value = value.substring(0, 5) + '/' + value.substring(5, 9);
-            }
-            e.currentTarget.value = value;
-          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
-        {errors.visa_expiry && <p className="text-red-500 text-sm mt-1">{errors.visa_expiry.message}</p>}
       </div>
-
+      
       {/* Passport no. */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Passport Number</label>
@@ -788,49 +693,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., A1234567"
         />
       </div>
-
+      
       {/* Passport expiry */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Passport Expiry</label>
         <input
-          type="text"
-          {...register('passport_expiry', {
-            pattern: {
-              value: /^\d{2}\/\d{2}\/\d{4}$/,
-              message: 'Date must be in DD/MM/YYYY format'
-            },
-            validate: (value) => {
-              if (!value) return true; // Optional field
-              const parts = value.split('/');
-              if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]);
-              const year = parseInt(parts[2]);
-              if (day < 1 || day > 31) return 'Day must be between 1-31';
-              if (month < 1 || month > 12) return 'Month must be between 1-12';
-              if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-              return true;
-            }
-          })}
+          type="date"
+          {...register('passport_expiry')}
           disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-yellow-50 focus:bg-white"
-          placeholder="DD/MM/YYYY (e.g., 31/12/2030)"
-          onInput={(e) => {
-            // Auto-format as user types
-            let value = e.currentTarget.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-              value = value.substring(0, 2) + '/' + value.substring(2);
-            }
-            if (value.length >= 5) {
-              value = value.substring(0, 5) + '/' + value.substring(5, 9);
-            }
-            e.currentTarget.value = value;
-          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        <div className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY</div>
-        {errors.passport_expiry && <p className="text-red-500 text-sm mt-1">{errors.passport_expiry.message}</p>}
       </div>
-
+      
       {/* Hiring source */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Hiring Source</label>
@@ -841,7 +715,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., Referral, Job Board, Direct"
         />
       </div>
-
+      
       {/* Emergency contact relation */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Relation</label>
@@ -852,7 +726,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="e.g., Father, Mother, Spouse, Brother"
         />
       </div>
-
+      
       {/* Current address */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
@@ -863,7 +737,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           placeholder="Current residential address"
         />
       </div>
-
+      
       {/* Status */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1263,11 +1263,11 @@ module.exports = {
           // Return Excel serial number or null
           if (date && !isNaN(date.getTime())) {
             // Excel date serial calculation (1900-based system)
-            const EXCEL_EPOCH = new Date(1899, 11, 30); // December 30, 1899
+            const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)); // December 30, 1899
             const MS_PER_DAY = 86400000;
             
             const timeDiff = date.getTime() - EXCEL_EPOCH.getTime();
-            const excelSerial = Math.floor(timeDiff / MS_PER_DAY) + 1;
+            const excelSerial = Math.floor(timeDiff / MS_PER_DAY) + 0; // Fixed: -1 day to correct Excel export date issue
             
             console.log(`📅 Date conversion: ${dateStr} → Excel serial ${excelSerial}`);
             return excelSerial;
@@ -1326,7 +1326,7 @@ module.exports = {
             ws[cellRef].z = 'dd/mm/yyyy'; // DD/MM/YYYY format
             
             // Convert Excel serial number back to JavaScript Date object
-            const EXCEL_EPOCH = new Date(1899, 11, 30);
+            const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30));
             const MS_PER_DAY = 86400000;
             const dateValue = new Date(EXCEL_EPOCH.getTime() + (ws[cellRef].v * MS_PER_DAY));
             
