@@ -1,4 +1,3 @@
-deployer@vultr:~/HR-Management-System/src/components/Employees$ cat EmployeeForm.tsx
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';

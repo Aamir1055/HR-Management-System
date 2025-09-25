@@ -49,12 +49,23 @@ export const useUsers = (): UseUsersReturn => {
         password: userData.password,
         role: userData.role,
         two_factor_enabled: userData.two_factor_enabled || false,
-        office_ids: userData.offices ? userData.offices.map((office: any) => parseInt(office.id)) : []
+        office_ids: userData.offices ? userData.offices.map((office: any) => {
+          // Ensure office ID is a valid number
+          const officeId = parseInt(typeof office.id === 'string' ? office.id : office.id.toString());
+          if (isNaN(officeId)) {
+            console.warn('Invalid office ID during create:', office.id, 'from office:', office);
+            return null;
+          }
+          return officeId;
+        }).filter(id => id !== null) : []
       };
 
-      console.log('Sending user data:', transformedData); // Debug log
+      console.log('Sending create user data:', transformedData);
+      console.log('Office IDs being sent for create:', transformedData.office_ids);
       
       const response = await api.post('/roles', transformedData);
+      
+      console.log('Create response:', response);
       
       // The backend doesn't return a success field, it returns the user directly
       if (response.data) {
@@ -64,7 +75,12 @@ export const useUsers = (): UseUsersReturn => {
       }
     } catch (err: any) {
       console.error('Error creating user:', err);
-      throw new Error(err.response?.data?.error || err.response?.data?.message || 'Failed to create user');
+      console.error('Create error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create user');
     }
   };
 
@@ -76,7 +92,15 @@ export const useUsers = (): UseUsersReturn => {
         username: userData.username,
         role: userData.role,
         two_factor_enabled: userData.two_factor_enabled || false,
-        office_ids: userData.offices ? userData.offices.map((office: any) => parseInt(office.id)) : []
+        office_ids: userData.offices ? userData.offices.map((office: any) => {
+          // Ensure office ID is a valid number
+          const officeId = parseInt(typeof office.id === 'string' ? office.id : office.id.toString());
+          if (isNaN(officeId)) {
+            console.warn('Invalid office ID:', office.id, 'from office:', office);
+            return null;
+          }
+          return officeId;
+        }).filter(id => id !== null) : []
       };
 
       // Only include password if it's provided (not empty)
@@ -84,20 +108,30 @@ export const useUsers = (): UseUsersReturn => {
         transformedData.password = userData.password;
       }
 
-      console.log('Sending update data:', transformedData); // Debug log
+      console.log('Sending update data to /roles/' + id + ':', transformedData);
+      console.log('Office IDs being sent:', transformedData.office_ids);
       
       const response = await api.put(`/roles/${id}`, transformedData);
       
+      console.log('Update response:', response);
+      
       // Backend returns the updated user directly, not wrapped in success field
-      if (response.data && response.data.id) {
+      if (response.data) {
+        console.log('User update successful, refreshing users list');
         // Just refresh the users list to get the latest data
         await fetchUsers();
       } else {
-        throw new Error('Failed to update user');
+        console.error('Update response missing data:', response);
+        throw new Error('Failed to update user - no data returned');
       }
     } catch (err: any) {
       console.error('Error updating user:', err);
-      throw new Error(err.response?.data?.error || err.response?.data?.message || 'Failed to update user');
+      console.error('Error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update user');
     }
   };
 

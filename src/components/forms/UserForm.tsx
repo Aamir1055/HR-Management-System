@@ -9,9 +9,11 @@ interface UserFormProps {
   onClose: () => void;
   onSubmit: (userData: Partial<User>) => void;
   mode: 'add' | 'edit' | 'view';
+  viewOnly?: boolean;
+  errors?: string[];
 }
 
-export default function UserForm({ user, isOpen, onClose, onSubmit, mode }: UserFormProps) {
+export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOnly, errors: formErrors }: UserFormProps) {
   const [formData, setFormData] = useState<Partial<User>>({
     username: '',
     password: '',
@@ -70,11 +72,29 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode }: User
     try {
       const response = await api.get('/masters/offices');
       // Transform the response to match expected format
-      const transformedOffices = response.data.map((office: any) => ({
-        id: office.office_id ? office.office_id.toString() : office.id.toString(),
-        name: office.office_name || office.name,
-        location: office.location || ''
-      }));
+      const transformedOffices = response.data.map((office: any) => {
+        // Ensure we always get a valid string ID
+        let officeId;
+        if (office.office_id) {
+          officeId = typeof office.office_id === 'object' ? 
+            (office.office_id.id || office.office_id.office_id || JSON.stringify(office.office_id)) :
+            office.office_id.toString();
+        } else if (office.id) {
+          officeId = typeof office.id === 'object' ? 
+            (office.id.id || office.id.office_id || JSON.stringify(office.id)) :
+            office.id.toString();
+        } else {
+          // Fallback: use index or generate unique ID
+          officeId = `office_${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
+        return {
+          id: officeId,
+          name: office.office_name || office.name || 'Unknown Office',
+          location: office.location || ''
+        };
+      });
+      console.log('Transformed offices:', transformedOffices);
       setOffices(transformedOffices);
     } catch (error) {
       console.error('Error fetching offices:', error);
@@ -173,7 +193,7 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode }: User
 
   if (!isOpen) return null;
 
-  const isReadOnly = mode === 'view';
+  const isReadOnly = mode === 'view' || viewOnly;
   const isEdit = mode === 'edit';
   const isAdd = mode === 'add';
 
@@ -206,6 +226,29 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode }: User
         {/* Form */}
         <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="p-6 space-y-6">
+            
+            {/* Form-level Errors */}
+            {formErrors && formErrors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Error{formErrors.length > 1 ? 's' : ''} occurred:
+                    </h3>
+                    <ul className="mt-2 text-sm text-red-700 list-disc list-inside space-y-1">
+                      {formErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
