@@ -1085,7 +1085,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
               >
-                Save
+                Apply changes
               </button>
             </div>
           )}
@@ -1124,7 +1124,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
               >
-                Save
+                Apply changes
               </button>
             </div>
           )}

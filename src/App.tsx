@@ -24,6 +24,9 @@ import AdvanceSalaryHistory from './pages/AdvanceSalaryHistory';
 import { SalarySlips } from './pages/SalarySlips';
 import EmployeeLoans from './pages/EmployeeLoans';
 import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
+import { OfficeEmployeeDetails } from './pages/OfficeEmployeeDetails';
+import { PlatformEmployeeDetails } from './pages/PlatformEmployeeDetails';
+import { CelebrationsPage } from './pages/CelebrationsPage';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -168,6 +171,38 @@ const AppRoutes: React.FC = () => {
       />
       {/* === END EMPLOYEE ROUTES === */}
 
+      {/* === OFFICE DETAILS ROUTE === */}
+      <Route
+        path="/office/:officeName"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <OfficeEmployeeDetails />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END OFFICE DETAILS ROUTE === */}
+
+      {/* === PLATFORM DETAILS ROUTE === */}
+      <Route
+        path="/platform/:platformName"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <PlatformEmployeeDetails />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END PLATFORM DETAILS ROUTE === */}
+
+      {/* === CELEBRATIONS DASHBOARD ROUTE === */}
+      <Route
+        path="/celebrations"
+        element={
+          <ProtectedRoute>
+            <CelebrationsPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END CELEBRATIONS DASHBOARD ROUTE === */}
 
       {/* === ATTENDANCE UPLOAD ROUTE === */}
       <Route

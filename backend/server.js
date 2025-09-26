@@ -41,6 +41,7 @@ const advanceSalaryRoutes = require('./routes/advanceSalaryRoutes'); // NEW
 const salarySlipRoutes = require('./routes/salarySlipRoutes'); // NEW
 const loanRoutes = require('./routes/loanRoutes'); // NEW - EMPLOYEE LOANS
 const commentsRoutes = require('./routes/commentsRoutes'); // NEW - EMPLOYEE COMMENTS
+const dashboardRoutes = require('./routes/dashboardRoutes'); // NEW - DASHBOARD
 
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
@@ -122,6 +123,7 @@ app.use('/api/advance-salary', advanceSalaryRoutes); // NEW - ADVANCE SALARY
 app.use('/api/salary-slips', salarySlipRoutes); // NEW - SALARY SLIPS
 app.use('/api/loans', loanRoutes); // NEW - EMPLOYEE LOANS
 app.use('/api/comments', verifyToken, commentsRoutes); // NEW - EMPLOYEE COMMENTS
+app.use('/api/dashboard', dashboardRoutes); // NEW - DASHBOARD
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -190,6 +192,7 @@ app.listen(PORT, async () => {
     console.log('💵 Advance Salary: /api/advance-salary/* (manager+ required)');
     console.log('📄 Salary Slips: /api/salary-slips/* (auth required)');
     console.log('🏦 Employee Loans: /api/loans/* (manager+ required)');
+    console.log('🎉 Celebrations Dashboard: /api/dashboard/* (auth required)');
     
     console.log('\n⚙️ Setup Instructions:');
     console.log('1. Run: node migrate.js');

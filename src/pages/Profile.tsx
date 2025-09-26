@@ -240,7 +240,7 @@ export const Profile: React.FC = () => {
                 <>
                   <div className="flex items-center text-green-600">
                     <Check className="w-4 h-4 mr-2" />
-                    <span className="text-sm">Employee Management</span>
+                    <span className="text-sm">Employee Directory</span>
                   </div>
                   <div className="flex items-center text-green-600">
                     <Check className="w-4 h-4 mr-2" />
@@ -269,7 +269,7 @@ export const Profile: React.FC = () => {
                 <>
                   <div className="flex items-center text-green-600">
                     <Check className="w-4 h-4 mr-2" />
-                    <span className="text-sm">Employee Management</span>
+                    <span className="text-sm">Employee Directory</span>
                   </div>
                   <div className="flex items-center text-green-600">
                     <Check className="w-4 h-4 mr-2" />
@@ -294,7 +294,7 @@ export const Profile: React.FC = () => {
                   </div>
                   <div className="flex items-center text-gray-400">
                     <X className="w-4 h-4 mr-2" />
-                    <span className="text-sm">Employee Management</span>
+                    <span className="text-sm">Employee Directory</span>
                   </div>
                   <div className="flex items-center text-gray-400">
                     <X className="w-4 h-4 mr-2" />

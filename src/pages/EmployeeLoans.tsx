@@ -67,10 +67,12 @@ interface EditLoanModalProps {
 
 interface LoanFormData {
   employee_id: string;
+  employee_name: string;
   total_amount: string;
   monthly_deduction: string;
   start_date: string;
   description: string;
+  approved_by: string;
 }
 
 // Custom Date Picker Component
@@ -381,13 +383,16 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<LoanFormData>({
     employee_id: '',
+    employee_name: '',
     total_amount: '',
     monthly_deduction: '',
     start_date: '',
-    description: ''
+    description: '',
+    approved_by: ''
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [loadingEmployeeName, setLoadingEmployeeName] = useState(false);
 
   // Get current date for default value
   const getCurrentDate = () => {
@@ -402,10 +407,12 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
     if (isOpen) {
       setFormData({
         employee_id: '',
+        employee_name: '',
         total_amount: '',
         monthly_deduction: '',
         start_date: getCurrentDate(),
-        description: ''
+        description: '',
+        approved_by: ''
       });
       setErrors({});
     }
@@ -445,13 +452,51 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
   const handleClose = () => {
     setFormData({
       employee_id: '',
+      employee_name: '',
       total_amount: '',
       monthly_deduction: '',
       start_date: getCurrentDate(),
-      description: ''
+      description: '',
+      approved_by: ''
     });
     setErrors({});
     onClose();
+  };
+
+  // Function to fetch and populate employee name
+  const fetchEmployeeName = async (employeeId: string) => {
+    if (!employeeId.trim()) {
+      setFormData(prev => ({ ...prev, employee_name: '' }));
+      return;
+    }
+
+    setLoadingEmployeeName(true);
+    try {
+      const response = await fetch(`/api/employees/${employeeId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const employee = await response.json();
+        setFormData(prev => ({ ...prev, employee_name: employee.name || '' }));
+      } else {
+        // Employee not found or error
+        setFormData(prev => ({ ...prev, employee_name: '' }));
+      }
+    } catch (error) {
+      console.error('Error fetching employee name:', error);
+      setFormData(prev => ({ ...prev, employee_name: '' }));
+    } finally {
+      setLoadingEmployeeName(false);
+    }
+  };
+
+  // Handle employee ID change
+  const handleEmployeeIdChange = (employeeId: string) => {
+    setFormData(prev => ({ ...prev, employee_id: employeeId }));
+    fetchEmployeeName(employeeId);
   };
 
   if (!isOpen) return null;
@@ -487,7 +532,7 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
               type="text"
               id="employee_id"
               value={formData.employee_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
+              onChange={(e) => handleEmployeeIdChange(e.target.value)}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.employee_id ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
@@ -501,6 +546,30 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
             )}
           </div>
 
+          {/* Employee Name - Auto-populated */}
+          <div>
+            <label htmlFor="employee_name" className="block text-sm font-medium text-gray-700 mb-2">
+              Employee Name
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="employee_name"
+                value={formData.employee_name}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                placeholder={loadingEmployeeName ? "Loading employee name..." : "Employee name will auto-populate"}
+              />
+              {loadingEmployeeName && (
+                <div className="absolute right-3 top-2.5">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Employee name is automatically populated when you enter a valid Employee ID.
+            </p>
+          </div>
 
           {/* Loan Amount */}
           <div>
@@ -572,6 +641,24 @@ const AddLoanModal: React.FC<AddLoanModalProps> = ({
             )}
           </div>
 
+          {/* Approved By */}
+          <div>
+            <label htmlFor="approved_by" className="block text-sm font-medium text-gray-700 mb-2">
+              Approved By
+            </label>
+            <input
+              type="text"
+              id="approved_by"
+              value={formData.approved_by}
+              onChange={(e) => setFormData(prev => ({ ...prev, approved_by: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter the name of the person who approved this loan"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Enter the name or designation of the person who approved this loan.
+            </p>
+          </div>
+
           {/* Description */}
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
@@ -624,10 +711,12 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<LoanFormData>({
     employee_id: '',
+    employee_name: '',
     total_amount: '',
     monthly_deduction: '',
     start_date: '',
-    description: ''
+    description: '',
+    approved_by: ''
   });
 
   // Create a separate state to handle date display and manipulation
@@ -698,10 +787,12 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
       
       setFormData({
         employee_id: loanData.employee_id || '',
+        employee_name: loanData.employee_name || '',
         total_amount: loanData.total_amount || '',
         monthly_deduction: loanData.monthly_deduction || '',
         start_date: formattedDate,
-        description: loanData.description || ''
+        description: loanData.description || '',
+        approved_by: loanData.approved_by || ''
       });
       setErrors({});
     }
@@ -741,10 +832,12 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
   const handleClose = () => {
     setFormData({
       employee_id: '',
+      employee_name: '',
       total_amount: '',
       monthly_deduction: '',
       start_date: '',
-      description: ''
+      description: '',
+      approved_by: ''
     });
     setErrors({});
     onClose();
@@ -789,6 +882,24 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
             />
             <p className="mt-1 text-xs text-gray-500">
               💡 Employee ID cannot be changed when editing a loan.
+            </p>
+          </div>
+
+          {/* Employee Name - Read Only */}
+          <div>
+            <label htmlFor="employee_name" className="block text-sm font-medium text-gray-700 mb-2">
+              Employee Name
+            </label>
+            <input
+              type="text"
+              id="employee_name"
+              value={formData.employee_name}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+              placeholder="Employee Name"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Employee name is based on the Employee ID and cannot be changed directly.
             </p>
           </div>
 
@@ -860,6 +971,24 @@ const EditLoanModal: React.FC<EditLoanModalProps> = ({
                 {errors.start_date}
               </p>
             )}
+          </div>
+
+          {/* Approved By */}
+          <div>
+            <label htmlFor="approved_by" className="block text-sm font-medium text-gray-700 mb-2">
+              Approved By
+            </label>
+            <input
+              type="text"
+              id="approved_by"
+              value={formData.approved_by}
+              onChange={(e) => setFormData(prev => ({ ...prev, approved_by: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter the name of the person who approved this loan"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              💡 Enter the name or designation of the person who approved this loan.
+            </p>
           </div>
 
           {/* Description */}

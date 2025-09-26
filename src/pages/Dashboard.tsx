@@ -1,6 +1,7 @@
 // Main dashboard page displaying comprehensive payroll system overview and key metrics
 // Shows employee count, total monthly payroll, office summaries with interactive charts and data visualization
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout/MainLayout';
 import { MetricCard } from '../components/Dashboard/MetricCard';
 import { DashboardCharts } from '../components/Dashboard/DashboardCharts';
@@ -8,6 +9,8 @@ import { DirhamIcon } from '../components/Icons/DirhamIcon';
 import { User, Building } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  
   // State variables
   const [totalEmployees, setTotalEmployees] = useState<number | null>(null);
   const [totalMonthlySalary, setTotalMonthlySalary] = useState<number | null>(null);
@@ -252,9 +255,16 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Navigation handler for office cards
+  const handleOfficeCardClick = (officeName: string) => {
+    // URL encode the office name to handle spaces and special characters
+    const encodedOfficeName = encodeURIComponent(officeName);
+    navigate(`/office/${encodedOfficeName}`);
+  };
+
   // Helper function to format currency in Dirhams
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-AE', {
+    return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
@@ -311,6 +321,7 @@ export const Dashboard: React.FC = () => {
                 }
                 color="purple"
                 icon={Building}
+                onClick={() => handleOfficeCardClick(office.office)}
               />
             ))}
           </div>

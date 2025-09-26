@@ -179,9 +179,10 @@ exports.getEmployeeLoanHistory = async (req, res) => {
         el.total_loan_amount,
         el.remaining_amount,
         el.monthly_deduction,
-        el.start_date,
-        el.end_date,
-        el.status,
+        el.created_by,
+        el.approved_by,
+        el.created_at,
+        el.updated_at,
         el.description,
         el.created_at,
         -- Fixed: Use subquery to get accurate total_paid
@@ -429,7 +430,8 @@ exports.createLoan = async (req, res) => {
       total_amount, 
       monthly_deduction,
       description, 
-      start_date 
+      start_date,
+      approved_by
     } = req.body;
     
     // Validation
@@ -486,8 +488,9 @@ exports.createLoan = async (req, res) => {
         start_date, 
         remaining_amount,
         monthly_deduction,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_by,
+        approved_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       employee_id,
       totalAmountFloat,
@@ -498,7 +501,8 @@ exports.createLoan = async (req, res) => {
       start_date,
       calculatedTotalLoanAmount, // remaining_amount equals total_loan_amount initially
       monthlyDeductionFloat, // Include the validated monthly_deduction
-      createdBy
+      createdBy,
+      approved_by || null
     ]);
     
     res.status(201).json({

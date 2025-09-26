@@ -22,7 +22,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, loading, error })
     twoFactorCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showTwoFactor, setShowTwoFactor] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,8 +45,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, loading, error })
           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your HR Management System</p>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome</h1>
+          <p className="text-gray-600 mt-2">Log in to your HR maangement portal</p>
         </div>
 
         {/* Error Message */}
@@ -105,25 +104,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, loading, error })
             </div>
           </div>
 
-          {/* Two Factor Authentication Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="twoFactor"
-                checked={showTwoFactor}
-                onChange={(e) => setShowTwoFactor(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                disabled={loading}
-              />
-              <label htmlFor="twoFactor" className="ml-2 text-sm text-gray-600">
-                Use Two-Factor Authentication
-              </label>
-            </div>
-          </div>
-
-          {/* Two Factor Code Field */}
-          {showTwoFactor && (
+          {/* Two Factor Code Field - shown only when required */}
+          {requiresTwoFactor && (
             <div className="animate-fadeIn">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Authentication Code
@@ -156,7 +138,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, loading, error })
               loading ||
               !credentials.username ||
               !credentials.password ||
-              (showTwoFactor && (!credentials.twoFactorCode || credentials.twoFactorCode.length !== 6))
+              (requiresTwoFactor && (!credentials.twoFactorCode || credentials.twoFactorCode.length !== 6))
             }
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >

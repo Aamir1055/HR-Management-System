@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Employee } from '../../types';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, ArrowUpDown } from 'lucide-react';
 import { formatDateFromEpoch } from '../../utils/dateUtils';
 
 interface EmployeeTableProps {
@@ -16,6 +16,11 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<keyof Employee>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [clickData, setClickData] = useState<{
+    field: keyof Employee | null;
+    count: number;
+    timer: NodeJS.Timeout | null;
+  }>({ field: null, count: 0, timer: null });
 
   // Get status display text
   const getStatusDisplay = (status: boolean | number | string) => {
@@ -25,43 +30,199 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     return { text: 'Active', color: 'green' };
   };
 
-  const sortedEmployees = [...employees].sort((a, b) => {
-    const aValue = a[sortField];
-    const bValue = b[sortField];
-
-    // Handle sorting by office_name or position_title if needed
-    if (sortField === 'office_name') {
-      return sortDirection === 'asc'
-        ? (a.office_name || '').localeCompare(b.office_name || '')
-        : (b.office_name || '').localeCompare(a.office_name || '');
+  // Helper function to parse dates in various formats
+  const parseDate = (dateValue: any): number => {
+    if (!dateValue) return 0;
+    
+    // If it's already a number (timestamp), use it
+    if (typeof dateValue === 'number') {
+      return dateValue;
     }
-
-    if (sortField === 'position_title') {
-      return sortDirection === 'asc'
-        ? (a.position_title || '').localeCompare(b.position_title || '')
-        : (b.position_title || '').localeCompare(a.position_title || '');
+    
+    if (typeof dateValue === 'string') {
+      const str = dateValue.trim();
+      
+      // Handle DD/MM/YYYY format
+      if (str.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        const [day, month, year] = str.split('/');
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+      }
+      
+      // Handle YYYY-MM-DD format
+      if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return new Date(str).getTime();
+      }
+      
+      // Try parsing as general date string
+      const parsed = new Date(str);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.getTime();
+      }
     }
-
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    
+    if (dateValue instanceof Date) {
+      return dateValue.getTime();
     }
-
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortDirection === 'asc'
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-
+    
     return 0;
+  };
+
+  const sortedEmployees = [...employees].sort((a, b) => {
+    console.log('🔄 Sorting employees by:', sortField, 'direction:', sortDirection);
+    console.log('🔍 Sample data:', {
+      aName: a.name,
+      bName: b.name,
+      aOffice: a.office_name,
+      bOffice: b.office_name,
+      aJoining: a.joiningDate,
+      bJoining: b.joiningDate,
+      aStatus: a.status,
+      bStatus: b.status
+    });
+    
+    let aValue: any;
+    let bValue: any;
+
+    // Handle different field types properly
+    switch (sortField) {
+      case 'name':
+        aValue = (a.name || '').toString().toLowerCase().trim();
+        bValue = (b.name || '').toString().toLowerCase().trim();
+        console.log('📝 Name sorting:', { aValue, bValue });
+        break;
+      
+      case 'office_name':
+        aValue = (a.office_name || '').toString().toLowerCase().trim();
+        bValue = (b.office_name || '').toString().toLowerCase().trim();
+        console.log('🏢 Office sorting:', { aValue, bValue });
+        break;
+      
+      case 'position_title':
+        aValue = (a.position_title || '').toString().toLowerCase().trim();
+        bValue = (b.position_title || '').toString().toLowerCase().trim();
+        console.log('💼 Position sorting:', { aValue, bValue });
+        break;
+      
+      case 'shift_timings':
+        aValue = (a.shift_timings || '').toString().toLowerCase().trim();
+        bValue = (b.shift_timings || '').toString().toLowerCase().trim();
+        console.log('⏰ Shift sorting:', { aValue, bValue });
+        break;
+      
+      case 'joiningDate':
+        // Handle date sorting - convert to comparable timestamps
+        aValue = parseDate(a.joiningDate);
+        bValue = parseDate(b.joiningDate);
+        console.log('📅 Date sorting:', {
+          aRaw: a.joiningDate,
+          bRaw: b.joiningDate,
+          aParsed: aValue,
+          bParsed: bValue,
+          aDate: new Date(aValue),
+          bDate: new Date(bValue)
+        });
+        break;
+      
+      case 'status':
+        // Handle boolean/number status - Active (true/1) should come first
+        aValue = a.status ? 1 : 0;
+        bValue = b.status ? 1 : 0;
+        console.log('✅ Status sorting:', {
+          aRaw: a.status,
+          bRaw: b.status,
+          aValue,
+          bValue
+        });
+        break;
+      
+      default:
+        aValue = a[sortField] || '';
+        bValue = b[sortField] || '';
+        console.log('🔍 Default sorting:', { field: sortField, aValue, bValue });
+    }
+
+    // Perform comparison
+    let result = 0;
+    
+    if (sortField === 'joiningDate' || (typeof aValue === 'number' && typeof bValue === 'number')) {
+      // Numeric comparison
+      result = aValue - bValue;
+      console.log('🔢 Numeric comparison result:', result);
+    } else {
+      // String comparison
+      const aStr = String(aValue || '');
+      const bStr = String(bValue || '');
+      result = aStr.localeCompare(bStr);
+      console.log('📝 String comparison result:', result, { aStr, bStr });
+    }
+
+    // Apply sort direction
+    const finalResult = sortDirection === 'asc' ? result : -result;
+    console.log('📊 Final result:', finalResult, '(direction:', sortDirection + ')');
+    
+    return finalResult;
   });
 
   const handleSort = (field: keyof Employee) => {
+    console.log('Sorting by field:', field); // Debug log
     if (field === sortField) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clickData.timer) {
+        clearTimeout(clickData.timer);
+      }
+    };
+  }, [clickData.timer]);
+
+  const handleHeaderClick = (field: keyof Employee) => {
+    console.log('Header clicked:', field);
+    
+    // Clear any existing timer
+    if (clickData.timer) {
+      clearTimeout(clickData.timer);
+    }
+
+    // Check if this is the same field as before
+    const isSameField = clickData.field === field;
+    const newCount = isSameField ? clickData.count + 1 : 1;
+    
+    console.log('Same field:', isSameField, 'New count:', newCount);
+
+    if (newCount === 2) {
+      // Double click detected
+      console.log('Double click detected for:', field);
+      handleSort(field);
+      setClickData({ field: null, count: 0, timer: null });
+    } else {
+      // Set timer to reset click count after 400ms
+      const timer = setTimeout(() => {
+        console.log('Click timer expired, resetting count for field:', field);
+        setClickData({ field: null, count: 0, timer: null });
+      }, 400);
+      
+      setClickData({ field, count: newCount, timer });
+    }
+  };
+
+  const getSortIcon = (field: keyof Employee) => {
+    if (sortField === field) {
+      return (
+        <span className="ml-1 inline-flex items-center text-blue-600">
+          {sortDirection === 'asc' ? '↑' : '↓'}
+        </span>
+      );
+    }
+    return (
+      <ArrowUpDown className="ml-1 w-3 h-3 text-gray-400 inline-block" />
+    );
   };
 
 
@@ -72,50 +233,63 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <thead className="bg-gray-50">
             <tr>
               <th
-                onClick={() => handleSort('name')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleHeaderClick('name')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by employee name"
+                style={{ userSelect: 'none' }}
               >
-                Employee
-                {sortField === 'name' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
+                <div className="flex items-center">
+                  Employee
+                  {getSortIcon('name')}
+                </div>
               </th>
               <th
-                onClick={() => handleSort('office_name')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleHeaderClick('office_name')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by office name"
+                style={{ userSelect: 'none' }}
               >
-                OFFICE & POSITION
-                {sortField === 'office_name' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
+                <div className="flex items-center">
+                  OFFICE & POSITION
+                  {getSortIcon('office_name')}
+                </div>
               </th>
               <th
-                onClick={() => handleSort('joiningDate')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleHeaderClick('joiningDate')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by joining date"
+                style={{ userSelect: 'none' }}
               >
-                Joining Date
-                {sortField === 'joiningDate' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Shift Timings
+                <div className="flex items-center">
+                  JOINING DATE
+                  {getSortIcon('joiningDate')}
+                </div>
               </th>
               <th
-                onClick={() => handleSort('status')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleHeaderClick('shift_timings')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by shift timings"
+                style={{ userSelect: 'none' }}
               >
-                Status
-                {sortField === 'status' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
+                <div className="flex items-center">
+                  SHIFT TIMINGS
+                  {getSortIcon('shift_timings')}
+                </div>
               </th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Visa Type
+              <th
+                onClick={() => handleHeaderClick('status')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by status"
+                style={{ userSelect: 'none' }}
+              >
+                <div className="flex items-center">
+                  STATUS
+                  {getSortIcon('status')}
+                </div>
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
-              </th> */}
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -192,7 +366,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             })}
             {sortedEmployees.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500 text-sm">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 text-sm">
                   No employees found.
                 </td>
               </tr>

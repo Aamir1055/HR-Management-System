@@ -10,6 +10,7 @@ export interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 }
 
 const colorClasses: Record<MetricCardProps['color'], string> = {
@@ -26,9 +27,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   icon: Icon = User,
   color,
   trend,
+  onClick,
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 transform transition duration-300 hover:scale-105 hover:shadow-lg">
+    <div 
+      className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 transform transition duration-300 hover:scale-105 hover:shadow-lg ${
+        onClick ? 'cursor-pointer hover:border-blue-300 active:scale-95' : ''
+      }`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600">{title}</p>

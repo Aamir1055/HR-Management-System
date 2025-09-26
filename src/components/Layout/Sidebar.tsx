@@ -12,12 +12,14 @@ import {
   Trash2,
   UserCog,
   FileText,
-  CreditCard
+  CreditCard,
+  Gift
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
+  { name: 'Celebrations', href: '/celebrations', icon: Gift },
   { name: 'Employees', href: '/employees', icon: Users },
   { name: 'Employee Loan', href: '/employee-loans', icon: CreditCard }, // Employee Loan navigation - moved below Employees
   { name: 'Payroll', href: '/payroll', icon: TrendingUp },

@@ -71,7 +71,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
 }) => {
   // Format currency to Dirhams
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-AE', {
+    return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);

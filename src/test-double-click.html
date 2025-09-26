@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double-Click Test</title>
+    <style>
+        .test-header {
+            padding: 10px 20px;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            user-select: none;
+            margin: 5px;
+            display: inline-block;
+        }
+        .test-header:hover {
+            background-color: #e5e7eb;
+        }
+        .active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Double-Click Test</h1>
+    <p>Double-click the headers below to test the functionality:</p>
+    
+    <div class="test-header" ondblclick="handleDoubleClick('name')">Employee Name</div>
+    <div class="test-header" ondblclick="handleDoubleClick('office')">Office</div>
+    <div class="test-header" ondblclick="handleDoubleClick('date')">Date</div>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        function handleDoubleClick(field) {
+            console.log('Double-clicked:', field);
+            document.getElementById('result').innerHTML = `Double-clicked: ${field} at ${new Date().toLocaleTimeString()}`;
+            
+            // Remove active class from all headers
+            document.querySelectorAll('.test-header').forEach(h => h.classList.remove('active'));
+            
+            // Add active class to clicked header
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

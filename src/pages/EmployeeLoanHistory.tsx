@@ -1098,108 +1098,15 @@ const EmployeeLoanHistory: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {activeTab === 'overview' && (
             <div className="p-6">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* ✅ REDESIGNED: Enhanced Financial Overview */}
-                <div className="xl:col-span-2">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                      <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                        <TrendingUp className="w-6 h-6 text-blue-600" />
-                      </div>
-                      Financial Overview
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      {/* Original Amount Card */}
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <div className="text-sm text-gray-500 mb-1">Original Loan Amount</div>
-                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(data.summary.total_original_amount)}</div>
-                        <div className="text-xs text-gray-400 mt-1">Base amount borrowed</div>
-                      </div>
-                      
-                      {/* Current Total Card */}
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <div className="text-sm text-gray-500 mb-1">Current Total Amount</div>
-                        <div className="text-2xl font-bold text-blue-600">{formatCurrency(data.summary.total_loan_amount)}</div>
-                        <div className="text-xs text-gray-400 mt-1">After adjustments</div>
-                      </div>
-                    </div>
-
-                    {/* Adjustments Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                        <div className="flex items-center mb-2">
-                          <PlusCircle className="w-4 h-4 text-green-600 mr-2" />
-                          <span className="text-sm font-medium text-green-800">Total Added</span>
-                        </div>
-                        <div className="text-lg font-bold text-green-700">{formatCurrency(data.summary.total_amount_added)}</div>
-                      </div>
-                      
-                      <div className="bg-red-50 rounded-lg p-4 border border-red-100">
-                        <div className="flex items-center mb-2">
-                          <MinusCircle className="w-4 h-4 text-red-600 mr-2" />
-                          <span className="text-sm font-medium text-red-800">Total Deducted</span>
-                        </div>
-                        <div className="text-lg font-bold text-red-700">{formatCurrency(data.summary.total_amount_deducted)}</div>
-                      </div>
-                    </div>
-
-                    {/* Outstanding Amount - Prominent Display */}
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-6 text-white">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-orange-100 text-sm mb-1">Outstanding Balance</div>
-                          <div className="text-3xl font-bold">{formatCurrency(data.summary.total_remaining)}</div>
-                          <div className="text-orange-100 text-xs mt-1">Amount yet to be recovered</div>
-                        </div>
-                      </div>
-                      
-                      {/* Progress Bar */}
-                      <div className="mt-4">
-                        <div className="bg-white/20 rounded-full h-2">
-                          <div 
-                            className="bg-white h-2 rounded-full transition-all duration-500" 
-                            style={{ 
-                              width: `${parseFloat(data.summary.total_loan_amount) > 0 ? 
-                                ((parseFloat(data.summary.total_loan_amount) - parseFloat(data.summary.total_remaining)) / parseFloat(data.summary.total_loan_amount)) * 100 
-                                : 0}%` 
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
+              <div className="text-center py-16">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-12 border-2 border-dashed border-gray-200">
+                  <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                    <FileText className="w-10 h-10 text-gray-400" />
                   </div>
-                </div>
-
-                {/* ✅ REDESIGNED: Loan Status & Quick Stats */}
-                <div className="space-y-6">
-                  {/* Loan Status */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                      <div className="p-2 bg-gray-100 rounded-lg mr-3">
-                        <CreditCard className="w-5 h-5 text-gray-600" />
-                      </div>
-                      Loan Status
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <span className="text-gray-700 font-medium">Total Loans</span>
-                        <span className="text-xl font-bold text-blue-600">{data.summary.total_loans}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                        <span className="text-gray-700 font-medium">Active Loans</span>
-                        <span className="text-xl font-bold text-green-600">{data.loans.filter(loan => parseFloat(loan.remaining_amount) > 0).length}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                        <span className="text-gray-700 font-medium">Completed Loans</span>
-                        <span className="text-xl font-bold text-purple-600">{data.loans.filter(loan => parseFloat(loan.remaining_amount) <= 0).length}</span>
-                      </div>
-                    </div>
-                  </div>
-
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Clean Overview</h3>
+                  <p className="text-gray-600 max-w-md mx-auto leading-relaxed">
+                    All loan details and management options are available in the loan management panel above and transaction history tab.
+                  </p>
                 </div>
               </div>
             </div>

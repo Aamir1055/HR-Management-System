@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout/MainLayout';
 import { MetricCard } from '../components/Dashboard/MetricCard';
 import { DashboardPlatformCharts } from '../components/Dashboard/DashboardPlatformCharts';
@@ -13,6 +14,7 @@ interface PlatformData {
 }
 
 export const DashboardByPlatform: React.FC = () => {
+  const navigate = useNavigate();
   const [platformData, setPlatformData] = useState<PlatformData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +73,11 @@ export const DashboardByPlatform: React.FC = () => {
     }).format(amount);
   };
 
+  // Handle platform card click to navigate to platform details
+  const handlePlatformClick = (platformName: string) => {
+    navigate(`/platform/${encodeURIComponent(platformName)}`);
+  };
+
   return (
     <MainLayout
       title="Dashboard by Platform"
@@ -122,6 +129,7 @@ export const DashboardByPlatform: React.FC = () => {
                 }
                 color="purple"
                 icon={Layers}
+                onClick={() => handlePlatformClick(platform.platform)}
               />
             ))}
           </div>

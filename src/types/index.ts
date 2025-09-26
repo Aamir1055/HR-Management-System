@@ -26,6 +26,7 @@ export interface Employee {
   visa_type_name?: string; // This stores the actual visa type name
   visa_type_id?: number; // For form handling
   platform?: string; // This stores the platform name
+  platform_name?: string; // Backend field name for platform
   platform_id?: number; // For form handling
   address?: string; // Permanent address
   current_address?: string; // Current address

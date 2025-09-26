@@ -49,7 +49,7 @@ export const Login = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white">Payroll System</h1>
-          <p className="text-blue-100 mt-1">Sign in to your HR Management System</p>
+          <p className="text-blue-100 mt-1">Log in to your HR maangement portal</p>
         </div>
 
         <div className="p-6 sm:p-8">
@@ -127,7 +127,7 @@ export const Login = () => {
                   loading ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
-                {loading ? 'Signing in...' : `Sign in as ${formData.loginType.toUpperCase().replace('-', ' ')}`}
+                {loading ? 'Logging in...' : `Log in as ${formData.loginType.toUpperCase().replace('-', ' ')}`}
               </button>
             </div>
           </form>
