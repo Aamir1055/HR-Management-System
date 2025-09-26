@@ -136,6 +136,43 @@ const formatDateForDisplay = (dateStr) => {
   return dateStr;
 };
 
+// --- Shift timing helpers ---
+const parseTimeToMinutes = (t) => {
+  if (t == null) return null;
+  try {
+    const s = String(t).trim();
+    if (!s.includes(':')) return null;
+    const parts = s.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) || 0;
+    if (isNaN(h) || isNaN(m)) return null;
+    return (h * 60) + m;
+  } catch (_) {
+    return null;
+  }
+};
+const minutesToAmPm = (totalMinutes) => {
+  if (totalMinutes == null) return null;
+  // normalize to 0..1439
+  let m = ((totalMinutes % 1440) + 1440) % 1440;
+  const h24 = Math.floor(m / 60);
+  const min = m % 60;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  return `${h12}:${String(min).padStart(2, '0')} ${period}`;
+};
+const computeShiftTimings = (reporting_time, duty_hours) => {
+  const startMin = parseTimeToMinutes(reporting_time);
+  const dh = duty_hours != null ? Number(duty_hours) : null;
+  if (startMin == null || dh == null || isNaN(dh)) return null;
+  const endMin = startMin + Math.round(dh * 60);
+  const startStr = minutesToAmPm(startMin);
+  const endStr = minutesToAmPm(endMin);
+  if (!startStr || !endStr) return null;
+  return `${startStr} - ${endStr}`;
+};
+
 
 
 // --- Main Export ---
@@ -186,6 +223,13 @@ module.exports = {
         }
         
         console.log('[IMPORT] Column mapping:', columnMapping);
+        
+        // Ensure shift_timings column exists for import operations
+        try {
+          await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS shift_timings VARCHAR(100) NULL`);
+        } catch (alterErr) {
+          console.log('[IMPORT] shift_timings column check failed (might already exist):', alterErr.message);
+        }
       } else {
         throw new Error('Excel file has no data');
       }
@@ -331,6 +375,17 @@ module.exports = {
           const firstName = getColumnValue('First Name');
           const lastName = getColumnValue('Last Name');
           
+          // Compute shift timings from office_positions
+          let shiftStr = null;
+          try {
+            const [opRows] = await db.query('SELECT reporting_time, duty_hours FROM office_positions WHERE office_id = ? AND position_id = ?', [office_id, position_id]);
+            if (opRows && opRows[0]) {
+              shiftStr = computeShiftTimings(opRows[0].reporting_time, opRows[0].duty_hours);
+            }
+          } catch (e) {
+            console.warn(`[IMPORT] Could not compute shift timings for ${employeeId}:`, e.message);
+          }
+
           processed.push([
             employeeId,
             `${firstName || ''} ${lastName || ''}`.trim() || null,
@@ -361,7 +416,8 @@ module.exports = {
             row['Salary Currency'] || 'AED',
             row['Emirates ID'] || null,
             row['Emergency Contact'] || null,
-            row['emergency_contact_relation'] || row['Emergency Contact Relation'] || null
+            row['emergency_contact_relation'] || row['Emergency Contact Relation'] || null,
+            shiftStr
           ]);
         } catch (error) {
           console.error('[IMPORT] Error in row:', error);
@@ -369,13 +425,13 @@ module.exports = {
         }
       }
       if (processed.length > 0) {
-        const placeholders = processed.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+        const placeholders = processed.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
         const flatValues = processed.flat();
         const sql = `
           INSERT INTO employees 
           (employeeId, name, first_name, last_name, nationality, email, office_id, position_id, monthlySalary, joiningDate, status,
             dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-            primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation)
+            primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings)
           VALUES ${placeholders}
           ON DUPLICATE KEY UPDATE
             name = VALUES(name),
@@ -406,7 +462,8 @@ module.exports = {
             salary_currency = VALUES(salary_currency),
             emirates_id = VALUES(emirates_id),
             emergency_contact = VALUES(emergency_contact),
-            emergency_contact_relation = VALUES(emergency_contact_relation)
+            emergency_contact_relation = VALUES(emergency_contact_relation),
+            shift_timings = VALUES(shift_timings)
         `;
         console.log('[IMPORT] SQL to run:', sql);
         console.log('[IMPORT] First row values:', processed[0]);
@@ -698,10 +755,16 @@ module.exports = {
       
       const [employees] = await req.db.query(sql, params);
       const processedEmployees = employees.map(emp => {
+        // Always compute shift timings fresh from reporting_time + duty_hours
+        const computedShift = computeShiftTimings(emp.reporting_time, emp.duty_hours);
+        console.log(`🔍 TABLE Employee ${emp.employeeId}: reporting_time='${emp.reporting_time}', duty_hours='${emp.duty_hours}' → shift='${computedShift}'`);
+        
         return {
           ...emp,
           status: emp.status === 1 || emp.status === true || emp.status === 'active',
           position_name: emp.position_title,
+          // Always use computed shift timings (ignore stored DB values)
+          shift_timings: computedShift || emp.shift_timings || null,
           // Return dates formatted as DD/MM/YYYY for frontend display
           joiningDate: formatDateForDisplay(emp.joiningDate),
           dob: formatDateForDisplay(emp.dob),
@@ -861,13 +924,14 @@ module.exports = {
       console.log('🔍 CREATE - Raw request body:', req.body);
       const { employeeId, name, first_name, last_name, nationality, email, office_name, position_name, monthlySalary, joiningDate, status,
         dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation } = req.body;
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings } = req.body;
       
       console.log('🔍 CREATE - Extracted fields:');
       console.log('  - first_name:', first_name);
       console.log('  - last_name:', last_name);
       console.log('  - nationality:', nationality);
       console.log('  - emergency_contact_relation:', emergency_contact_relation);
+      console.log('  - shift_timings:', shift_timings);
       console.log('  - joiningDate (raw):', joiningDate);
       
       if (!employeeId || !office_name || !position_name) {
@@ -888,6 +952,18 @@ module.exports = {
       if (typeof status === 'boolean') statusValue = status ? 1 : 0;
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
+      
+      // Auto-compute shift_timings from office+position mapping if not provided
+      let autoShiftTimings = null;
+      try {
+        const [opRows] = await db.query('SELECT reporting_time, duty_hours FROM office_positions WHERE office_id = ? AND position_id = ?', [office_id, position_id]);
+        if (opRows && opRows[0]) {
+          autoShiftTimings = computeShiftTimings(opRows[0].reporting_time, opRows[0].duty_hours);
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not compute shift timings from office_positions:', e.message);
+      }
+      const finalShiftTimings = shift_timings || autoShiftTimings || null;
       
       // Simple date handling without timezone manipulation
       const safeFormatDate = (dateStr) => {
@@ -960,6 +1036,7 @@ module.exports = {
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NULL`);
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS nationality VARCHAR(50) NULL`);
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_relation VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS shift_timings VARCHAR(100) NULL`);
         console.log('✅ Columns added or already exist');
       } catch (alterError) {
         console.log('⚠️ Column alteration failed (columns might already exist):', alterError.message);
@@ -969,14 +1046,14 @@ module.exports = {
         INSERT INTO employees 
         (employeeId, name, first_name, last_name, nationality, email, office_id, position_id, monthlySalary, joiningDate, status,
           dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation)
+          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?)
+          ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         employeeId, name, first_name || null, last_name || null, nationality || null, email, office_id, position_id, monthlySalary, fixedJoiningDate, statusValue,
         fixedDob, passport_number || null, fixedPassportExpiry, visa_type || null, fixedVisaExpiry, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
-        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null, finalShiftTimings
       ]);
       const [newEmployee] = await db.query(`
         SELECT e.*, o.name AS office_name, p.title AS position_title,
@@ -1019,6 +1096,12 @@ module.exports = {
         emp.status = emp.status === 1;
         emp.position_name = emp.position_title;
         
+        // Always compute shift timings from reporting_time + duty_hours for accuracy
+        console.log(`🔍 DEBUGGING Employee ${emp.employeeId}: reporting_time='${emp.reporting_time}', duty_hours='${emp.duty_hours}'`);
+        const computedShiftTimings = computeShiftTimings(emp.reporting_time, emp.duty_hours);
+        console.log(`🔍 COMPUTED shift_timings='${computedShiftTimings}' (stored: '${emp.shift_timings}')`);
+        emp.shift_timings = computedShiftTimings || emp.shift_timings || null;
+        
         // Return dates formatted as DD/MM/YYYY for frontend display
         emp.joiningDate = formatDateForDisplay(emp.joiningDate);
         emp.dob = formatDateForDisplay(emp.dob);
@@ -1040,7 +1123,7 @@ module.exports = {
       const {
         name, first_name, last_name, nationality, email, office_name, position_name, monthlySalary, joiningDate, status,
         dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation
+        primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings
       } = req.body;
       
       console.log('🔍 UPDATE - Extracted fields:');
@@ -1057,6 +1140,18 @@ module.exports = {
       if (typeof status === 'boolean') statusValue = status ? 1 : 0;
       else if (typeof status === 'string') statusValue = (status === 'true' || status.toLowerCase() === 'active') ? 1 : 0;
       else if (typeof status === 'number') statusValue = status;
+      
+      // Auto-compute shift_timings from office+position mapping if not provided
+      let autoShiftTimings = null;
+      try {
+        const [opRows] = await db.query('SELECT reporting_time, duty_hours FROM office_positions WHERE office_id = ? AND position_id = ?', [office_id, position_id]);
+        if (opRows && opRows[0]) {
+          autoShiftTimings = computeShiftTimings(opRows[0].reporting_time, opRows[0].duty_hours);
+        }
+      } catch (e) {
+        console.warn('⚠️ UPDATE: Could not compute shift timings from office_positions:', e.message);
+      }
+      const finalShiftTimings = shift_timings || autoShiftTimings || null;
       
       // Simple date handling without timezone manipulation
       const safeFormatDate = (dateStr) => {
@@ -1129,6 +1224,7 @@ module.exports = {
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NULL`);
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS nationality VARCHAR(50) NULL`);
         await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_relation VARCHAR(50) NULL`);
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS shift_timings VARCHAR(100) NULL`);
         console.log('✅ Columns verified or added');
       } catch (alterError) {
         console.log('⚠️ Column verification failed (columns might already exist):', alterError.message);
@@ -1139,12 +1235,12 @@ module.exports = {
           name = ?, first_name = ?, last_name = ?, nationality = ?, email = ?, office_id = ?, position_id = ?,
           monthlySalary = ?, joiningDate = ?, status = ?,
           dob = ?, passport_number = ?, passport_expiry = ?, visa_type = ?, visa_expiry = ?, platform = ?, address = ?, current_address = ?, phone = ?, whatsapp = ?, gender = ?,
-          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?, emergency_contact_relation = ?
+          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?, emergency_contact_relation = ?, shift_timings = ?
         WHERE employeeId = ?
       `, [
         name, first_name || null, last_name || null, nationality || null, email, office_id, position_id, monthlySalary, fixedJoiningDate, statusValue,
         fixedDob, passport_number || null, fixedPassportExpiry, visa_type || null, fixedVisaExpiry, platform || null, address || null, current_address || null, phone || null, whatsapp || null, gender || null,
-        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null,
+        primary_language || null, secondary_language || null, marital_status || null, hiring_source || null, salary_currency || 'AED', emirates_id || null, emergency_contact || null, emergency_contact_relation || null, finalShiftTimings,
         req.params.employeeId
       ]);
       if (!result.affectedRows) return res.status(404).json({ error: 'Employee not found' });
@@ -1204,6 +1300,36 @@ module.exports = {
     } catch (err) {
       console.error('Error:', err);
       res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Recalculate and persist shift timings for all employees
+  recalculateShiftTimings: async (req, res) => {
+    try {
+      const db = req.db;
+      // Ensure column exists
+      try {
+        await db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS shift_timings VARCHAR(100) NULL`);
+      } catch (e) {
+        console.log('shift_timings column ensure failed (may already exist):', e.message);
+      }
+      const [rows] = await db.query(`
+        SELECT e.employeeId, e.office_id, e.position_id, op.reporting_time, op.duty_hours
+        FROM employees e
+        LEFT JOIN office_positions op ON e.office_id = op.office_id AND e.position_id = op.position_id
+      `);
+      let updated = 0;
+      for (const r of rows) {
+        const s = computeShiftTimings(r.reporting_time, r.duty_hours);
+        if (s) {
+          const [resUpd] = await db.query('UPDATE employees SET shift_timings = ? WHERE employeeId = ?', [s, r.employeeId]);
+          if (resUpd.affectedRows) updated++;
+        }
+      }
+      res.json({ total: rows.length, updated });
+    } catch (err) {
+      console.error('Recalculate shift timings error:', err);
+      res.status(500).json({ error: 'Failed to recalculate shift timings: ' + err.message });
     }
   },
 

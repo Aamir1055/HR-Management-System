@@ -210,9 +210,6 @@ export const Employees: React.FC = () => {
     navigate(`/employees/edit/${employee.employeeId}`);
   };
 
-  const handleViewEmployee = (employee: Employee) => {
-    navigate(`/employees/view/${employee.employeeId}`);
-  };
 
   const handleDeleteEmployee = async (id: string) => {
     // Find the employee to get their name for the message
@@ -259,33 +256,6 @@ export const Employees: React.FC = () => {
     }
   };
 
-  const handleSecondaryFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const response = await fetch('/api/employees/import-secondary', {
-        method: 'POST',
-        body: formData,
-        headers: { Accept: 'application/json' },
-      });
-      if (response.ok) {
-        alert('Secondary employee data imported successfully');
-        refreshEmployees();
-      } else {
-        const errorMsg = await response.text();
-        throw new Error(errorMsg || 'Failed to import secondary data');
-      }
-    } catch (err) {
-      let message = 'Import error';
-      if (err instanceof Error) message += ': ' + err.message;
-      else message += ': ' + String(err);
-      alert(message);
-    }
-  };
 
   if (loading) {
     return (
@@ -371,8 +341,8 @@ export const Employees: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[140px]"
             >
               <option value="">All Offices</option>
-              {offices.map((office) => (
-                <option key={office.id || office.name || `office-${office}`} value={getDisplayName(office, 'name', 'office_name')}>
+              {offices.map((office, index) => (
+                <option key={office.id || `office-${index}-${office.name || office}`} value={getDisplayName(office, 'name', 'office_name')}>
                   {getDisplayName(office, 'name', 'office_name')}
                 </option>
               ))}
@@ -399,13 +369,22 @@ export const Employees: React.FC = () => {
             </select>
           </div>
 
-          {/* Other buttons */}
-          <div className="flex gap-2 justify-start md:justify-end items-center w-full md:w-auto">
+          {/* Action buttons */}
+          <div className="flex gap-3 justify-start md:justify-end items-center w-full md:w-auto">
 
-            {/* Import Excel */}
+            {/* Add New Employee - Primary Action */}
+            <button
+              onClick={handleAddEmployee}
+              className="flex items-center justify-center h-12 px-4 min-w-[150px] text-base font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-150 shadow-md"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Employee
+            </button>
+
+            {/* Import Excel - Secondary Action */}
             <label
               htmlFor="importExcel"
-              className="flex items-center justify-center h-12 px-3 min-w-[130px] text-base font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors duration-150 shadow-sm"
+              className="flex items-center justify-center h-12 px-4 min-w-[130px] text-base font-medium rounded-md bg-gray-600 text-white hover:bg-gray-700 cursor-pointer transition-colors duration-150 shadow-sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
@@ -417,31 +396,6 @@ export const Employees: React.FC = () => {
               onChange={handleFileUpload}
               className="hidden"
             />
-
-            {/* Import Secondary Data */}
-            <label
-              htmlFor="importSecondaryExcel"
-              className="flex items-center justify-center h-12 px-3 min-w-[150px] text-base font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer transition-colors duration-150 shadow-sm"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import Secondary Data
-            </label>
-            <input
-              id="importSecondaryExcel"
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={handleSecondaryFileUpload}
-              className="hidden"
-            />
-
-            {/* Add New Employee */}
-            <button
-              onClick={handleAddEmployee}
-              className="flex items-center justify-center h-12 px-3 min-w-[140px] text-base font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-150 shadow-sm"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Employee
-            </button>
           </div>
         </div>
 
@@ -482,7 +436,6 @@ export const Employees: React.FC = () => {
                 employees={paginatedEmployees}
                 onEdit={handleEditEmployee}
                 onDelete={handleDeleteEmployee}
-                onView={handleViewEmployee}
               />
               <div className="flex justify-between items-center px-4 py-4 border-t border-gray-200 bg-white rounded-b-lg">
                 <button

@@ -58,6 +58,9 @@ router.get('/positions/options', requireAuth, employeeController.getPositionOpti
 router.get('/positions/by-office/:officeId', requireAuth, employeeController.getPositionsByOffice);
 router.get('/platforms/options', requireAuth, employeeController.getPlatformOptions);
 
+// =================== SHIFT TIMINGS UTILITY ROUTES ======================
+router.post('/recalculate-shift-timings', requireAuth, requireManager, employeeController.recalculateShiftTimings);
+
 // =================== CRUD (Leave these after static routes) ========
 router.post('/', requireAuth, addUserOffices, employeeController.createEmployee);
 router.get('/:employeeId', requireAuth, addUserOffices, employeeController.getEmployeeById);

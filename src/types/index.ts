@@ -42,6 +42,7 @@ export interface Employee {
   emirates_id?: string;
   emergency_contact?: string;
   emergency_contact_relation?: string; // New field for emergency contact relation
+  shift_timings?: string; // Shift timings (e.g., "9:00 AM - 6:00 PM")
 }
 
 export interface AttendanceRecord {

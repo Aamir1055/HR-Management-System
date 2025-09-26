@@ -1,26 +1,21 @@
 import React, { useState } from 'react';
 import { Employee } from '../../types';
-import { Edit, Trash2, Eye, MessageCircle } from 'lucide-react';
-import EmployeeComments from './EmployeeComments';
+import { Edit, Trash2 } from 'lucide-react';
 import { formatDateFromEpoch } from '../../utils/dateUtils';
 
 interface EmployeeTableProps {
   employees: Employee[];
   onEdit: (employee: Employee) => void;
   onDelete: (id: string) => void;
-  onView: (employee: Employee) => void;
 }
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   employees,
   onEdit,
   onDelete,
-  onView,
 }) => {
   const [sortField, setSortField] = useState<keyof Employee>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   // Get status display text
   const getStatusDisplay = (status: boolean | number | string) => {
@@ -69,15 +64,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     }
   };
 
-  const handleCommentsClick = (employeeId: string) => {
-    setSelectedEmployeeId(employeeId);
-    setCommentsModalOpen(true);
-  };
-
-  const handleCloseComments = () => {
-    setCommentsModalOpen(false);
-    setSelectedEmployeeId('');
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -104,15 +90,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 )}
               </th>
               <th
-                onClick={() => handleSort('monthlySalary')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              >
-                Salary
-                {sortField === 'monthlySalary' && (
-                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </th>
-              <th
                 onClick={() => handleSort('joiningDate')}
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               >
@@ -120,6 +97,9 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 {sortField === 'joiningDate' && (
                   <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                 )}
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Shift Timings
               </th>
               <th
                 onClick={() => handleSort('status')}
@@ -164,15 +144,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {employee.monthlySalary !== undefined && employee.monthlySalary !== null
-                        ? `AED ${Number(employee.monthlySalary).toLocaleString()}`
-                        : 'Not set'}
+                    <div className="text-sm text-gray-900">
+                      {formatDateFromEpoch(employee.joiningDate)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {formatDateFromEpoch(employee.joiningDate)}
+                      {employee.shift_timings || '9:00 AM - 6:00 PM'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -194,25 +172,11 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button
-                        onClick={() => onView(employee)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
                         onClick={() => onEdit(employee)}
                         className="text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-50"
                         title="Edit Employee"
                       >
                         <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleCommentsClick(employee.employeeId)}
-                        className="text-purple-600 hover:text-purple-900 p-1 rounded-full hover:bg-purple-50"
-                        title="View Comments"
-                      >
-                        <MessageCircle className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onDelete(employee.employeeId)}
@@ -228,7 +192,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             })}
             {sortedEmployees.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 text-sm">
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500 text-sm">
                   No employees found.
                 </td>
               </tr>
@@ -236,13 +200,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </tbody>
         </table>
       </div>
-      
-      {/* Comments Modal */}
-      <EmployeeComments
-        employeeId={selectedEmployeeId}
-        isOpen={commentsModalOpen}
-        onClose={handleCloseComments}
-      />
     </div>
   );
 };

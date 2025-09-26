@@ -19,6 +19,30 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
     toString: dateValue?.toString(),
     length: typeof dateValue === 'string' ? dateValue.length : 'N/A'
   });
+
+  // Local helper: adds +1 day to a DD/MM/YYYY string safely
+  const addOneDayToDDMMYYYY = (value: string): string => {
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value;
+    const [d, m, y] = value.split('/').map((v) => parseInt(v, 10));
+    const dt = new Date(y, m - 1, d);
+    if (isNaN(dt.getTime())) return value;
+    dt.setDate(dt.getDate() + 1);
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(dt.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // Local helper: format a Date to DD/MM/YYYY with +1 day adjustment
+  const formatDatePlusOne = (dt: Date): string => {
+    if (isNaN(dt.getTime())) return 'Invalid Date';
+    dt = new Date(dt.getTime());
+    dt.setDate(dt.getDate() + 1);
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(dt.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  };
   
   // Handle null, undefined, empty string, or whitespace-only strings
   if (!dateValue || (typeof dateValue === 'string' && dateValue.trim() === '')) {
@@ -31,7 +55,8 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
     
     // Check if it's in DD/MM/YYYY format (our expected display format)
     if (trimmedValue.includes('/') && trimmedValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      return trimmedValue; // Return DD/MM/YYYY directly
+      // Apply +1 day adjustment consistently across all displays
+      return addOneDayToDDMMYYYY(trimmedValue);
     }
     
     // Handle YYYY-MM-DD format (convert to DD/MM/YYYY)
@@ -49,7 +74,7 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
           // Validate the result is a proper date
           const testDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
           if (!isNaN(testDate.getTime())) {
-            return result;
+            return addOneDayToDDMMYYYY(result);
           }
         }
       } catch (error) {
@@ -61,17 +86,13 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
     try {
       const parsedDate = new Date(trimmedValue);
       if (!isNaN(parsedDate.getTime())) {
-        return parsedDate.toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
+        return formatDatePlusOne(parsedDate);
       }
     } catch (error) {
       console.error('Error parsing date string:', error, 'Input:', dateValue);
     }
     
-    // If all parsing fails, return the original value
+    // If all parsing fails, return the original value (no adjustment possible)
     console.warn('Unable to parse date string, returning as-is:', dateValue);
     return trimmedValue;
   }
@@ -81,12 +102,7 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
     try {
       const date = new Date(dateValue);
       if (isNaN(date.getTime())) return 'Invalid Date';
-      
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return formatDatePlusOne(date);
     } catch (error) {
       console.error('Error formatting epoch date:', error);
       return 'Invalid Date';
@@ -97,12 +113,7 @@ export const formatDateFromEpoch = (dateValue: number | string | Date | null | u
   if (dateValue instanceof Date) {
     try {
       if (isNaN(dateValue.getTime())) return 'Invalid Date';
-      
-      return dateValue.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return formatDatePlusOne(dateValue);
     } catch (error) {
       console.error('Error formatting Date object:', error);
       return 'Invalid Date';
@@ -122,10 +133,10 @@ export const formatDateForInput = (dateValue: number | string | Date | null | un
   
   try {
     if (typeof dateValue === 'string') {
-      // Handle DD/MM/YYYY format from database
+      // Handle DD/MM/YYYY format from database - NOTE: no +1 day here as formatDateFromEpoch already applied it
       if (dateValue.includes('/') && dateValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
         const [day, month, year] = dateValue.split('/');
-        return `${year}-${month}-${day}`; // Convert to YYYY-MM-DD
+        return `${year}-${month}-${day}`; // Convert to YYYY-MM-DD directly
       }
       
       // If it's already in YYYY-MM-DD format, return it directly
