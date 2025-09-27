@@ -1,11 +1,13 @@
 // Main React application component for PayRoll Management System frontend
 // Handles routing, authentication, role-based access control, and navigation between different modules
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth, LoginCredentials } from './context/AuthContext';
 import { ToastProvider } from './components/UI/ToastContainer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginForm } from './components/Auth/LoginForm';
+// First login 2FA setup is shown on its own page now
+import FirstLogin2FASetupPage from './pages/FirstLogin2FASetupPage';
 import AddEmployeePage from './pages/AddEmployee';
 import { Dashboard } from './pages/Dashboard';
 import { Employees } from './pages/Employees';
@@ -27,6 +29,8 @@ import EmployeeLoanHistory from './pages/EmployeeLoanHistory';
 import { OfficeEmployeeDetails } from './pages/OfficeEmployeeDetails';
 import { PlatformEmployeeDetails } from './pages/PlatformEmployeeDetails';
 import { CelebrationsPage } from './pages/CelebrationsPage';
+import { Recruitments } from './pages/Recruitments';
+import { PeticashPage } from './pages/Peticash';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -87,14 +91,23 @@ const ProtectedRoute: React.FC<{
 };
 
 const AuthenticatedLoginForm: React.FC = () => {
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, requiresFirstLogin2FA, firstLogin2FAData } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (credentials: LoginCredentials) => {
     const success = await login(credentials);
     if (success) {
       window.location.href = '/';
+      return;
     }
   };
+
+  // Handle redirect to first-login 2FA page when needed
+  useEffect(() => {
+    if (requiresFirstLogin2FA && firstLogin2FAData) {
+      navigate('/first-login-2fa', { replace: true });
+    }
+  }, [requiresFirstLogin2FA, firstLogin2FAData, navigate]);
 
   return (
     <LoginForm
@@ -112,6 +125,7 @@ const AppRoutes: React.FC = () => {
     return (
       <Routes>
         <Route path="/login" element={<AuthenticatedLoginForm />} />
+        <Route path="/first-login-2fa" element={<FirstLogin2FASetupPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -170,6 +184,28 @@ const AppRoutes: React.FC = () => {
         }
       />
       {/* === END EMPLOYEE ROUTES === */}
+
+      {/* === RECRUITMENT ROUTES === */}
+      <Route
+        path="/recruitments"
+        element={
+          <ProtectedRoute permission="manage_employees">
+            <Recruitments />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END RECRUITMENT ROUTES === */}
+
+      {/* === PETICASH ROUTES === */}
+      <Route
+        path="/peticash"
+        element={
+          <ProtectedRoute permission="manage_payroll">
+            <PeticashPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END PETICASH ROUTES === */}
 
       {/* === OFFICE DETAILS ROUTE === */}
       <Route
@@ -338,6 +374,7 @@ const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
+
 
 const App: React.FC = () => {
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Key, UserCog, Building2 } from 'lucide-react';
+import { X, Eye, EyeOff, Key, UserCog, Building2, Shield } from 'lucide-react';
 import { User, Office } from '../../types';
 import { api } from '../../services/api';
 
@@ -68,6 +68,13 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOn
     }
   }, [user, isOpen, mode]);
 
+  // Auto-select all offices when role is admin and offices are loaded
+  useEffect(() => {
+    if (formData.role === 'admin' && offices.length > 0) {
+      setSelectedOfficeIds(offices.map(office => office.id));
+    }
+  }, [formData.role, offices]);
+
   const fetchOffices = async () => {
     try {
       const response = await api.get('/masters/offices');
@@ -110,6 +117,11 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOn
       [name]: type === 'checkbox' ? checked : value
     }));
 
+    // Auto-select all offices when Admin role is selected
+    if (name === 'role' && value === 'admin') {
+      setSelectedOfficeIds(offices.map(office => office.id));
+    }
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -117,7 +129,7 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOn
   };
 
   const handleOfficeToggle = (officeId: string) => {
-    if (mode === 'view') return;
+    if (mode === 'view' || formData.role === 'admin') return;
     
     setSelectedOfficeIds(prev => {
       if (prev.includes(officeId)) {
@@ -329,40 +341,100 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOn
               )}
             </div>
 
+            {/* 2FA Toggle */}
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center">
+                  <Shield className="h-5 w-5 text-blue-600 mr-3" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h3>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {formData.two_factor_enabled 
+                        ? 'User will be required to set up 2FA on first login' 
+                        : 'User can login with username and password only'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="two_factor_enabled"
+                    checked={formData.two_factor_enabled || false}
+                    onChange={handleInputChange}
+                    disabled={isReadOnly}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    {formData.two_factor_enabled ? 'Required' : 'Optional'}
+                  </span>
+                </label>
+              </div>
+              {formData.two_factor_enabled && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center">
+                    <Shield className="h-4 w-4 text-blue-500 mr-2" />
+                    <p className="text-xs text-blue-700">
+                      <strong>Note:</strong> This user will see a QR code setup screen on their first login and must complete 2FA setup before accessing the system.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
 
             {/* Office Assignments */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Building2 className="inline h-4 w-4 mr-1" />
                 Office Access *
+                {formData.role === 'admin' && (
+                  <span className="ml-2 text-xs text-blue-600 font-medium">
+                    (All offices automatically selected for Admin)
+                  </span>
+                )}
               </label>
               <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
                 {offices.length === 0 ? (
                   <p className="text-sm text-gray-500">No offices available</p>
                 ) : (
                   <div className="space-y-2">
-                    {offices.map((office) => (
-                      <label
-                        key={office.id}
-                        className={`flex items-center space-x-3 p-2 rounded-lg border transition-colors ${
-                          selectedOfficeIds.includes(office.id)
-                            ? 'bg-blue-50 border-blue-200'
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
-                        } ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedOfficeIds.includes(office.id)}
-                          onChange={() => handleOfficeToggle(office.id)}
-                          disabled={isReadOnly}
-                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{office.name}</div>
-                          <div className="text-xs text-gray-500">{office.location}</div>
-                        </div>
-                      </label>
-                    ))}
+                    {offices.map((office) => {
+                      const isAdminRole = formData.role === 'admin';
+                      const isDisabled = isReadOnly || isAdminRole;
+                      return (
+                        <label
+                          key={office.id}
+                          className={`flex items-center space-x-3 p-2 rounded-lg border transition-colors ${
+                            selectedOfficeIds.includes(office.id)
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-white border-gray-200 hover:bg-gray-50'
+                          } ${
+                            isDisabled ? 'cursor-default' : 'cursor-pointer'
+                          } ${
+                            isAdminRole ? 'opacity-75' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedOfficeIds.includes(office.id)}
+                            onChange={() => handleOfficeToggle(office.id)}
+                            disabled={isDisabled}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">{office.name}</div>
+                            <div className="text-xs text-gray-500">{office.location}</div>
+                          </div>
+                          {isAdminRole && (
+                            <div className="text-xs text-blue-600 font-medium">
+                              Auto-selected
+                            </div>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>

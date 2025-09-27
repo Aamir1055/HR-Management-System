@@ -13,7 +13,9 @@ import {
   UserCog,
   FileText,
   CreditCard,
-  Gift
+  Gift,
+  UserPlus,
+  Wallet
 } from 'lucide-react';
 
 const navigation = [
@@ -21,16 +23,16 @@ const navigation = [
   { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
   { name: 'Celebrations', href: '/celebrations', icon: Gift },
   { name: 'Employees', href: '/employees', icon: Users },
+  { name: 'Recruitment Panel', href: '/recruitments', icon: UserPlus },
   { name: 'Employee Loan', href: '/employee-loans', icon: CreditCard }, // Employee Loan navigation - moved below Employees
   { name: 'Payroll', href: '/payroll', icon: TrendingUp },
+  { name: 'Petty Cash', href: '/peticash', icon: Wallet },
   { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
   { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
   { name: 'Holidays', href: '/holidays', icon: Calendar },
-  { name: 'Profile', href: '/profile', icon: User },
   { name: 'Role Management', href: '/roles', icon: UserCog }, // Changed icon for better distinction
   { name: 'Master Data', href: '/master-data', icon: Settings }, // New Master Data route
-  { name: 'Flush DB', href: '/flush-db', icon: Trash2, adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -71,12 +73,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return hasPermission('manage_holidays');
       case '/employees':
         return hasPermission('manage_employees');
+      case '/recruitments':
+        return hasPermission('manage_employees');
       case '/payroll':
         return hasPermission('manage_payroll');
+      case '/peticash':
+        return hasPermission('manage_payroll'); // Same permission as payroll
       case '/salary-slips':
         return hasPermission('manage_payroll'); // Same permission as payroll
-      case '/flush-db':
-        return user?.role === 'admin';
       default:
         return true;
     }
@@ -114,17 +118,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
                     isActive
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                      : item.href === '/flush-db'
-                        ? 'text-red-600 hover:bg-red-50 hover:text-red-600'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
                   }`
                 }
                 onClick={() => window.innerWidth < 1024 && onClose()}
               >
-                <item.icon className={`w-5 h-5 mr-3 ${item.href === '/flush-db' ? 'text-red-500' : ''}`} />
-                <span className={item.href === '/flush-db' ? 'text-red-600 font-semibold' : ''}>
-                  {item.name}
-                </span>
+                <item.icon className="w-5 h-5 mr-3" />
+                <span>{item.name}</span>
               </NavLink>
             ))}
 

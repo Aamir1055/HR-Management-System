@@ -10,7 +10,7 @@ const QRCode = require('qrcode');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_EXPIRY = '24h';
 
-// ✅ Login with optional 2FA
+// ✅ Login with optional 2FA and first login setup
 exports.login = async (req, res) => {
   const { username, password, twoFactorCode } = req.body;
 
@@ -19,7 +19,7 @@ exports.login = async (req, res) => {
   }
 
   try {
-    const [users] = await req.db.query('SELECT * FROM users WHERE username = ?', [username]);
+const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = LOWER(?)', [username]);
 
     if (users.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -36,6 +36,44 @@ exports.login = async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // First login: require 2FA setup regardless of current two_factor_enabled flag
+    if (user.first_login) {
+      // Reuse existing secret if already generated; otherwise create and persist a new one
+      let secretBase32 = user.two_factor_secret;
+      if (!secretBase32) {
+        const generated = speakeasy.generateSecret({
+          name: `Payroll System (${user.username})`,
+          issuer: 'Payroll System',
+          length: 32
+        });
+        secretBase32 = generated.base32;
+        await req.db.query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [
+          secretBase32,
+          user.id
+        ]);
+      }
+
+      const qrCodeUrl = speakeasy.otpauthURL({
+        secret: secretBase32,
+        label: user.username,
+        issuer: 'Payroll System',
+        encoding: 'base32'
+      });
+
+      const qrCodeImage = await QRCode.toDataURL(qrCodeUrl);
+
+      return res.status(200).json({
+        requiresFirstLogin2FA: true,
+        message: 'First login - 2FA setup required',
+        qrCode: qrCodeImage,
+        secret: secretBase32,
+        backupCodes: Array.from({ length: 3 }, () =>
+          Math.random().toString(36).substr(2, 8).toUpperCase()
+        )
+      });
+    }
+
 
     if (user.two_factor_enabled) {
       if (!twoFactorCode) {
@@ -226,6 +264,83 @@ exports.register = async (req, res) => {
     }
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
+  }
+};
+
+// ✅ Complete first login 2FA setup
+exports.completeFirstLogin2FA = async (req, res) => {
+  const { username, password, token } = req.body;
+
+  if (!username || !password || !token) {
+    return res.status(400).json({ error: 'Username, password, and 2FA token are required' });
+  }
+
+  try {
+    // Verify user credentials
+    const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = LOWER(?)', [username]);
+
+    if (users.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = users[0];
+    
+    if (!user.first_login) {
+      return res.status(400).json({ error: 'This user has already completed first login setup' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verify 2FA token
+    if (!user.two_factor_secret) {
+      return res.status(400).json({ error: '2FA setup not found. Please retry login.' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.two_factor_secret,
+      encoding: 'base32',
+      token,
+      window: 6
+    });
+
+    if (!verified) {
+      return res.status(400).json({ error: 'Invalid 2FA code' });
+    }
+
+    // Mark first login as complete and enable 2FA
+    await req.db.query(
+      'UPDATE users SET first_login = FALSE, two_factor_enabled = TRUE WHERE id = ?',
+      [user.id]
+    );
+
+    // Generate JWT token
+    const jwtToken = jwt.sign(
+      {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        employeeId: user.employee_id
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
+    );
+
+    res.json({
+      token: jwtToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        employeeId: user.employee_id,
+        twoFactorEnabled: true
+      }
+    });
+  } catch (error) {
+    console.error('First login 2FA completion error:', error);
+    res.status(500).json({ error: 'Failed to complete first login setup' });
   }
 };
 

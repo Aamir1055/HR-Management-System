@@ -468,7 +468,7 @@ const EmployeeLoanHistory: React.FC = () => {
   const [data, setData] = useState<LoanHistoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'loans' | 'transactions'>('overview');
+  const [activeTab, setActiveTab] = useState<'transactions'>('transactions');
   const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
   
   // ✅ UPDATED: States for adjustment modal with loan selection
@@ -555,12 +555,12 @@ const EmployeeLoanHistory: React.FC = () => {
     }
   };
 
-  // ✅ NEW: Fetch transactions when switching to transactions tab
+  // ✅ NEW: Fetch transactions when component loads
   useEffect(() => {
-    if (activeTab === 'transactions' && employee_id) {
+    if (employee_id) {
       fetchTransactionHistory();
     }
-  }, [activeTab, employee_id]);
+  }, [employee_id]);
 
   // ✅ UPDATED: Handle adjustment with selected loan
   const handleAdjustment = async (amount: number, reason: string) => {
@@ -821,8 +821,8 @@ const EmployeeLoanHistory: React.FC = () => {
                             </div>
                             <div className="space-y-3">
                               <div>
-                              <h5 className="text-xl font-bold text-indigo-900">Loan #{activeLoans[0].id}</h5>
-                                <p className="text-sm text-gray-600">{activeLoans[0].description || 'No description'}</p>
+                              <h5 className="text-xl font-bold text-indigo-900">{data.employee.name}</h5>
+                                <p className="text-sm text-gray-600">{activeLoans[0].description || 'Employee Loan'}</p>
                               </div>
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
@@ -849,7 +849,7 @@ const EmployeeLoanHistory: React.FC = () => {
                           />
                           {selectedLoan && (
                             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                              <h5 className="font-semibold text-blue-900 mb-1">{`Loan #${selectedLoan.id}`}</h5>
+                              <h5 className="font-semibold text-blue-900 mb-1">{data.employee.name}</h5>
                               <p className="text-sm text-blue-700">Remaining: <span className="font-semibold">AED {parseFloat(selectedLoan.remaining_amount).toFixed(2)}</span></p>
                             </div>
                           )}
@@ -1066,78 +1066,33 @@ const EmployeeLoanHistory: React.FC = () => {
           </div>
         </div>
 
-        {/* ✅ SIMPLIFIED: Tabs - Removed redundant Loans tab */}
-        <div className="mb-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'overview'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FileText className="inline-block w-5 h-5 mr-2" />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('transactions')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'transactions'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <History className="inline-block w-5 h-5 mr-2" />
-              Transaction History
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {activeTab === 'overview' && (
-            <div className="p-6">
-              <div className="text-center py-16">
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-12 border-2 border-dashed border-gray-200">
-                  <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                    <FileText className="w-10 h-10 text-gray-400" />
+        {/* Transaction History Header - No Tabs Needed */}
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <History className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Clean Overview</h3>
-                  <p className="text-gray-600 max-w-md mx-auto leading-relaxed">
-                    All loan details and management options are available in the loan management panel above and transaction history tab.
-                  </p>
-                </div>
+                  Transaction History
+                </h3>
+                <p className="text-gray-600">Complete audit trail of all loan adjustments with detailed timestamps and reasons</p>
               </div>
             </div>
-          )}
+          </div>
+        </div>
 
-
-          {/* ✅ ENHANCED: Transaction History Tab with Modern Design */}
-          {activeTab === 'transactions' && (
-            <div className="p-6">
-              {/* Enhanced Header */}
-              <div className="mb-8">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
-                        <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                          <History className="w-6 h-6 text-blue-600" />
-                        </div>
-                        Transaction History
-                      </h3>
-                      <p className="text-gray-600">Complete audit trail of all loan adjustments with detailed timestamps and reasons</p>
-                    </div>
-                    {transactionHistory.length > 0 && (
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-blue-600">{transactionHistory.length}</div>
-                        <div className="text-sm text-gray-600">Total Transactions</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* Transaction History Content */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6">
+            {/* Transaction Count Display */}
+            {transactionHistory.length > 0 && (
+              <div className="mb-6 text-right">
+                <div className="text-3xl font-bold text-blue-600">{transactionHistory.length}</div>
+                <div className="text-sm text-gray-600">Total Transactions</div>
               </div>
+            )}
 
               {transactionHistory.length === 0 ? (
                 <div className="text-center py-16">
@@ -1246,13 +1201,13 @@ const EmployeeLoanHistory: React.FC = () => {
                                   </div>
                                 </td>
                                 
-                                {/* Enhanced Loan */}
+                                {/* Enhanced Loan (updated: show employee name instead of loan id) */}
                                 <td className="px-6 py-5">
                                   <div className="max-w-xs">
                                     <div className="text-sm font-medium text-gray-900 truncate">
-                                      {`Loan #${transaction.loan_id}`}
+                                      {data.employee.name}
                                     </div>
-                                    <div className="text-xs text-gray-500">ID: {transaction.loan_id}</div>
+                                    <div className="text-xs text-gray-500">Employee</div>
                                   </div>
                                 </td>
                                 
@@ -1345,7 +1300,6 @@ const EmployeeLoanHistory: React.FC = () => {
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
       

@@ -42,6 +42,8 @@ const salarySlipRoutes = require('./routes/salarySlipRoutes'); // NEW
 const loanRoutes = require('./routes/loanRoutes'); // NEW - EMPLOYEE LOANS
 const commentsRoutes = require('./routes/commentsRoutes'); // NEW - EMPLOYEE COMMENTS
 const dashboardRoutes = require('./routes/dashboardRoutes'); // NEW - DASHBOARD
+const recruitmentRoutes = require('./routes/recruitmentRoutes'); // NEW - RECRUITMENT PANEL
+const peticashRoutes = require('./routes/peticashRoutes'); // NEW - PETICASH MANAGEMENT
 
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
@@ -102,7 +104,9 @@ app.get('/api/health', (req, res) => {
       approvedLeaves: true,
       advanceSalary: true,
       employeeLoans: true,
-      salarySlips: true
+      salarySlips: true,
+      recruitmentPanel: true,
+      peticashManagement: true
     }
   });
 });
@@ -124,6 +128,8 @@ app.use('/api/salary-slips', salarySlipRoutes); // NEW - SALARY SLIPS
 app.use('/api/loans', loanRoutes); // NEW - EMPLOYEE LOANS
 app.use('/api/comments', verifyToken, commentsRoutes); // NEW - EMPLOYEE COMMENTS
 app.use('/api/dashboard', dashboardRoutes); // NEW - DASHBOARD
+app.use('/api/recruitment', recruitmentRoutes); // NEW - RECRUITMENT PANEL
+app.use('/api/peticash', peticashRoutes); // NEW - PETICASH MANAGEMENT
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -193,6 +199,8 @@ app.listen(PORT, async () => {
     console.log('📄 Salary Slips: /api/salary-slips/* (auth required)');
     console.log('🏦 Employee Loans: /api/loans/* (manager+ required)');
     console.log('🎉 Celebrations Dashboard: /api/dashboard/* (auth required)');
+    console.log('👔 Recruitment Panel: /api/recruitment/* (hr+ required for CUD, auth for read)');
+    console.log('💰 Petty Cash: /api/peticash/* (hr+ required for CUD, manager+ for delete)');
     
     console.log('\n⚙️ Setup Instructions:');
     console.log('1. Run: node migrate.js');
@@ -210,6 +218,8 @@ app.listen(PORT, async () => {
     console.log(`• Advance Salary: ✅ Active`);
     console.log(`• Employee Loans: ✅ Active`);
     console.log(`• Salary Slips: ✅ Active`);
+    console.log(`• Recruitment Panel: ✅ Active`);
+    console.log(`• Petty Cash Management: ✅ Active`);
   }
   
   console.log('\n🚀 Server ready and waiting for requests...\n');

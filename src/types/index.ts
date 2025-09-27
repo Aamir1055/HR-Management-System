@@ -132,3 +132,108 @@ export interface AdvanceSalaryRecord {
   uploaded_date: string;
   uploaded_by: string;
 }
+
+// Recruitment Panel interfaces
+export interface Recruitment {
+  id?: number;
+  date: string; // dd/mm/yyyy format
+  fullName: string;
+  mobile: string;
+  whatsapp?: string;
+  email: string;
+  recruitmentSource: string;
+  recruitmentPipeline: string;
+  nationality: string;
+  cvFilePath?: string;
+  cvOriginalName?: string;
+  cvFileSize?: number;
+  cvMimeType?: string;
+  formattedDate?: string; // For display purposes
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RecruitmentFormData extends Recruitment {
+  cvFile?: File; // For form handling
+}
+
+export interface RecruitmentSearchFilters {
+  search?: string;
+  source?: string;
+  pipeline?: string;
+  nationality?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  orderBy?: string;
+  orderDirection?: 'ASC' | 'DESC';
+  limit?: number;
+  offset?: number;
+}
+
+export interface RecruitmentStatistics {
+  total: number;
+  bySource: Array<{ recruitmentSource: string; count: number }>;
+  byPipeline: Array<{ recruitmentPipeline: string; count: number }>;
+  byNationality: Array<{ nationality: string; count: number }>;
+  recentApplications: number;
+  thisMonth: number;
+}
+
+export interface RecruitmentReferenceData {
+  sources: string[];
+  pipelines: string[];
+  nationalities: string[];
+}
+
+// Petty Cash Management interfaces
+export interface Peticash {
+  id?: number;
+  date: string;
+  company: string;
+  expense_category: string;
+  payment_type: string;
+  disbursed_amount: number;
+  comments?: string;
+  payable: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PeticashFormData extends Peticash {
+  // Additional form-specific properties if needed
+}
+
+export interface PeticashSummary {
+  totalTransactions: number;
+  totalAmount: number;
+  paidAmount: number;
+  unpaidAmount: number;
+}
+
+export interface PeticashOptions {
+  paymentTypes: Array<{ value: string; label: string }>;
+  expenseCategories: Array<{ value: string; label: string }>;
+  companies: Array<{ value: string; label: string }>;
+}
+
+export interface PeticashFilters {
+  search?: string;
+  company?: string;
+  expense_category?: string;
+  payment_type?: string;
+  payable?: boolean;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PeticashResponse {
+  expenses: Peticash[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}

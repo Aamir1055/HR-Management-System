@@ -20,6 +20,15 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   requiresTwoFactor: boolean;
+  requiresFirstLogin2FA: boolean;
+  firstLogin2FAData: {
+    qrCode: string;
+    secret: string;
+    backupCodes: string[];
+    username: string;
+    password: string;
+  } | null;
+  completeFirstLogin2FA: (token: string, user: User) => void;
   resetTwoFactor: () => void;
 }
 
@@ -33,6 +42,10 @@ interface LoginResponse {
   token?: string;
   user?: User;
   requiresTwoFactor?: boolean;
+  requiresFirstLogin2FA?: boolean;
+  qrCode?: string;
+  secret?: string;
+  backupCodes?: string[];
   message?: string;
   error?: string;
 }
@@ -56,6 +69,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [requiresFirstLogin2FA, setRequiresFirstLogin2FA] = useState(false);
+  const [firstLogin2FAData, setFirstLogin2FAData] = useState<{
+    qrCode: string;
+    secret: string;
+    backupCodes: string[];
+    username: string;
+    password: string;
+  } | null>(null);
   const [tempCredentials, setTempCredentials] = useState<{username: string, password: string} | null>(null);
 
   // Check for existing session on mount
@@ -95,6 +116,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
+      // Check if first login 2FA setup is required
+      if (data.requiresFirstLogin2FA && data.qrCode && data.secret && data.backupCodes) {
+        setRequiresFirstLogin2FA(true);
+        setFirstLogin2FAData({
+          qrCode: data.qrCode,
+          secret: data.secret,
+          backupCodes: data.backupCodes,
+          username: credentials.username,
+          password: credentials.password
+        });
+        setError(null); // Clear any existing error
+        return false; // Don't complete login yet
+      }
+
       // Check if 2FA is required
       if (data.requiresTwoFactor) {
         setRequiresTwoFactor(true);
@@ -110,6 +145,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         setError(null);
         setRequiresTwoFactor(false);
+        setRequiresFirstLogin2FA(false);
+        setFirstLogin2FAData(null);
         setTempCredentials(null);
         return true;
       }
@@ -178,8 +215,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const completeFirstLogin2FA = (token: string, user: User) => {
+    // Complete the first login process
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+    setError(null);
+    setRequiresTwoFactor(false);
+    setRequiresFirstLogin2FA(false);
+    setFirstLogin2FAData(null);
+    setTempCredentials(null);
+  };
+
   const resetTwoFactor = () => {
     setRequiresTwoFactor(false);
+    setRequiresFirstLogin2FA(false);
+    setFirstLogin2FAData(null);
     setTempCredentials(null);
     setError(null);
   };
@@ -190,6 +241,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setError(null);
     setRequiresTwoFactor(false);
+    setRequiresFirstLogin2FA(false);
+    setFirstLogin2FAData(null);
     setTempCredentials(null);
   };
 
@@ -241,6 +294,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasPermission,
     isAuthenticated: !!user,
     requiresTwoFactor,
+    requiresFirstLogin2FA,
+    firstLogin2FAData,
+    completeFirstLogin2FA,
     resetTwoFactor,
   };
 

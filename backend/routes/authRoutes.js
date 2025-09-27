@@ -9,6 +9,7 @@ const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 // Public routes
 router.post('/login', authController.login);
+router.post('/complete-first-login-2fa', authController.completeFirstLogin2FA);
 
 // Protected routes (require authentication)
 router.get('/profile', verifyToken, authController.getProfile);
