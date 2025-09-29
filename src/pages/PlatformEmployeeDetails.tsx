@@ -37,6 +37,7 @@ export const PlatformEmployeeDetails: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
+  const [showActiveOnly, setShowActiveOnly] = useState(true); // Default to active only to match dashboard
   const [positions, setPositions] = useState<any[]>([]);
 
   const { showSuccess, showError } = useToast();
@@ -108,8 +109,11 @@ export const PlatformEmployeeDetails: React.FC = () => {
     return isMatch;
   });
 
-  // Apply additional filters (search, position)
+  // Apply additional filters (search, position, status)
   const filteredEmployees = filteredEmployeesByPlatform.filter((employee) => {
+    // Status filter (to match dashboard behavior)
+    const statusMatch = !showActiveOnly || employee.status;
+    
     // Search filter
     const search = searchTerm.trim().toLowerCase();
     const fieldsToSearch = [
@@ -125,7 +129,7 @@ export const PlatformEmployeeDetails: React.FC = () => {
     const positionMatch = !selectedPosition || 
       (employee.position_title === selectedPosition || employee.position_name === selectedPosition);
 
-    return searchMatch && positionMatch;
+    return statusMatch && searchMatch && positionMatch;
   });
 
   const handleExportToExcel = async () => {
@@ -360,6 +364,16 @@ export const PlatformEmployeeDetails: React.FC = () => {
                   </option>
                 ))}
             </select>
+            
+            {/* Status Filter */}
+            <select
+              value={showActiveOnly ? 'active' : 'all'}
+              onChange={(e) => setShowActiveOnly(e.target.value === 'active')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[120px]"
+            >
+              <option value="active">Active Only</option>
+              <option value="all">All Status</option>
+            </select>
           </div>
 
           {/* Action buttons */}
@@ -394,7 +408,12 @@ export const PlatformEmployeeDetails: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Users className="w-5 h-5 text-blue-600" />
               <span className="text-sm font-medium text-gray-700">
-                Total Employees in {decodeURIComponent(platformName || '')}: {filteredEmployees.length}
+                {showActiveOnly ? 'Active' : 'All'} Employees in {decodeURIComponent(platformName || '')}: {filteredEmployees.length}
+                {!showActiveOnly && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    ({filteredEmployeesByPlatform.filter(emp => emp.status).length} active, {filteredEmployeesByPlatform.filter(emp => !emp.status).length} inactive)
+                  </span>
+                )}
               </span>
             </div>
           </div>

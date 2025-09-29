@@ -188,8 +188,10 @@ function dateToExcelSerial(dateStr) {
       date = new Date(dateStr);
     }
     
-    // Return Excel serial number or null
+    // Add +1 day to fix Excel export date offset issue
     if (date && !isNaN(date.getTime())) {
+      date.setDate(date.getDate() + 1);
+      
       // Excel date serial calculation (1900-based system)
       const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)); // December 30, 1899
       const MS_PER_DAY = 86400000;
@@ -197,7 +199,7 @@ function dateToExcelSerial(dateStr) {
       const timeDiff = date.getTime() - EXCEL_EPOCH.getTime();
       const excelSerial = Math.floor(timeDiff / MS_PER_DAY);
       
-      console.log(`📅 Date to Excel serial: ${dateStr} → ${excelSerial}`);
+      console.log(`📅 Date to Excel serial: ${dateStr} → +1 day → ${excelSerial}`);
       return excelSerial;
     }
     

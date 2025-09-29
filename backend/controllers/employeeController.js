@@ -369,7 +369,11 @@ const employeeController = {
     try {
       const services = initializeServices(req.db);
       
-      const summary = await services.employeeService.getSummaryByPlatform();
+      // Build office filter from middleware (consistent with other endpoints)
+      const { buildOfficeFilter } = require('../middleware/auth');
+      const filter = buildOfficeFilter(req, 'e');
+      
+      const summary = await services.employeeService.getSummaryByPlatform(filter);
       
       res.json(summary);
     } catch (error) {

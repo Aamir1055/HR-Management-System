@@ -10,29 +10,20 @@ const { excelDateToYYYYMMDD, dateToExcelSerial, formatDateForTemplate } = requir
 /**
  * Map Excel column names to standard field names
  * @param {Array} availableColumns - Available columns in Excel file
- * @param {Object} mappings - Field mappings object
- * @returns {Object} - Column mapping object
+ * @param {Object} mappings - Field mappings object (excelColumn -> modelField)
+ * @returns {Object} - Column mapping object (modelField -> excelColumn)
  */
 function mapExcelColumns(availableColumns, mappings = EmployeeFieldMappings.excelToModel) {
   const columnMapping = {};
   
-  for (const [standardName, possibleNames] of Object.entries(mappings)) {
-    // If mappings are provided as arrays (from the model)
-    if (Array.isArray(possibleNames)) {
-      for (const possibleName of possibleNames) {
-        if (availableColumns.includes(possibleName)) {
-          columnMapping[standardName] = possibleName;
-          break;
-        }
-      }
-    } 
-    // If mappings are provided as single values
-    else {
-      for (const possibleName of [possibleNames]) {
-        if (availableColumns.includes(possibleName)) {
-          columnMapping[standardName] = possibleName;
-          break;
-        }
+  // The mappings object has structure: { "Excel Column": "modelField" }
+  // We need to reverse this to find which Excel columns exist and map them to model fields
+  for (const [excelColumnName, modelFieldName] of Object.entries(mappings)) {
+    // Check if this Excel column name exists in the available columns
+    if (availableColumns.includes(excelColumnName)) {
+      // Only map if we haven't already mapped this model field
+      if (!columnMapping[modelFieldName]) {
+        columnMapping[modelFieldName] = excelColumnName;
       }
     }
   }
@@ -187,7 +178,7 @@ function createEmployeeTemplate(templateData, referenceData = {}) {
 function createEmployeeExport(exportData, options = {}) {
   const wb = XLSX.utils.book_new();
   
-  // Convert dates to Excel serial numbers for proper sorting
+  // Convert dates to Excel serial numbers for proper sorting (with +1 day fix)
   const processedData = exportData.map(emp => ({
     ...emp,
     'Date of Birth': emp['Date of Birth'] ? dateToExcelSerial(emp['Date of Birth']) : null,

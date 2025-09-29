@@ -244,11 +244,12 @@ class EmployeeService {
 
   /**
    * Get summary statistics by platform
+   * @param {Object} filter - Filter options
    * @returns {Array} - Platform summaries
    */
-  async getSummaryByPlatform() {
+  async getSummaryByPlatform(filter = {}) {
     try {
-      return await this.employeeRepository.getSummaryByPlatform();
+      return await this.employeeRepository.getSummaryByPlatform(filter);
     } catch (error) {
       console.error('Error in getSummaryByPlatform:', error);
       throw new Error(`Failed to get platform summary: ${error.message}`);

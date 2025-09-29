@@ -363,22 +363,62 @@ class EmployeeRepository {
 
   /**
    * Get summary by platform
+   * @param {Object} filter - Filter options
    * @returns {Array} - Platform summaries
    */
-  async getSummaryByPlatform() {
+  async getSummaryByPlatform(filter = {}) {
     try {
-      const sql = `
+      // First get platform-assigned employees
+      let sql = `
         SELECT p.id AS platform_id, p.platform_name AS platform,
           COUNT(e.id) AS totalEmployees,
           SUM(e.monthlySalary) AS totalSalary
         FROM platforms p
         LEFT JOIN ${EmployeeTableName} e ON p.platform_name = e.platform AND e.status = 1
-        GROUP BY p.id, p.platform_name
-        ORDER BY p.platform_name
       `;
+      
+      const params = [];
 
-      const [results] = await this.db.query(sql);
-      return results;
+      // Apply office filter if provided
+      if (filter.whereClause) {
+        sql += ` WHERE ${filter.whereClause}`;
+        params.push(...(filter.params || []));
+      }
+      
+      sql += `
+        GROUP BY p.id, p.platform_name
+      `;
+      
+      // Then get unassigned employees and add as "Unassigned" platform
+      let unassignedSql = `
+        SELECT 0 AS platform_id, 'Unassigned Platform' AS platform,
+          COUNT(e.id) AS totalEmployees,
+          SUM(e.monthlySalary) AS totalSalary
+        FROM ${EmployeeTableName} e
+        WHERE e.status = 1 AND (e.platform IS NULL OR TRIM(e.platform) = '' OR e.platform = '')
+      `;
+      
+      const unassignedParams = [];
+      
+      // Apply same office filter for unassigned employees
+      if (filter.whereClause) {
+        unassignedSql += ` AND ${filter.whereClause}`;
+        unassignedParams.push(...(filter.params || []));
+      }
+      
+      // Combine both queries
+      const finalSql = `
+        (${sql})
+        UNION ALL
+        (${unassignedSql})
+        ORDER BY platform
+      `;
+      
+      const allParams = [...params, ...unassignedParams];
+      const [results] = await this.db.query(finalSql, allParams);
+      
+      // Filter out entries with 0 employees (including empty unassigned)
+      return results.filter(result => result.totalEmployees > 0);
     } catch (error) {
       console.error('Database error in getSummaryByPlatform:', error);
       throw new Error(`Failed to get platform summary: ${error.message}`);

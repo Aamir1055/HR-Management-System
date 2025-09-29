@@ -201,14 +201,15 @@ class EmployeeValidationService {
       // Create employee instance for validation
       const employee = new Employee(employeeData);
 
-      // Import-specific validation
-      const basicValidation = employee.validate('import');
+      // Import-specific validation - use 'create' since data is already converted
+      const basicValidation = employee.validate('create');
       if (!basicValidation.isValid) {
         errors.push(...basicValidation.errors.map(err => `Row ${rowIndex + 1}: ${err}`));
       }
 
       // Required field validation for import
-      const importRequiredFields = RequiredFields.import;
+      // Use converted field names since data has already been processed
+      const importRequiredFields = ['employeeId', 'name', 'email', 'office_id', 'position_id', 'monthlySalary', 'joiningDate', 'status'];
       importRequiredFields.forEach(field => {
         if (!employeeData[field] || (typeof employeeData[field] === 'string' && employeeData[field].trim() === '')) {
           errors.push(`Row ${rowIndex + 1}: ${field} is required for import`);

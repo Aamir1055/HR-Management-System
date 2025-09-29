@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-09-29T07:21:49.732Z",
+  "sourceFile": "employee_template_test.xlsx",
+  "analysis": {
+    "totalRows": 1,
+    "validRows": 0,
+    "invalidRows": 1,
+    "emptyRows": 0,
+    "duplicateRows": 0,
+    "rowDetails": [
+      {
+        "row": 2,
+        "isValid": false,
+        "errors": [
+          "Missing Office",
+          "Missing Position"
+        ],
+        "warnings": [],
+        "fixes": [],
+        "data": {
+          "employeeId": "EMP001",
+          "firstName": "John",
+          "lastName": "Smith",
+          "email": "john.smith@example.com",
+          "phone": "+971501234567",
+          "office": "",
+          "position": "",
+          "salary": "4000",
+          "status": "active",
+          "joiningDate": "31-12-2022",
+          "dob": "14-01-1990"
+        }
+      }
+    ],
+    "issueBreakdown": {
+      "missingEmployeeId": 0,
+      "missingFirstName": 0,
+      "missingEmail": 0,
+      "missingOffice": 1,
+      "missingPosition": 1,
+      "missingSalary": 0,
+      "missingStatus": 0,
+      "invalidEmails": 0,
+      "duplicateEmployeeIds": 0,
+      "duplicateEmails": 0,
+      "invalidSalaries": 0,
+      "invalidStatuses": 0
+    }
+  }
+}

@@ -1391,16 +1391,18 @@ module.exports = {
             date = new Date(dateStr);
           }
           
-          // Return Excel serial number or null
+          // Add +1 day to the date before export
           if (date && !isNaN(date.getTime())) {
+            date.setDate(date.getDate() + 1);
+            
             // Excel date serial calculation (1900-based system)
             const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)); // December 30, 1899
             const MS_PER_DAY = 86400000;
             
             const timeDiff = date.getTime() - EXCEL_EPOCH.getTime();
-            const excelSerial = Math.floor(timeDiff / MS_PER_DAY) + 0; // Fixed: -1 day to correct Excel export date issue
+            const excelSerial = Math.floor(timeDiff / MS_PER_DAY) + 0; 
             
-            console.log(`📅 Date conversion: ${dateStr} → Excel serial ${excelSerial}`);
+            console.log(`📅 Date conversion: ${dateStr} → +1 day → Excel serial ${excelSerial}`);
             return excelSerial;
           }
           
