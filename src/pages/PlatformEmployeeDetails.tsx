@@ -42,29 +42,40 @@ export const PlatformEmployeeDetails: React.FC = () => {
 
   const { showSuccess, showError } = useToast();
 
-  // Fetch positions for filters
+  // Get unique positions from employees on this platform
   useEffect(() => {
-    const fetchFilterData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        };
-
-        // Fetch positions
-        const positionsResponse = await fetch('/api/masters/positions', { headers });
-        if (positionsResponse.ok) {
-          const positionsData = await positionsResponse.json();
-          setPositions(positionsData);
-        }
-      } catch (error) {
-        console.error('Error fetching filter data:', error);
-      }
-    };
-
-    fetchFilterData();
-  }, []);
+    if (employees.length > 0 && platformName) {
+      // Filter employees by current platform first
+      const platformEmployees = employees.filter(employee => {
+        const urlPlatformName = decodeURIComponent(platformName || '');
+        
+        // Try multiple possible field names for platform
+        const possiblePlatformValues = [
+          employee.platform,
+          getDisplayName(employee.platform_name, 'name', 'platform_name'),
+          getDisplayName(employee.platform_name, 'platform_name', 'name'),
+          employee.platform_name,
+          (employee as any).platformName,
+          (employee as any)['platform name']
+        ].filter(val => val && typeof val === 'string' && val.trim() !== '');
+        
+        return possiblePlatformValues.some(platformValue => 
+          platformValue === urlPlatformName
+        );
+      });
+      
+      // Extract unique positions from platform employees
+      const uniquePositions = Array.from(
+        new Set(
+          platformEmployees
+            .map(emp => emp.position_title || emp.position_name)
+            .filter(pos => pos && pos.trim() !== '')
+        )
+      ).map(positionName => ({ title: positionName, position_name: positionName }));
+      
+      setPositions(uniquePositions);
+    }
+  }, [employees, platformName]);
 
   // Filter employees by platform
   const filteredEmployeesByPlatform = employees.filter(employee => {

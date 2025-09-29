@@ -346,11 +346,13 @@ class EmployeeService {
       // Ensure position_name is set
       processed.position_name = employee.position_title || employee.position_name;
 
-      // Always compute shift timings fresh from reporting_time + duty_hours
-      const computedShift = computeShiftTimings(employee.reporting_time, employee.duty_hours);
-      processed.shift_timings = computedShift || employee.shift_timings || '9:00 AM - 6:00 PM';
-
-      console.log(`🔍 Employee ${employee.employeeId}: computed shift='${computedShift}' (stored: '${employee.shift_timings}')`);
+      // Use database shift_timings if available, otherwise compute from reporting_time and duty_hours
+      if (employee.shift_timings) {
+        processed.shift_timings = employee.shift_timings;
+      } else {
+        const computedShift = computeShiftTimings(employee.reporting_time, employee.duty_hours);
+        processed.shift_timings = computedShift || '9:00 AM - 6:00 PM';
+      }
 
       // Dates are already formatted by repository transformation
       return processed;

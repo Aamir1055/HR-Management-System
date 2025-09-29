@@ -244,20 +244,28 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   }, [employee?.id, viewOnly]); // Only reset when employee ID changes, not on every employee object change
 
   useEffect(() => {
-    if (officeId && officeId !== 0) {
+    // For new employees, show all positions regardless of office
+    // For existing employees, show office-specific positions only when editing
+    if (employee && officeId && officeId !== 0) {
+      // This is an existing employee being edited - show office-specific positions
       fetchPositionsForOffice(officeId);
-      if (!employee || employee.office_id !== officeId) {
+      if (employee.office_id !== officeId) {
         setValue('position_id', 0);
         setReportingTime('Select position');
         setDutyHours('Select position');
       }
     } else {
+      // This is a new employee - show all available positions
       setFilteredPositions(allPositions);
+      if (officeId && officeId !== 0 && !employee) {
+        // Reset position selection when office changes for new employee
+        setValue('position_id', 0);
+      }
       setReportingTime('Select office and position');
       setDutyHours('Select office and position');
     }
     // eslint-disable-next-line
-    }, [officeId, allPositions, employee?.office_id, setValue]);
+    }, [officeId, allPositions, employee?.office_id, setValue, employee]);
 
   useEffect(() => {
     const fetchOfficePositionData = async () => {
@@ -286,7 +294,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   }, [officeId, positionId]);
 
   // Helpers to convert date formats between picker (YYYY-MM-DD) and display/storage (DD/MM/YYYY)
-  // These functions handle timezone issues by adding +1 day adjustment
   const isoToDDMMYYYY = (iso: string): string => {
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
     const [y, m, d] = iso.split('-');
@@ -298,29 +305,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     return `${y}-${m}-${d}`;
   };
 
-  // Helper function to add one day to correct timezone shifting issues
-  const addOneDayToDate = (dateStr: string): string => {
-    if (!dateStr || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
-    
-    const [day, month, year] = dateStr.split('/');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    
-    // Add one day to compensate for timezone offset
-    date.setDate(date.getDate() + 1);
-    
-    const newDay = date.getDate().toString().padStart(2, '0');
-    const newMonth = (date.getMonth() + 1).toString().padStart(2, '0');
-    const newYear = date.getFullYear();
-    
-    console.log(`🔧 Date fix: ${dateStr} → ${newDay}/${newMonth}/${newYear}`);
-    return `${newDay}/${newMonth}/${newYear}`;
-  };
-
-  // Helper function to convert date picker value (ISO) to DD/MM/YYYY with +1 day fix
+  // Helper function to convert date picker value (ISO) to DD/MM/YYYY without timezone adjustments
   const pickerValueToDDMMYYYY = (isoValue: string): string => {
     if (!isoValue) return '';
-    const ddmmyyyy = isoToDDMMYYYY(isoValue);
-    return addOneDayToDate(ddmmyyyy);
+    return isoToDDMMYYYY(isoValue);
   };
 
   const fetchPositionsForOffice = async (selectedOfficeId: number) => {
@@ -800,16 +788,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         <div className="text-xs text-gray-500 mt-1">Employee's daily working hours (Required)</div>
       </div>
 
-      {/* Reporting Time (display only) */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Reporting Time</label>
-        <input
-          type="text"
-          value={reportingTime}
-          disabled
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100"
-        />
-      </div>
     </>
   );
 

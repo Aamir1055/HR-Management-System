@@ -41,29 +41,27 @@ export const OfficeEmployeeDetails: React.FC = () => {
 
   const { showSuccess, showError } = useToast();
 
-  // Fetch positions for filters
+  // Get unique positions from employees in this office
   useEffect(() => {
-    const fetchFilterData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        };
-
-        // Fetch positions
-        const positionsResponse = await fetch('/api/masters/positions', { headers });
-        if (positionsResponse.ok) {
-          const positionsData = await positionsResponse.json();
-          setPositions(positionsData);
-        }
-      } catch (error) {
-        console.error('Error fetching filter data:', error);
-      }
-    };
-
-    fetchFilterData();
-  }, []);
+    if (employees.length > 0 && officeName) {
+      // Filter employees by current office first
+      const officeEmployees = employees.filter(employee => {
+        const employeeOfficeName = getDisplayName(employee.office_name, 'name', 'office_name');
+        return employeeOfficeName === decodeURIComponent(officeName || '');
+      });
+      
+      // Extract unique positions from office employees
+      const uniquePositions = Array.from(
+        new Set(
+          officeEmployees
+            .map(emp => emp.position_title || emp.position_name)
+            .filter(pos => pos && pos.trim() !== '')
+        )
+      ).map(positionName => ({ title: positionName, position_name: positionName }));
+      
+      setPositions(uniquePositions);
+    }
+  }, [employees, officeName]);
 
   // Filter employees by office and calculate stats
   const filteredEmployeesByOffice = employees.filter(employee => {

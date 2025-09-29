@@ -858,8 +858,8 @@ exports.getDashboardSummary = async (req, res) => {
       SELECT 
         (SELECT COUNT(*) FROM offices) as totalOffices,
         (SELECT COUNT(*) FROM positions) as totalPositions,
-        (SELECT COUNT(*) FROM employees WHERE status = 1) as totalEmployees,
-        (SELECT COALESCE(SUM(monthlySalary), 0) FROM employees WHERE status = 1) as totalSalary
+        (SELECT COUNT(*) FROM employees) as totalEmployees,
+        (SELECT COALESCE(SUM(monthlySalary), 0) FROM employees) as totalSalary
     `;
     
     const result = await query(summaryQuery);

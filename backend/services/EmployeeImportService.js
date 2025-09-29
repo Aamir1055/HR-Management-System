@@ -323,7 +323,6 @@ class EmployeeImportService {
         'Hiring Source': emp.hiring_source || '',
         'Current Address': emp.current_address || '',
         'Emergency Contact Relation': emp.emergency_contact_relation || '',
-        'Emergency Contact': emp.emergency_contact || '',
         'Status': emp.status ? 'Active' : 'Inactive'
       }));
 
@@ -477,7 +476,6 @@ class EmployeeImportService {
       'Visa Type': 'visa_type',
       'Visa Expiry': 'visa_expiry',
       'Hiring Source': 'hiring_source',
-      'Emergency Contact': 'emergency_contact',
       'Emergency Contact Relation': 'emergency_contact_relation',
       'Current Address': 'current_address',
       'Address': 'address',

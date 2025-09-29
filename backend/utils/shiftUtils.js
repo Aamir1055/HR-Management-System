@@ -188,10 +188,11 @@ function calculateWorkingHours(startTime, endTime) {
 
 /**
  * Get default shift timing if none provided
- * @returns {string} - Default shift timing
+ * @param {boolean} allowNull - Whether to return null instead of default
+ * @returns {string|null} - Default shift timing or null
  */
-function getDefaultShiftTiming() {
-  return '9:00 AM - 6:00 PM';
+function getDefaultShiftTiming(allowNull = false) {
+  return allowNull ? null : '9:00 AM - 6:00 PM';
 }
 
 /**

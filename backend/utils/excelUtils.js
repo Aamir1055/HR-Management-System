@@ -238,7 +238,6 @@ function createEmployeeExport(exportData, options = {}) {
       { wch: 15 }, // Hiring Source
       { wch: 30 }, // Current Address
       { wch: 20 }, // Emergency Contact Relation
-      { wch: 18 }, // Emergency Contact
       { wch: 10 }  // Status
     ];
     

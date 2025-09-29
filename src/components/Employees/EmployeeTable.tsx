@@ -68,97 +68,66 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   };
 
   const sortedEmployees = [...employees].sort((a, b) => {
-    console.log('🔄 Sorting employees by:', sortField, 'direction:', sortDirection);
-    console.log('🔍 Sample data:', {
-      aName: a.name,
-      bName: b.name,
-      aOffice: a.office_name,
-      bOffice: b.office_name,
-      aJoining: a.joiningDate,
-      bJoining: b.joiningDate,
-      aStatus: a.status,
-      bStatus: b.status
-    });
-    
     let aValue: any;
     let bValue: any;
 
     // Handle different field types properly
     switch (sortField) {
+      case 'employeeId':
+        // Numerical sorting for employee ID
+        const aIdStr = String(a.employeeId || '');
+        const bIdStr = String(b.employeeId || '');
+        aValue = parseInt(aIdStr.replace(/[^0-9]/g, '') || '0') || 0;
+        bValue = parseInt(bIdStr.replace(/[^0-9]/g, '') || '0') || 0;
+        break;
+      
       case 'name':
         aValue = (a.name || '').toString().toLowerCase().trim();
         bValue = (b.name || '').toString().toLowerCase().trim();
-        console.log('📝 Name sorting:', { aValue, bValue });
         break;
       
       case 'office_name':
         aValue = (a.office_name || '').toString().toLowerCase().trim();
         bValue = (b.office_name || '').toString().toLowerCase().trim();
-        console.log('🏢 Office sorting:', { aValue, bValue });
         break;
       
       case 'position_title':
         aValue = (a.position_title || '').toString().toLowerCase().trim();
         bValue = (b.position_title || '').toString().toLowerCase().trim();
-        console.log('💼 Position sorting:', { aValue, bValue });
-        break;
-      
-      case 'shift_timings':
-        aValue = (a.shift_timings || '').toString().toLowerCase().trim();
-        bValue = (b.shift_timings || '').toString().toLowerCase().trim();
-        console.log('⏰ Shift sorting:', { aValue, bValue });
         break;
       
       case 'joiningDate':
         // Handle date sorting - convert to comparable timestamps
         aValue = parseDate(a.joiningDate);
         bValue = parseDate(b.joiningDate);
-        console.log('📅 Date sorting:', {
-          aRaw: a.joiningDate,
-          bRaw: b.joiningDate,
-          aParsed: aValue,
-          bParsed: bValue,
-          aDate: new Date(aValue),
-          bDate: new Date(bValue)
-        });
         break;
       
       case 'status':
         // Handle boolean/number status - Active (true/1) should come first
         aValue = a.status ? 1 : 0;
         bValue = b.status ? 1 : 0;
-        console.log('✅ Status sorting:', {
-          aRaw: a.status,
-          bRaw: b.status,
-          aValue,
-          bValue
-        });
         break;
       
       default:
         aValue = a[sortField] || '';
         bValue = b[sortField] || '';
-        console.log('🔍 Default sorting:', { field: sortField, aValue, bValue });
     }
 
     // Perform comparison
     let result = 0;
     
-    if (sortField === 'joiningDate' || (typeof aValue === 'number' && typeof bValue === 'number')) {
-      // Numeric comparison
+    if (sortField === 'joiningDate' || sortField === 'employeeId' || (sortField === 'status' && typeof aValue === 'number' && typeof bValue === 'number')) {
+      // Numeric comparison for dates, IDs, and status
       result = aValue - bValue;
-      console.log('🔢 Numeric comparison result:', result);
     } else {
-      // String comparison
-      const aStr = String(aValue || '');
-      const bStr = String(bValue || '');
+      // String comparison for names, positions, offices, etc.
+      const aStr = String(aValue || '').toLowerCase().trim();
+      const bStr = String(bValue || '').toLowerCase().trim();
       result = aStr.localeCompare(bStr);
-      console.log('📝 String comparison result:', result, { aStr, bStr });
     }
 
     // Apply sort direction
     const finalResult = sortDirection === 'asc' ? result : -result;
-    console.log('📊 Final result:', finalResult, '(direction:', sortDirection + ')');
     
     return finalResult;
   });
@@ -233,14 +202,36 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <thead className="bg-gray-50">
             <tr>
               <th
+                onClick={() => handleHeaderClick('employeeId')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by employee ID"
+                style={{ userSelect: 'none' }}
+              >
+                <div className="flex items-center">
+                  ID
+                  {getSortIcon('employeeId')}
+                </div>
+              </th>
+              <th
                 onClick={() => handleHeaderClick('name')}
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 title="Double-click to sort by employee name"
                 style={{ userSelect: 'none' }}
               >
                 <div className="flex items-center">
-                  Employee
+                  NAME
                   {getSortIcon('name')}
+                </div>
+              </th>
+              <th
+                onClick={() => handleHeaderClick('position_title')}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                title="Double-click to sort by position"
+                style={{ userSelect: 'none' }}
+              >
+                <div className="flex items-center">
+                  POSITION
+                  {getSortIcon('position_title')}
                 </div>
               </th>
               <th
@@ -250,7 +241,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 style={{ userSelect: 'none' }}
               >
                 <div className="flex items-center">
-                  OFFICE & POSITION
+                  OFFICE
                   {getSortIcon('office_name')}
                 </div>
               </th>
@@ -261,19 +252,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 style={{ userSelect: 'none' }}
               >
                 <div className="flex items-center">
-                  JOINING DATE
+                  DOJ
                   {getSortIcon('joiningDate')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleHeaderClick('shift_timings')}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                title="Double-click to sort by shift timings"
-                style={{ userSelect: 'none' }}
-              >
-                <div className="flex items-center">
-                  SHIFT TIMINGS
-                  {getSortIcon('shift_timings')}
                 </div>
               </th>
               <th
@@ -298,33 +278,33 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
               return (
                 <tr key={employee.employeeId} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {employee.employeeId}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
                         {employee.name?.charAt(0).toUpperCase()}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                        <div className="text-sm text-gray-500">{employee.employeeId}</div>
-                        <div className="text-xs text-gray-400">{employee.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-medium">
-                      {employee.office_name || 'Not assigned'}
-                    </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-900">
                       {employee.position_title || 'Not assigned'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {formatDateFromEpoch(employee.joiningDate)}
+                      {employee.office_name || 'Not assigned'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {employee.shift_timings || '9:00 AM - 6:00 PM'}
+                      {formatDateFromEpoch(employee.joiningDate)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -338,11 +318,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       {statusInfo.text}
                     </span>
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {employee.visa_type_name || 'Not specified'}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button
@@ -366,7 +341,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             })}
             {sortedEmployees.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 text-sm">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 text-sm">
                   No employees found.
                 </td>
               </tr>

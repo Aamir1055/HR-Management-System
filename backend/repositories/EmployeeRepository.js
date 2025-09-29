@@ -374,7 +374,7 @@ class EmployeeRepository {
           COUNT(e.id) AS totalEmployees,
           SUM(e.monthlySalary) AS totalSalary
         FROM platforms p
-        LEFT JOIN ${EmployeeTableName} e ON p.platform_name = e.platform AND e.status = 1
+        LEFT JOIN ${EmployeeTableName} e ON p.platform_name = e.platform
       `;
       
       const params = [];
@@ -395,7 +395,7 @@ class EmployeeRepository {
           COUNT(e.id) AS totalEmployees,
           SUM(e.monthlySalary) AS totalSalary
         FROM ${EmployeeTableName} e
-        WHERE e.status = 1 AND (e.platform IS NULL OR TRIM(e.platform) = '' OR e.platform = '')
+        WHERE (e.platform IS NULL OR TRIM(e.platform) = '' OR e.platform = '')
       `;
       
       const unassignedParams = [];
