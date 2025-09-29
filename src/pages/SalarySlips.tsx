@@ -1447,7 +1447,7 @@ export const SalarySlips: React.FC = () => {
                     <div className="space-y-2 bg-red-50 p-3 rounded-lg border border-red-200">
                       <div className="flex justify-between">
                         <span className="text-gray-700 font-semibold flex items-center">
-                          💰 Loan Deductions
+                           Loan Deductions
                         </span>
                         <span className="text-red-700 font-bold text-lg">{formatCurrency(salarySlip.deductions.loanDeductions)}</span>
                       </div>

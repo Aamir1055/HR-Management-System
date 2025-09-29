@@ -103,6 +103,17 @@ const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = 
       { expiresIn: JWT_EXPIRY }
     );
 
+    // ✅ Automatically clear browser cache on successful login
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store',
+      'Clear-Site-Data': '"cache"' // Clear browser HTTP cache to ensure fresh content
+    });
+
+    console.log(`🔄 Cache cleared for user: ${user.username}`);
+
     res.json({
       token,
       user: {
@@ -327,6 +338,17 @@ exports.completeFirstLogin2FA = async (req, res) => {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
+
+    // ✅ Automatically clear browser cache on successful first login completion
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store',
+      'Clear-Site-Data': '"cache"' // Clear browser HTTP cache to ensure fresh content
+    });
+
+    console.log(`🔄 Cache cleared for first login completion: ${user.username}`);
 
     res.json({
       token: jwtToken,

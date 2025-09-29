@@ -1,0 +1,120 @@
+﻿{
+    "EndpointTests":  [
+                          {
+                              "Success":  true,
+                              "StatusCode":  200,
+                              "Error":  null,
+                              "Method":  "GET",
+                              "Module":  "global-health",
+                              "Endpoint":  "health",
+                              "Url":  "http://localhost:5000/api/health"
+                          },
+                          {
+                              "Success":  true,
+                              "StatusCode":  200,
+                              "Error":  null,
+                              "Method":  "POST",
+                              "Module":  "auth",
+                              "Endpoint":  "login",
+                              "Url":  "http://localhost:5000/api/auth/login"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "auth",
+                              "Endpoint":  "profile",
+                              "Url":  "http://localhost:5000/api/auth/profile"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "auth",
+                              "Endpoint":  "2fa-setup",
+                              "Url":  "http://localhost:5000/api/auth/2fa/setup"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "employees",
+                              "Endpoint":  "list",
+                              "Url":  "http://localhost:5000/api/employees/"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "employees",
+                              "Endpoint":  "getById",
+                              "Url":  "http://localhost:5000/api/employees/1"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  404,
+                              "Error":  "The remote server returned an error: (404) Not Found.",
+                              "Method":  "GET",
+                              "Module":  "payroll",
+                              "Endpoint":  "list",
+                              "Url":  "http://localhost:5000/api/payroll/"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "payroll",
+                              "Endpoint":  "half-day-feature-status",
+                              "Url":  "http://localhost:5000/api/payroll/half-day-feature-status"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  401,
+                              "Error":  "The remote server returned an error: (401) Unauthorized.",
+                              "Method":  "GET",
+                              "Module":  "attendance",
+                              "Endpoint":  "list",
+                              "Url":  "http://localhost:5000/api/attendance/"
+                          },
+                          {
+                              "Success":  false,
+                              "StatusCode":  404,
+                              "Error":  "The remote server returned an error: (404) Not Found.",
+                              "Method":  "GET",
+                              "Module":  "dashboard",
+                              "Endpoint":  "stats",
+                              "Url":  "http://localhost:5000/api/dashboard/"
+                          },
+                          {
+                              "Success":  true,
+                              "StatusCode":  200,
+                              "Error":  null,
+                              "Method":  "GET",
+                              "Module":  "holidays",
+                              "Endpoint":  "list",
+                              "Url":  "http://localhost:5000/api/holidays/"
+                          }
+                      ],
+    "HealthChecks":  {
+                         "payroll":  true,
+                         "global-health":  true,
+                         "holidays":  true,
+                         "attendance":  true,
+                         "employees":  true,
+                         "dashboard":  true,
+                         "auth":  true
+                     },
+    "Timestamp":  "2025-09-27 17:37:48",
+    "Summary":  {
+                    "HealthTotal":  7,
+                    "EndpointsPassed":  3,
+                    "EndpointsTotal":  11,
+                    "HealthPassed":  7,
+                    "OverallSuccess":  false
+                }
+}

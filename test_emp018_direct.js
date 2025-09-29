@@ -32,7 +32,7 @@ async function testEMP018Loans() {
       
       if (generateResponse.data.success) {
         console.log('✅ Generate endpoint SUCCESS');
-        console.log('💰 Loan Deductions:', generateResponse.data.data.deductions.loanDeductions);
+        console.log(' Loan Deductions:', generateResponse.data.data.deductions.loanDeductions);
         console.log('🏦 Loan Details Count:', generateResponse.data.data.deductions.loanDetails?.length || 0);
         
         if (generateResponse.data.data.deductions.loanDetails?.length > 0) {
@@ -57,7 +57,7 @@ async function testEMP018Loans() {
       
       if (legacyResponse.data.success) {
         console.log('✅ Legacy endpoint SUCCESS');
-        console.log('💰 Loan Deductions:', legacyResponse.data.data.deductions.loanDeductions);
+        console.log(' Loan Deductions:', legacyResponse.data.data.deductions.loanDeductions);
         console.log('🏦 Loan Details Count:', legacyResponse.data.data.deductions.loanDetails?.length || 0);
         
         if (legacyResponse.data.data.deductions.loanDetails?.length > 0) {

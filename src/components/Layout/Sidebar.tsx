@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -15,24 +15,46 @@ import {
   CreditCard,
   Gift,
   UserPlus,
-  Wallet
+  Wallet,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
-  { name: 'Celebrations', href: '/celebrations', icon: Gift },
-  { name: 'Employees', href: '/employees', icon: Users },
-  { name: 'Recruitment Panel', href: '/recruitments', icon: UserPlus },
-  { name: 'Employee Loan', href: '/employee-loans', icon: CreditCard }, // Employee Loan navigation - moved below Employees
-  { name: 'Payroll', href: '/payroll', icon: TrendingUp },
-  { name: 'Petty Cash', href: '/peticash', icon: Wallet },
-  { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
-  { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
-  { name: 'Attendance', href: '/attendance', icon: Calendar },
-  { name: 'Holidays', href: '/holidays', icon: Calendar },
-  { name: 'Role Management', href: '/roles', icon: UserCog }, // Changed icon for better distinction
-  { name: 'Master Data', href: '/master-data', icon: Settings }, // New Master Data route
+const navigationGroups = [
+  {
+    name: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
+      { name: 'Celebrations', href: '/celebrations', icon: Gift },
+    ]
+  },
+  {
+    name: 'Human Resources',
+    items: [
+      { name: 'Employees', href: '/employees', icon: Users },
+      { name: 'Recruitment Panel', href: '/recruitments', icon: UserPlus },
+      { name: 'Attendance', href: '/attendance', icon: Calendar },
+      { name: 'Holidays', href: '/holidays', icon: Calendar },
+    ]
+  },
+  {
+    name: 'Financial',
+    items: [
+      { name: 'Payroll', href: '/payroll', icon: TrendingUp },
+      { name: 'Petty Cash', href: '/peticash', icon: Wallet },
+      { name: 'Salary Slips', href: '/salary-slips', icon: FileText },
+      { name: 'Advance Salary', href: '/advance-salary', icon: TrendingUp },
+      { name: 'Employee Loan', href: '/employee-loans', icon: CreditCard },
+    ]
+  },
+  {
+    name: 'Administration',
+    items: [
+      { name: 'Role Management', href: '/roles', icon: UserCog },
+      { name: 'Master Data', href: '/master-data', icon: Settings },
+    ]
+  }
 ];
 
 interface SidebarProps {
@@ -42,6 +64,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user, logout, hasPermission } = useAuth();
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Overview', 'Human Resources', 'Financial', 'Administration']);
 
   const getRoleDisplay = (role: string) => {
     const roleMap = {
@@ -58,7 +81,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const filteredNavigation = navigation.filter(item => {
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => 
+      prev.includes(groupName) 
+        ? prev.filter(g => g !== groupName)
+        : [...prev, groupName]
+    );
+  };
+
+  const filterItem = (item: any) => {
     const adminOnly = (item as any).adminOnly;
     
     if (adminOnly && user?.role !== 'admin') {
@@ -66,8 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     }
 
     switch (item.href) {
-      case '/role-management':
-        // Only admins should see role management
+      case '/roles':
         return user?.role === 'admin';
       case '/holidays':
         return hasPermission('manage_holidays');
@@ -78,13 +108,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       case '/payroll':
         return hasPermission('manage_payroll');
       case '/peticash':
-        return hasPermission('manage_payroll'); // Same permission as payroll
+        return hasPermission('manage_payroll');
       case '/salary-slips':
-        return hasPermission('manage_payroll'); // Same permission as payroll
+        return hasPermission('manage_payroll');
       default:
         return true;
     }
-  });
+  };
+
+  const filteredGroups = navigationGroups.map(group => ({
+    ...group,
+    items: group.items.filter(filterItem)
+  })).filter(group => group.items.length > 0);
 
   return (
     <>
@@ -109,23 +144,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
           
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            {filteredNavigation.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
-                  }`
-                }
-                onClick={() => window.innerWidth < 1024 && onClose()}
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span>{item.name}</span>
-              </NavLink>
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {filteredGroups.map((group) => (
+              <div key={group.name} className="mb-2">
+                <button
+                  onClick={() => toggleGroup(group.name)}
+                  className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+                >
+                  <span>{group.name}</span>
+                  {expandedGroups.includes(group.name) ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </button>
+                {expandedGroups.includes(group.name) && (
+                  <div className="space-y-1 mt-1">
+                    {group.items.map((item) => (
+                      <NavLink
+                        key={item.name}
+                        to={item.href}
+                        className={({ isActive }) =>
+                          `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ml-2 ${
+                            isActive
+                              ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                          }`
+                        }
+                        onClick={() => window.innerWidth < 1024 && onClose()}
+                      >
+                        <item.icon className="w-4 h-4 mr-2" />
+                        <span className="text-xs">{item.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
 
           </nav>

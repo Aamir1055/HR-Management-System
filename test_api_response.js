@@ -15,7 +15,7 @@ async function testSalarySlipAPI() {
     console.log('Generate endpoint status:', response1.status);
     if (data1.success) {
       console.log('✅ Generate endpoint SUCCESS');
-      console.log('💰 Loan Deductions:', data1.data.deductions.loanDeductions);
+      console.log(' Loan Deductions:', data1.data.deductions.loanDeductions);
       console.log('🏦 Loan Details Count:', data1.data.deductions.loanDetails?.length || 0);
     } else {
       console.log('❌ Generate endpoint error:', data1);
@@ -29,7 +29,7 @@ async function testSalarySlipAPI() {
     console.log('Legacy endpoint status:', response2.status);
     if (data2.success) {
       console.log('✅ Legacy endpoint SUCCESS');
-      console.log('💰 Loan Deductions:', data2.data.deductions.loanDeductions);
+      console.log(' Loan Deductions:', data2.data.deductions.loanDeductions);
       console.log('🏦 Loan Details Count:', data2.data.deductions.loanDetails?.length || 0);
       
       // Show detailed loan data from working endpoint

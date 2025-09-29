@@ -1,0 +1,76 @@
+{
+  "baseUrl": "http://localhost:5000",
+  "defaultHeaders": {
+    "Content-Type": "application/json"
+  },
+  "modules": [
+    {
+      "name": "global-health",
+      "basePath": "/api",
+      "health": "/health",
+      "headers": {},
+      "endpoints": [
+        { "name": "health", "path": "/health", "method": "GET", "expectedStatus": [200], "authRequired": false }
+      ]
+    },
+    {
+      "name": "auth",
+      "basePath": "/api/auth",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "login", "path": "/login", "method": "POST", "body": { "username": "admin", "password": "admin123" }, "expectedStatus": [200, 201], "authRequired": false },
+        { "name": "profile", "path": "/profile", "method": "GET", "expectedStatus": [200, 401], "authRequired": true },
+        { "name": "2fa-setup", "path": "/2fa/setup", "method": "GET", "expectedStatus": [200, 401], "authRequired": true }
+      ]
+    },
+    {
+      "name": "employees",
+      "basePath": "/api/employees",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "list", "path": "/", "method": "GET", "expectedStatus": [200, 401] },
+        { "name": "getById", "path": "/1", "method": "GET", "expectedStatus": [200, 401, 404] }
+      ]
+    },
+    {
+      "name": "payroll",
+      "basePath": "/api/payroll",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "list", "path": "/", "method": "GET", "expectedStatus": [200, 401] },
+        { "name": "half-day-feature-status", "path": "/half-day-feature-status", "method": "GET", "expectedStatus": [200, 401] }
+      ]
+    },
+    {
+      "name": "attendance",
+      "basePath": "/api/attendance",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "list", "path": "/", "method": "GET", "expectedStatus": [200, 401] }
+      ]
+    },
+    {
+      "name": "dashboard",
+      "basePath": "/api/dashboard",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "stats", "path": "/", "method": "GET", "expectedStatus": [200, 401] }
+      ]
+    },
+    {
+      "name": "holidays",
+      "basePath": "/api/holidays",
+      "health": "/../health",
+      "headers": {},
+      "endpoints": [
+        { "name": "list", "path": "/", "method": "GET", "expectedStatus": [200, 401] }
+      ]
+    }
+  ]
+}
+

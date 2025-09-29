@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Calendar, User } from 'lucide-react';
+import { api } from '../../utils/api';
 
 interface Comment {
   id: number;
@@ -28,52 +29,27 @@ const EmployeeComments: React.FC<EmployeeCommentsProps> = ({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : '',
-    };
-  };
-
   const fetchComments = async () => {
     try {
-      const response = await fetch(`/api/comments/employee/${employeeId}`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setComments(data);
-      } else {
-        console.error('Failed to fetch comments');
-      }
+      const response = await api.get(`/comments/employee/${employeeId}`);
+      setComments(response.data);
     } catch (error) {
       console.error('Error fetching comments:', error);
     }
   };
-
   const addComment = async () => {
     if (!newComment.trim()) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/comments/employee/${employeeId}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          comment: newComment.trim(),
-          created_by: 'HR', // You can get this from user context
-        }),
+      const response = await api.post(`/comments/employee/${employeeId}`, {
+        comment: newComment.trim(),
+        created_by: 'HR', // You can get this from user context
       });
-
-      if (response.ok) {
-        const newCommentData = await response.json();
-        setComments([newCommentData, ...comments]);
-        setNewComment('');
-        showMessage('Comment added successfully!');
-      } else {
-        showMessage('Failed to add comment');
-      }
+      
+      setComments([response.data, ...comments]);
+      setNewComment('');
+      showMessage('Comment added successfully!');
     } catch (error) {
       console.error('Error adding comment:', error);
       showMessage('Error adding comment');
@@ -87,27 +63,18 @@ const EmployeeComments: React.FC<EmployeeCommentsProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          comment: editText.trim(),
-        }),
+      const response = await api.put(`/comments/${commentId}`, {
+        comment: editText.trim(),
       });
-
-      if (response.ok) {
-        const updatedComment = await response.json();
-        setComments(
-          comments.map((c) =>
-            c.id === commentId ? updatedComment : c
-          )
-        );
-        setEditingComment(null);
-        setEditText('');
-        showMessage('Comment updated successfully!');
-      } else {
-        showMessage('Failed to update comment');
-      }
+      
+      setComments(
+        comments.map((c) =>
+          c.id === commentId ? response.data : c
+        )
+      );
+      setEditingComment(null);
+      setEditText('');
+      showMessage('Comment updated successfully!');
     } catch (error) {
       console.error('Error updating comment:', error);
       showMessage('Error updating comment');
@@ -121,17 +88,9 @@ const EmployeeComments: React.FC<EmployeeCommentsProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        setComments(comments.filter((c) => c.id !== commentId));
-        showMessage('Comment deleted successfully!');
-      } else {
-        showMessage('Failed to delete comment');
-      }
+      await api.delete(`/comments/${commentId}`);
+      setComments(comments.filter((c) => c.id !== commentId));
+      showMessage('Comment deleted successfully!');
     } catch (error) {
       console.error('Error deleting comment:', error);
       showMessage('Error deleting comment');
@@ -147,7 +106,16 @@ const EmployeeComments: React.FC<EmployeeCommentsProps> = ({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    // Use DD/MM/YYYY format consistently
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) + ' ' + date.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   };
 
   const startEdit = (comment: Comment) => {

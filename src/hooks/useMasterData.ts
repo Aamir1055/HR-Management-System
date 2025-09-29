@@ -156,7 +156,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
   // Auto-process deduction helper
   const autoProcessDeduction = async (loanId: number, deductionAmount: number, reason: string) => {
     try {
-      console.log('💰 Auto-processing deduction:', { loanId, deductionAmount, reason });
+      console.log(' Auto-processing deduction:', { loanId, deductionAmount, reason });
       
       const response = await fetch(`/api/loans/deduct/${loanId}`, {
         method: 'PUT',
@@ -255,7 +255,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
 
       // 🔥 AUTO-PROCESS DEDUCTION (if needed)
       if (shouldAutoProcess && deductionDifference > 0) {
-        console.log('💰 Starting auto-deduction process...');
+        console.log(' Starting auto-deduction process...');
         
         try {
           const autoResult = await autoProcessDeduction(

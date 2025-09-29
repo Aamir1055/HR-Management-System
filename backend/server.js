@@ -78,6 +78,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ Prevent caching of sensitive API responses (except health check and login)
+app.use('/api', (req, res, next) => {
+  // Skip cache prevention for specific endpoints that can be cached
+  const cacheableEndpoints = ['/api/health', '/api/auth/login', '/api/auth/complete-first-login-2fa'];
+  
+  if (!cacheableEndpoints.includes(req.path)) {
+    // Set headers to prevent caching of sensitive data
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    });
+  }
+  
+  next();
+});
+
 // NEW: Half-day database tables check
 const checkHalfDayTables = async () => {
   if (process.env.HALF_DAY_FEATURE_ENABLED === 'true') {
@@ -156,7 +174,13 @@ app.use('*', (req, res) => {
 });
 
 // Server startup with enhanced logging
-const PORT = process.env.PORT || 5000;
+if (!process.env.PORT) {
+  console.error('❌ ERROR: PORT environment variable is required!');
+  console.error('Please set PORT in your .env file or environment.');
+  process.exit(1);
+}
+
+const PORT = process.env.PORT;
 app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -180,7 +204,7 @@ app.listen(PORT, async () => {
     console.log('🔐 2FA Setup: GET /api/auth/2fa/setup');
     console.log('👥 Employees: /api/employees/* (auth required)');
     console.log('📅 Attendance: /api/attendance/* (auth required)');
-    console.log('💰 Payroll: /api/payroll/* (manager+ required)');
+    console.log(' Payroll: /api/payroll/* (manager+ required)');
     
     // NEW: Add half-day specific endpoints when feature is enabled
     if (process.env.HALF_DAY_FEATURE_ENABLED === 'true') {
@@ -200,7 +224,7 @@ app.listen(PORT, async () => {
     console.log('🏦 Employee Loans: /api/loans/* (manager+ required)');
     console.log('🎉 Celebrations Dashboard: /api/dashboard/* (auth required)');
     console.log('👔 Recruitment Panel: /api/recruitment/* (hr+ required for CUD, auth for read)');
-    console.log('💰 Petty Cash: /api/peticash/* (hr+ required for CUD, manager+ for delete)');
+    console.log(' Petty Cash: /api/peticash/* (hr+ required for CUD, manager+ for delete)');
     
     console.log('\n⚙️ Setup Instructions:');
     console.log('1. Run: node migrate.js');

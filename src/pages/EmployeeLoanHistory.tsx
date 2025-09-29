@@ -524,7 +524,7 @@ const EmployeeLoanHistory: React.FC = () => {
       console.log('✅ Employee loan history fetched:', result);
       console.log('📊 Summary data:', result.summary);
       console.log('👤 Employee data:', result.employee);
-      console.log('💰 Loans data:', result.loans);
+      console.log(' Loans data:', result.loans);
       setData(result);
     } catch (err: any) {
       console.error('❌ Error fetching employee loan history:', err);
