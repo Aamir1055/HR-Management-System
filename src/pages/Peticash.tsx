@@ -163,9 +163,15 @@ export const PeticashPage: React.FC = () => {
   };
 
   // Calculate summary statistics
-  const totalAmount = expenses.reduce((sum, expense) => sum + expense.disbursed_amount, 0);
+  const totalAmount = expenses.reduce((sum, expense) => {
+    const amount = expense.disbursed_amount || 0;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
 
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number | null | undefined) => {
+    if (amount == null || isNaN(amount)) {
+      return '0.00';
+    }
     return new Intl.NumberFormat('en-AE', {
       minimumFractionDigits: 2
     }).format(amount);
@@ -210,7 +216,7 @@ export const PeticashPage: React.FC = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -223,24 +229,6 @@ export const PeticashPage: React.FC = () => {
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
                     {expenses.length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <TrendingUp className="h-8 w-8 text-gray-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Amount
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatAmount(totalAmount)}
                   </dd>
                 </dl>
               </div>

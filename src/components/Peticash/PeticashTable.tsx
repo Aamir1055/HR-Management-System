@@ -19,7 +19,10 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Format amount display without currency symbol
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number | null | undefined) => {
+    if (amount == null || isNaN(amount)) {
+      return '0.00';
+    }
     return new Intl.NumberFormat('en-AE', {
       minimumFractionDigits: 2
     }).format(amount);

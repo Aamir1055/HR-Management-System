@@ -527,27 +527,118 @@ export const UnifiedDashboard: React.FC = () => {
                 {showVisaFilters && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-gray-700">From:</label>
-                        <input
-                          type="date"
-                          value={visaStartDate}
-                          onChange={(e) => setVisaStartDate(e.target.value)}
-                          className="px-3 py-1 border border-gray-300 rounded text-sm"
-                        />
+                        <div className="relative">
+                          {/* Display input showing DD/MM/YYYY */}
+                          <input
+                            type="text"
+                            value={formatDateDDMMYYYY(visaStartDate)}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              // Only allow digits and slashes
+                              value = value.replace(/[^\d/]/g, '');
+                              
+                              // Auto-format as user types: DD/MM/YYYY
+                              if (value.length <= 10) {
+                                if (value.length === 2 && !value.includes('/')) {
+                                  value = value + '/';
+                                } else if (value.length === 5 && value.charAt(2) === '/' && value.charAt(5) !== '/') {
+                                  value = value + '/';
+                                }
+                                
+                                e.target.value = value;
+                                
+                                // Convert DD/MM/YYYY to YYYY-MM-DD when complete
+                                if (value.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                  const [day, month, year] = value.split('/');
+                                  if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                                    setVisaStartDate(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+                                  }
+                                }
+                              }
+                            }}
+                            placeholder="DD/MM/YYYY"
+                            className="px-3 py-2 pr-10 border border-gray-300 rounded text-sm w-40"
+                            maxLength={10}
+                          />
+                          {/* Calendar icon overlay */}
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                            <Calendar 
+                              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" 
+                              onClick={() => {
+                                const dateInput = document.getElementById('visa-start-hidden-date') as HTMLInputElement;
+                                if (dateInput) {
+                                  dateInput.focus();
+                                  dateInput.showPicker?.();
+                                }
+                              }}
+                            />
+                          </div>
+                          {/* Hidden native date input for calendar */}
+                          <input
+                            id="visa-start-hidden-date"
+                            type="date"
+                            value={visaStartDate}
+                            onChange={(e) => setVisaStartDate(e.target.value)}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            style={{ zIndex: -1 }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-gray-700">To:</label>
-                        <input
-                          type="date"
-                          value={visaEndDate}
-                          onChange={(e) => setVisaEndDate(e.target.value)}
-                          className="px-3 py-1 border border-gray-300 rounded text-sm"
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={formatDateDDMMYYYY(visaEndDate)}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              value = value.replace(/[^\d/]/g, '');
+                              if (value.length <= 10) {
+                                if (value.length === 2 && !value.includes('/')) {
+                                  value = value + '/';
+                                } else if (value.length === 5 && value.charAt(2) === '/' && value.charAt(5) !== '/') {
+                                  value = value + '/';
+                                }
+                                e.target.value = value;
+                                if (value.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                  const [day, month, year] = value.split('/');
+                                  if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                                    setVisaEndDate(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+                                  }
+                                }
+                              }
+                            }}
+                            placeholder="DD/MM/YYYY"
+                            className="px-3 py-2 pr-10 border border-gray-300 rounded text-sm w-40"
+                            maxLength={10}
+                          />
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                            <Calendar
+                              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600"
+                              onClick={() => {
+                                const dateInput = document.getElementById('visa-end-hidden-date') as HTMLInputElement;
+                                if (dateInput) {
+                                  dateInput.focus();
+                                  dateInput.showPicker?.();
+                                }
+                              }}
+                            />
+                          </div>
+                          <input
+                            id="visa-end-hidden-date"
+                            type="date"
+                            value={visaEndDate}
+                            onChange={(e) => setVisaEndDate(e.target.value)}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            style={{ zIndex: -1 }}
+                          />
+                        </div>
                       </div>
                       <button
                         onClick={() => setShowVisaFilters(false)}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 self-end"
                       >
                         Apply
                       </button>
