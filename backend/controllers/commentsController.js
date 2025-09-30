@@ -22,7 +22,10 @@ module.exports = {
   addComment: async (req, res) => {
     try {
       const { employeeId } = req.params;
-      const { comment, created_by } = req.body;
+      const { comment } = req.body;
+      
+      // Get username from authenticated user
+      const username = req.user?.username || 'Unknown User';
 
       if (!comment || !comment.trim()) {
         return res.status(400).json({ error: 'Comment is required' });
@@ -30,7 +33,7 @@ module.exports = {
 
       const [result] = await req.db.query(
         'INSERT INTO employee_comments (employee_id, comment, created_by) VALUES (?, ?, ?)',
-        [employeeId, comment.trim(), created_by || 'HR']
+        [employeeId, comment.trim(), username]
       );
 
       // Fetch the newly created comment

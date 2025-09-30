@@ -251,3 +251,59 @@ export const safeDateDisplay = (dateValue: any): string => {
   
   return 'Invalid Date';
 };
+
+/**
+ * Formats timestamp to DD/MM/YYYY with optional time display
+ * Only shows the timestamp if it can be properly parsed as a valid date
+ * If parsing fails, returns empty string to hide the timestamp
+ * @param timestamp - Timestamp string (ISO format, epoch, etc.)
+ * @param includeTime - Whether to include time portion (default: true)
+ * @returns Formatted timestamp string in DD/MM/YYYY format, or empty string if invalid
+ */
+export const formatTimestampSafely = (timestamp: string | number | Date | null | undefined, includeTime: boolean = true): string => {
+  if (!timestamp) return '';
+  
+  try {
+    let date: Date;
+    
+    if (typeof timestamp === 'string') {
+      // Try parsing the string as a date
+      date = new Date(timestamp);
+    } else if (typeof timestamp === 'number') {
+      // Handle epoch timestamp
+      date = new Date(timestamp);
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else {
+      return ''; // Cannot parse, hide timestamp
+    }
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return ''; // Invalid date, hide timestamp
+    }
+    
+    // Format to DD/MM/YYYY
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear());
+    const dateString = `${day}/${month}/${year}`;
+    
+    if (!includeTime) {
+      return dateString;
+    }
+    
+    // Add time portion in 12-hour format with AM/PM
+    const timeString = date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    return `${dateString} ${timeString}`;
+    
+  } catch (error) {
+    console.warn('Failed to parse timestamp, hiding:', timestamp, error);
+    return ''; // Failed to parse, hide timestamp
+  }
+};

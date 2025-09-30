@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { X, Calendar } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Employee } from '../../types';
 import { formatDateForInput, formatDateFromEpoch } from '../../utils/dateUtils';
 import EmployeeFormComments from './EmployeeFormComments';
+import DateInput from '../UI/DateInput';
 
 interface Office {
   id: number;
@@ -57,6 +58,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     reset,
     watch,
   } = useForm<Employee>({
+    mode: 'onChange',
     defaultValues: {
       id: undefined,
       employeeId: '',
@@ -102,6 +104,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const statusValue = watch('status');
   const officeId = watch('office_id');
   const positionId = watch('position_id');
+  
+  // Register date fields for validation
+  React.useEffect(() => {
+    register('dob');
+    register('joiningDate', { required: 'Joining date is required' });
+    register('passport_expiry');
+    register('visa_expiry');
+  }, [register]);
 
   // Automatically update the `name` field when first_name or last_name changes
   useEffect(() => {
@@ -293,23 +303,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     // eslint-disable-next-line
   }, [officeId, positionId]);
 
-  // Helpers to convert date formats between picker (YYYY-MM-DD) and display/storage (DD/MM/YYYY)
-  const isoToDDMMYYYY = (iso: string): string => {
-    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  };
-  const ddmmyyyyToISO = (ddmmyyyy: string): string => {
-    if (!ddmmyyyy || !/^\d{2}\/\d{2}\/\d{4}$/.test(ddmmyyyy)) return '';
-    const [d, m, y] = ddmmyyyy.split('/');
-    return `${y}-${m}-${d}`;
-  };
-
-  // Helper function to convert date picker value (ISO) to DD/MM/YYYY without timezone adjustments
-  const pickerValueToDDMMYYYY = (isoValue: string): string => {
-    if (!isoValue) return '';
-    return isoToDDMMYYYY(isoValue);
-  };
 
   const fetchPositionsForOffice = async (selectedOfficeId: number) => {
     try {
@@ -480,66 +473,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
       {/* Date of Birth */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-        <div className="relative">
-          <input
-            type="text"
-            {...register('dob', {
-              pattern: {
-                value: /^\d{2}\/\d{2}\/\d{4}$/,
-                message: 'Date must be in DD/MM/YYYY format'
-              },
-              validate: (value) => {
-                if (!value) return true; // Optional field
-                const parts = value.split('/');
-                if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-                const day = parseInt(parts[0]);
-                const month = parseInt(parts[1]);
-                const year = parseInt(parts[2]);
-                if (day < 1 || day > 31) return 'Day must be between 1-31';
-                if (month < 1 || month > 12) return 'Month must be between 1-12';
-                if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-                return true;
-              }
-            })}
-            disabled={viewOnly}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-blue-50 focus:bg-white"
-            placeholder="DD/MM/YYYY or click calendar"
-            onInput={(e) => {
-              let value = e.currentTarget.value.replace(/\D/g, '');
-              if (value.length >= 2) value = value.substring(0, 2) + '/' + value.substring(2);
-              if (value.length >= 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-              e.currentTarget.value = value;
-            }}
-            onFocus={(e) => {
-              // Show date picker when field is focused
-              const dateInput = e.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement;
-              if (dateInput && !viewOnly) {
-                dateInput.focus();
-                dateInput.showPicker?.();
-              }
-            }}
-          />
-          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            type="date"
-            value={ddmmyyyyToISO(watch('dob') || '')}
-            onChange={(e) => {
-              const ddmmyyyy = pickerValueToDDMMYYYY(e.target.value);
-              setValue('dob', ddmmyyyy, { shouldValidate: true, shouldDirty: true });
-              // Focus back to text input to show formatted date
-              const textInput = e.currentTarget.parentElement?.querySelector('input[type="text"]') as HTMLInputElement;
-              if (textInput) {
-                setTimeout(() => textInput.focus(), 100);
-              }
-            }}
-            disabled={viewOnly}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            tabIndex={-1}
-          />
-        </div>
-        <div className="text-xs text-gray-500 mt-1">Type DD/MM/YYYY or click to open date picker</div>
-        {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob.message}</p>}
+        <DateInput
+          name="dob"
+          label="Date of Birth"
+          value={watch('dob') || ''}
+          onChange={(value) => setValue('dob', value, { shouldValidate: true, shouldDirty: true })}
+          disabled={viewOnly}
+          bgColor="bg-blue-50"
+          error={errors.dob?.message}
+          helpText="Type DD/MM/YYYY or click to open date picker (Optional)"
+        />
       </div>
 
       {/* Phone Number */}
@@ -623,67 +566,17 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     <>
       {/* DOJ - Date of Joining */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining (DOJ) <span className="text-red-600">*</span></label>
-        <div className="relative">
-          <input
-            type="text"
-            {...register('joiningDate', {
-              required: 'Joining date is required',
-              pattern: {
-                value: /^\d{2}\/\d{2}\/\d{4}$/,
-                message: 'Date must be in DD/MM/YYYY format'
-              },
-              validate: (value) => {
-                if (!value) return 'Joining date is required';
-                const parts = value.split('/');
-                if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-                const day = parseInt(parts[0]);
-                const month = parseInt(parts[1]);
-                const year = parseInt(parts[2]);
-                if (day < 1 || day > 31) return 'Day must be between 1-31';
-                if (month < 1 || month > 12) return 'Month must be between 1-12';
-                if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-                return true;
-              }
-            })}
-            disabled={viewOnly}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-green-50 focus:bg-white"
-            placeholder="DD/MM/YYYY or click calendar"
-            onInput={(e) => {
-              let value = e.currentTarget.value.replace(/\D/g, '');
-              if (value.length >= 2) value = value.substring(0, 2) + '/' + value.substring(2);
-              if (value.length >= 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-              e.currentTarget.value = value;
-            }}
-            onFocus={(e) => {
-              // Show date picker when field is focused
-              const dateInput = e.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement;
-              if (dateInput && !viewOnly) {
-                dateInput.focus();
-                dateInput.showPicker?.();
-              }
-            }}
-          />
-          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            type="date"
-            value={ddmmyyyyToISO(watch('joiningDate') || '')}
-            onChange={(e) => {
-              const ddmmyyyy = pickerValueToDDMMYYYY(e.target.value);
-              setValue('joiningDate', ddmmyyyy, { shouldValidate: true, shouldDirty: true });
-              // Focus back to text input to show formatted date
-              const textInput = e.currentTarget.parentElement?.querySelector('input[type="text"]') as HTMLInputElement;
-              if (textInput) {
-                setTimeout(() => textInput.focus(), 100);
-              }
-            }}
-            disabled={viewOnly}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            tabIndex={-1}
-          />
-        </div>
-        <div className="text-xs text-gray-500 mt-1">Type DD/MM/YYYY or click to open date picker (Required)</div>
-        {errors.joiningDate && <p className="text-red-500 text-sm mt-1">{errors.joiningDate.message}</p>}
+        <DateInput
+          name="joiningDate"
+          label="Date of Joining (DOJ)"
+          value={watch('joiningDate') || ''}
+          onChange={(value) => setValue('joiningDate', value, { shouldValidate: true, shouldDirty: true })}
+          disabled={viewOnly}
+          required={true}
+          bgColor="bg-green-50"
+          error={errors.joiningDate?.message}
+          helpText="Type DD/MM/YYYY or click to open date picker (Required)"
+        />
       </div>
 
       {/* Office */}
@@ -814,66 +707,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
       {/* Visa expiry */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Visa Expiry Date</label>
-        <div className="relative">
-          <input
-            type="text"
-            {...register('visa_expiry', {
-              pattern: {
-                value: /^\d{2}\/\d{2}\/\d{4}$/,
-                message: 'Date must be in DD/MM/YYYY format'
-              },
-              validate: (value) => {
-                if (!value) return true; // Optional field
-                const parts = value.split('/');
-                if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-                const day = parseInt(parts[0]);
-                const month = parseInt(parts[1]);
-                const year = parseInt(parts[2]);
-                if (day < 1 || day > 31) return 'Day must be between 1-31';
-                if (month < 1 || month > 12) return 'Month must be between 1-12';
-                if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-                return true;
-              }
-            })}
-            disabled={viewOnly}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-purple-50 focus:bg-white"
-            placeholder="DD/MM/YYYY or click calendar"
-            onInput={(e) => {
-              let value = e.currentTarget.value.replace(/\D/g, '');
-              if (value.length >= 2) value = value.substring(0, 2) + '/' + value.substring(2);
-              if (value.length >= 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-              e.currentTarget.value = value;
-            }}
-            onFocus={(e) => {
-              // Show date picker when field is focused
-              const dateInput = e.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement;
-              if (dateInput && !viewOnly) {
-                dateInput.focus();
-                dateInput.showPicker?.();
-              }
-            }}
-          />
-          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            type="date"
-            value={ddmmyyyyToISO(watch('visa_expiry') || '')}
-            onChange={(e) => {
-              const ddmmyyyy = pickerValueToDDMMYYYY(e.target.value);
-              setValue('visa_expiry', ddmmyyyy, { shouldValidate: true, shouldDirty: true });
-              // Focus back to text input to show formatted date
-              const textInput = e.currentTarget.parentElement?.querySelector('input[type="text"]') as HTMLInputElement;
-              if (textInput) {
-                setTimeout(() => textInput.focus(), 100);
-              }
-            }}
-            disabled={viewOnly}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            tabIndex={-1}
-          />
-        </div>
-        <div className="text-xs text-gray-500 mt-1">Type DD/MM/YYYY or click to open date picker</div>
-        {errors.visa_expiry && <p className="text-red-500 text-sm mt-1">{errors.visa_expiry.message}</p>}
+        <DateInput
+          name="visa_expiry"
+          label="Visa Expiry Date"
+          value={watch('visa_expiry') || ''}
+          onChange={(value) => setValue('visa_expiry', value, { shouldValidate: true, shouldDirty: true })}
+          disabled={viewOnly}
+          bgColor="bg-purple-50"
+          error={errors.visa_expiry?.message}
+          helpText="Type DD/MM/YYYY or click to open date picker (Optional)"
+        />
       </div>
 
       {/* Passport no. */}
@@ -889,66 +732,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
       {/* Passport expiry */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Passport Expiry</label>
-        <div className="relative">
-          <input
-            type="text"
-            {...register('passport_expiry', {
-              pattern: {
-                value: /^\d{2}\/\d{2}\/\d{4}$/,
-                message: 'Date must be in DD/MM/YYYY format'
-              },
-              validate: (value) => {
-                if (!value) return true; // Optional field
-                const parts = value.split('/');
-                if (parts.length !== 3) return 'Date must be in DD/MM/YYYY format';
-                const day = parseInt(parts[0]);
-                const month = parseInt(parts[1]);
-                const year = parseInt(parts[2]);
-                if (day < 1 || day > 31) return 'Day must be between 1-31';
-                if (month < 1 || month > 12) return 'Month must be between 1-12';
-                if (year < 1900 || year > 2100) return 'Year must be between 1900-2100';
-                return true;
-              }
-            })}
-            disabled={viewOnly}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-yellow-50 focus:bg-white"
-            placeholder="DD/MM/YYYY or click calendar"
-            onInput={(e) => {
-              let value = e.currentTarget.value.replace(/\D/g, '');
-              if (value.length >= 2) value = value.substring(0, 2) + '/' + value.substring(2);
-              if (value.length >= 5) value = value.substring(0, 5) + '/' + value.substring(5, 9);
-              e.currentTarget.value = value;
-            }}
-            onFocus={(e) => {
-              // Show date picker when field is focused
-              const dateInput = e.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement;
-              if (dateInput && !viewOnly) {
-                dateInput.focus();
-                dateInput.showPicker?.();
-              }
-            }}
-          />
-          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            type="date"
-            value={ddmmyyyyToISO(watch('passport_expiry') || '')}
-            onChange={(e) => {
-              const ddmmyyyy = pickerValueToDDMMYYYY(e.target.value);
-              setValue('passport_expiry', ddmmyyyy, { shouldValidate: true, shouldDirty: true });
-              // Focus back to text input to show formatted date
-              const textInput = e.currentTarget.parentElement?.querySelector('input[type="text"]') as HTMLInputElement;
-              if (textInput) {
-                setTimeout(() => textInput.focus(), 100);
-              }
-            }}
-            disabled={viewOnly}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            tabIndex={-1}
-          />
-        </div>
-        <div className="text-xs text-gray-500 mt-1">Type DD/MM/YYYY or click to open date picker</div>
-        {errors.passport_expiry && <p className="text-red-500 text-sm mt-1">{errors.passport_expiry.message}</p>}
+        <DateInput
+          name="passport_expiry"
+          label="Passport Expiry"
+          value={watch('passport_expiry') || ''}
+          onChange={(value) => setValue('passport_expiry', value, { shouldValidate: true, shouldDirty: true })}
+          disabled={viewOnly}
+          bgColor="bg-yellow-50"
+          error={errors.passport_expiry?.message}
+          helpText="Type DD/MM/YYYY or click to open date picker (Optional)"
+        />
       </div>
 
       {/* Hiring source */}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Calendar, Save, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { formatTimestampSafely } from '../../utils/dateUtils';
 
 interface Comment {
   id: number;
@@ -63,7 +65,6 @@ const EmployeeFormComments: React.FC<EmployeeFormCommentsProps> = ({
         headers: getAuthHeaders(),
         body: JSON.stringify({
           comment: newComment.trim(),
-          created_by: 'HR', // You can get this from user context
         }),
       });
 
@@ -148,11 +149,10 @@ const EmployeeFormComments: React.FC<EmployeeFormCommentsProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    // Use the safe timestamp formatting utility
+    // This will return an empty string if the timestamp cannot be parsed
+    const formattedTimestamp = formatTimestampSafely(dateString, true);
+    return formattedTimestamp; // Will be empty string if unparseable, hiding the timestamp
   };
 
   const startEdit = (comment: Comment) => {
@@ -283,11 +283,13 @@ const EmployeeFormComments: React.FC<EmployeeFormCommentsProps> = ({
                         <span>
                           Created by: {comment.created_by}
                         </span>
-                        <span className="flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {formatDate(comment.created_at)}
-                        </span>
-                        {comment.created_at !== comment.updated_at && (
+                        {formatDate(comment.created_at) && (
+                          <span className="flex items-center">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {formatDate(comment.created_at)}
+                          </span>
+                        )}
+                        {comment.created_at !== comment.updated_at && formatDate(comment.updated_at) && (
                           <span className="text-orange-500">
                             (Updated: {formatDate(comment.updated_at)})
                           </span>
