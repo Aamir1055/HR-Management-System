@@ -531,6 +531,123 @@ const employeeController = {
     } catch (error) {
       handleError(res, error, 'Failed to get platform options');
     }
+  },
+
+  /**
+   * Get employees with visa expiring in given date range
+   */
+  async getVisaExpiries(req, res) {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      // Default to current month if no dates provided
+      const now = new Date();
+      const defaultStartDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const fromDate = startDate || defaultStartDate;
+      const toDate = endDate || defaultEndDate;
+      
+      console.log('🔍 Visa Expiry Query Debug:');
+      console.log('  - Requested startDate:', startDate);
+      console.log('  - Requested endDate:', endDate);
+      console.log('  - Final fromDate:', fromDate);
+      console.log('  - Final toDate:', toDate);
+      console.log('  - Current server date:', now.toISOString().split('T')[0]);
+      
+      // Build office filter from middleware
+      const { buildOfficeFilter } = require('../middleware/auth');
+      const { whereClause: officeFilter, params: officeParams } = buildOfficeFilter(req, 'e');
+      
+      let sql = `
+        SELECT 
+          e.employeeId,
+          e.name,
+          e.first_name,
+          e.last_name,
+          e.visa_expiry,
+          o.name as office_name,
+          p.title as position_name,
+          DATEDIFF(e.visa_expiry, CURDATE()) as days_until_expiry
+        FROM employees e
+        LEFT JOIN offices o ON e.office_id = o.id
+        LEFT JOIN positions p ON e.position_id = p.id
+        WHERE e.visa_expiry IS NOT NULL 
+          AND e.visa_expiry BETWEEN ? AND ?
+          AND e.status = 1
+      `;
+      
+      let queryParams = [fromDate, toDate];
+      
+      // Add office filter if applicable
+      if (officeFilter) {
+        sql += ` AND ${officeFilter}`;
+        queryParams.push(...officeParams);
+      }
+      
+      sql += ` ORDER BY e.visa_expiry ASC, e.name ASC`;
+      
+      const [results] = await req.db.query(sql, queryParams);
+      
+      console.log(`  - SQL Query: ${sql}`);
+      console.log(`  - Query Params: [${queryParams.join(', ')}]`);
+      console.log(`  - Raw results count: ${results.length}`);
+      if (results.length > 0) {
+        console.log('  - Sample raw result:', {
+          visa_expiry: results[0].visa_expiry,
+          name: results[0].name,
+          days_until_expiry: results[0].days_until_expiry
+        });
+      }
+      
+      // Format the results
+      const formattedResults = results.map(employee => {
+        // Fix timezone issue: extract date part directly without timezone conversion
+        let visaExpiryFormatted = employee.visa_expiry;
+        if (employee.visa_expiry instanceof Date) {
+          // Use local date components to avoid timezone conversion
+          const year = employee.visa_expiry.getFullYear();
+          const month = String(employee.visa_expiry.getMonth() + 1).padStart(2, '0');
+          const day = String(employee.visa_expiry.getDate()).padStart(2, '0');
+          visaExpiryFormatted = `${year}-${month}-${day}`;
+        } else if (typeof employee.visa_expiry === 'string') {
+          // If already a string, extract date part
+          visaExpiryFormatted = employee.visa_expiry.split('T')[0];
+        }
+        
+        return {
+          ...employee,
+          visa_expiry: visaExpiryFormatted,
+          full_name: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+          is_expired: employee.days_until_expiry < 0,
+          is_expiring_soon: employee.days_until_expiry >= 0 && employee.days_until_expiry <= 30
+        };
+      });
+      
+      console.log(`  - Formatted results count: ${formattedResults.length}`);
+      if (formattedResults.length > 0) {
+        console.log('  - Sample formatted result:', {
+          visa_expiry: formattedResults[0].visa_expiry,
+          full_name: formattedResults[0].full_name,
+          days_until_expiry: formattedResults[0].days_until_expiry
+        });
+      }
+      
+      res.json({
+        visaExpiries: formattedResults,
+        dateRange: {
+          startDate: fromDate,
+          endDate: toDate
+        },
+        summary: {
+          total: formattedResults.length,
+          expired: formattedResults.filter(e => e.is_expired).length,
+          expiringSoon: formattedResults.filter(e => e.is_expiring_soon).length
+        }
+      });
+    } catch (error) {
+      handleError(res, error, 'Failed to get visa expiries');
+    }
   }
 };
 

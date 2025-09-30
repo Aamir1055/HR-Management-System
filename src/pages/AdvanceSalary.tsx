@@ -406,7 +406,7 @@ const AdvanceSalary: React.FC = () => {
     
     const matchesSearch = !filters.searchTerm || 
       employee.employee_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      employee.employee_id.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      String(employee.employee_id).toLowerCase().includes(filters.searchTerm.toLowerCase());
     
     const matchesOffice = !filters.selectedOffice || employee.office_name === filters.selectedOffice;
     

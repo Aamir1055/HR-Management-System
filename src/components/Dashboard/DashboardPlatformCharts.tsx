@@ -280,26 +280,6 @@ export const DashboardPlatformCharts: React.FC<DashboardPlatformChartsProps> = (
         </div>
       </div>
 
-      {/* Summary Statistics */}
-      <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-xl p-8 text-white">
-        <h3 className="text-2xl font-bold mb-6 text-center">Quick Statistics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-            <div className="text-3xl font-bold mb-1">AED {formatCurrency(totalMonthlySalary / totalEmployees || 0)}</div>
-            <div className="text-sm opacity-90">Average Salary per Employee</div>
-          </div>
-          <div className="text-center bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-            <div className="text-3xl font-bold mb-1">{platformData.length}</div>
-            <div className="text-sm opacity-90">Active Platforms</div>
-          </div>
-          <div className="text-center bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-            <div className="text-3xl font-bold mb-1">
-              {platformData.length > 0 ? Math.round(totalEmployees / platformData.length) : 0}
-            </div>
-            <div className="text-sm opacity-90">Average Employees per Platform</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

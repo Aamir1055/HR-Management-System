@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout/MainLayout';
 import { MetricCard } from '../components/Dashboard/MetricCard';
 import { DirhamIcon } from '../components/Icons/DirhamIcon';
-import { User, Building, Layers, Calendar, Gift, Award, Clock, Cake } from 'lucide-react';
+import { User, Building, Layers, Calendar, Gift, Award, Clock, Cake, AlertTriangle, Filter } from 'lucide-react';
 import { DashboardCharts } from '../components/Dashboard/DashboardCharts';
 import { DashboardPlatformCharts } from '../components/Dashboard/DashboardPlatformCharts';
 
@@ -40,6 +40,32 @@ interface CelebrationData {
     name: string;
     number: number;
     year: number;
+  };
+}
+
+// Visa Expiry Interfaces
+interface VisaExpiryEmployee {
+  employeeId: string;
+  name: string;
+  full_name: string;
+  visa_expiry: string;
+  office_name: string;
+  position_name: string;
+  days_until_expiry: number;
+  is_expired: boolean;
+  is_expiring_soon: boolean;
+}
+
+interface VisaExpiryData {
+  visaExpiries: VisaExpiryEmployee[];
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  summary: {
+    total: number;
+    expired: number;
+    expiringSoon: number;
   };
 }
 
@@ -91,10 +117,17 @@ export const UnifiedDashboard: React.FC = () => {
   // Celebrations State
   const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
   
+  // Visa Expiry State
+  const [visaExpiryData, setVisaExpiryData] = useState<VisaExpiryData | null>(null);
+  const [visaStartDate, setVisaStartDate] = useState('');
+  const [visaEndDate, setVisaEndDate] = useState('');
+  const [showVisaFilters, setShowVisaFilters] = useState(false);
+  
   // Loading States
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [platformLoading, setPlatformLoading] = useState(true);
   const [celebrationsLoading, setCelebrationsLoading] = useState(true);
+  const [visaExpiryLoading, setVisaExpiryLoading] = useState(true);
 
   // Auth headers function
   const getAuthHeaders = () => {
@@ -172,11 +205,68 @@ export const UnifiedDashboard: React.FC = () => {
     }
   };
 
+  // Visa Expiry Data Fetching
+  const fetchVisaExpiryData = async (startDate?: string, endDate?: string) => {
+    try {
+      setVisaExpiryLoading(true);
+      
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const response = await fetch(`/api/employees/visa-expiries?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setVisaExpiryData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching visa expiry data:', error);
+    } finally {
+      setVisaExpiryLoading(false);
+    }
+  };
+
+  // Initialize visa date range to current month (September 2025)
+  React.useEffect(() => {
+    // Get current date from environment
+    const now = new Date(); // This will give us September 30, 2025 based on environment
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-based, so September = 8
+    
+    // Use Date.UTC to avoid timezone conversion issues
+    // This ensures we get the exact dates we want in YYYY-MM-DD format
+    const currentMonthStart = new Date(Date.UTC(currentYear, currentMonth, 1));
+    const currentMonthEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 0));
+    
+    // Format dates as YYYY-MM-DD for input fields (using UTC methods)
+    const startDateString = currentMonthStart.toISOString().split('T')[0];
+    const endDateString = currentMonthEnd.toISOString().split('T')[0];
+    
+    console.log('🗓️ Setting visa date range for current month:');
+    console.log('  - Current date:', now.toISOString().split('T')[0]);
+    console.log('  - Current month (0-based):', currentMonth, '(', currentMonth + 1, '= month number)');
+    console.log('  - Month start:', startDateString);
+    console.log('  - Month end:', endDateString);
+    console.log('  - Timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    
+    setVisaStartDate(startDateString);
+    setVisaEndDate(endDateString);
+  }, []);
+
   useEffect(() => {
     fetchOverviewData();
     fetchPlatformData();
     fetchCelebrationsData();
   }, []);
+
+  // Fetch visa expiry data when dates change
+  React.useEffect(() => {
+    if (visaStartDate && visaEndDate) {
+      fetchVisaExpiryData(visaStartDate, visaEndDate);
+    }
+  }, [visaStartDate, visaEndDate]);
 
   // Helper function to format currency
   const formatCurrency = (amount: number) => {
@@ -184,6 +274,35 @@ export const UnifiedDashboard: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Helper function to format date as dd/mm/yyyy
+  const formatDateDDMMYYYY = (dateString: string) => {
+    try {
+      // Handle date string directly to avoid timezone conversion issues
+      if (dateString && typeof dateString === 'string') {
+        // If it's already in YYYY-MM-DD format, convert directly
+        if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = dateString.split('-');
+          return `${day}/${month}/${year}`;
+        }
+        // If it's a full ISO string, extract the date part first
+        if (dateString.includes('T')) {
+          const datePart = dateString.split('T')[0];
+          const [year, month, day] = datePart.split('-');
+          return `${day}/${month}/${year}`;
+        }
+      }
+      
+      // Fallback to Date parsing (may have timezone issues)
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateString;
+    }
   };
 
   // Navigation handlers
@@ -205,7 +324,7 @@ export const UnifiedDashboard: React.FC = () => {
   return (
     <MainLayout 
       title="Unified Dashboard"
-      subtitle="Combined overview of offices, platforms, and celebrations"
+      subtitle="Combined overview of offices, platforms, HR alerts, and celebrations"
     >
       <div className="space-y-10">
         {/* Top Summary Metrics */}
@@ -246,11 +365,11 @@ export const UnifiedDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Celebrations Section - MOVED TO TOP */}
+        {/* HR Alerts Section - MOVED TO TOP */}
         <section className="space-y-6">
           <div className="flex items-center gap-3">
             <Gift className="w-6 h-6 text-pink-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Celebrations</h2>
+            <h2 className="text-xl font-semibold text-gray-900">HR Alerts & Celebrations</h2>
           </div>
 
           {celebrationsLoading ? (
@@ -387,14 +506,175 @@ export const UnifiedDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Visa Expiry Section */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Visa Expiry Alerts</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowVisaFilters(!showVisaFilters)}
+                    className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter Dates
+                  </button>
+                </div>
+
+                {/* Visa Date Filter */}
+                {showVisaFilters && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">From:</label>
+                        <input
+                          type="date"
+                          value={visaStartDate}
+                          onChange={(e) => setVisaStartDate(e.target.value)}
+                          className="px-3 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">To:</label>
+                        <input
+                          type="date"
+                          value={visaEndDate}
+                          onChange={(e) => setVisaEndDate(e.target.value)}
+                          className="px-3 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowVisaFilters(false)}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Visa Expiry Content */}
+                {visaExpiryLoading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                    <span className="ml-3 text-gray-600">Loading visa expiries...</span>
+                  </div>
+                ) : visaExpiryData ? (
+                  <>
+                    {/* Visa Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-red-600 font-medium">Expired</p>
+                            <p className="text-xl font-bold text-red-700">{visaExpiryData.summary.expired}</p>
+                          </div>
+                          <AlertTriangle className="w-6 h-6 text-red-500" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-orange-600 font-medium">Expiring Soon</p>
+                            <p className="text-xl font-bold text-orange-700">{visaExpiryData.summary.expiringSoon}</p>
+                          </div>
+                          <Calendar className="w-6 h-6 text-orange-500" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-blue-600 font-medium">Total Found</p>
+                            <p className="text-xl font-bold text-blue-700">{visaExpiryData.summary.total}</p>
+                          </div>
+                          <User className="w-6 h-6 text-blue-500" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Employee List */}
+                    {visaExpiryData.visaExpiries.length > 0 ? (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {visaExpiryData.visaExpiries.map((employee, index) => {
+                          const getDaysColor = (days: number) => {
+                            if (days < 0) return 'text-red-600 bg-red-50';
+                            if (days <= 7) return 'text-red-600 bg-red-50';
+                            if (days <= 30) return 'text-orange-600 bg-orange-50';
+                            return 'text-green-600 bg-green-50';
+                          };
+                          
+                          const getDaysText = (days: number) => {
+                            if (days < 0) return `${Math.abs(days)} days ago`;
+                            if (days === 0) return 'Today';
+                            if (days === 1) return 'Tomorrow';
+                            return `${days} days`;
+                          };
+
+                          return (
+                            <div
+                              key={`${employee.employeeId}-${index}`}
+                              className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 text-sm">{employee.full_name}</h4>
+                                    <p className="text-xs text-gray-600">ID: {employee.employeeId}</p>
+                                  </div>
+                                </div>
+                                <div className="mt-1 flex items-center gap-3 text-xs text-gray-600">
+                                  <div className="flex items-center gap-1">
+                                    <Building className="w-3 h-3" />
+                                    <span>{employee.office_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Award className="w-3 h-3" />
+                                    <span>{employee.position_name}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right">
+                                <div className="text-xs font-medium text-gray-900">
+                                  {formatDateDDMMYYYY(employee.visa_expiry)}
+                                </div>
+                                <div className={`text-xs font-medium px-2 py-1 rounded-full ${getDaysColor(employee.days_until_expiry)}`}>
+                                  {getDaysText(employee.days_until_expiry)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">No Visa Expiries</h3>
+                        <p className="text-xs text-gray-500">No employee visas are expiring in the selected range.</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <AlertTriangle className="w-8 h-8 text-red-300 mx-auto mb-2" />
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">Error Loading Data</h3>
+                    <p className="text-xs text-gray-500">Failed to load visa expiry information.</p>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6">
               <div className="flex items-center">
                 <div className="text-red-600 mr-3">⚠️</div>
                 <div>
-                  <h3 className="text-red-800 font-medium">Error loading celebrations</h3>
-                  <p className="text-red-700 text-sm mt-1">Failed to load celebrations data</p>
+                  <h3 className="text-red-800 font-medium">Error loading HR alerts</h3>
+                  <p className="text-red-700 text-sm mt-1">Failed to load celebrations and visa data</p>
                 </div>
               </div>
             </div>

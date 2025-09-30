@@ -333,12 +333,22 @@ const peticashController = {
     try {
       // Get unique companies from database
       const [companies] = await req.db.execute(
-        'SELECT DISTINCT company FROM peticash ORDER BY company'
+        'SELECT DISTINCT company FROM peticash WHERE company IS NOT NULL AND company != "" ORDER BY company'
+      );
+      
+      // Get unique expense categories from database
+      const [expenseCategories] = await req.db.execute(
+        'SELECT DISTINCT expense_category FROM peticash WHERE expense_category IS NOT NULL AND expense_category != "" ORDER BY expense_category'
+      );
+      
+      // Get unique payment types from database
+      const [paymentTypes] = await req.db.execute(
+        'SELECT DISTINCT payment_type FROM peticash WHERE payment_type IS NOT NULL AND payment_type != "" ORDER BY payment_type'
       );
       
       res.json({
-        paymentTypes: PaymentTypes.getAll(),
-        expenseCategories: ExpenseCategories.getAll(),
+        paymentTypes: paymentTypes.map(row => ({ value: row.payment_type, label: row.payment_type })),
+        expenseCategories: expenseCategories.map(row => ({ value: row.expense_category, label: row.expense_category })),
         companies: companies.map(row => ({ value: row.company, label: row.company }))
       });
     } catch (error) {

@@ -51,6 +51,7 @@ router.get('/count', requireAuth, addUserOffices, employeeController.getEmployee
 router.get('/salary/total', requireAuth, addUserOffices, employeeController.getTotalMonthlySalary);
 router.get('/summary-by-office', requireAuth, addUserOffices, employeeController.getSummaryByOffice);
 router.get('/summary-by-platform', requireAuth, employeeController.getSummaryByPlatform);
+router.get('/visa-expiries', requireAuth, addUserOffices, employeeController.getVisaExpiries);
 
 // =================== OFFICE/POSITION/PLATFORM OPTIONS ROUTES ================
 router.get('/offices/options', requireAuth, addUserOffices, employeeController.getOfficeOptions);
