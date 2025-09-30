@@ -85,19 +85,13 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(({
       inputValue = inputValue.substring(0, 5) + '/' + inputValue.substring(5, 9);
     }
     
-    e.currentTarget.value = inputValue;
     onChange(inputValue);
   };
 
   // Handle manual text changes
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
-  };
-
-  // Handle text input focus - removed automatic date picker opening
-  const handleTextFocus = () => {
-    // Users can now type manually without the picker auto-opening
-    // They can still click the calendar icon or field to open the picker manually
+    const newValue = e.target.value;
+    onChange(newValue);
   };
 
   // Handle date picker changes
@@ -105,11 +99,15 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(({
     const isoValue = e.target.value;
     const ddmmyyyy = isoToDDMMYYYY(isoValue);
     onChange(ddmmyyyy);
-    
-    // Focus back to text input to show formatted date
-    setTimeout(() => {
-      textInputRef.current?.focus();
-    }, 100);
+  };
+
+  // Handle calendar icon click
+  const handleCalendarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled && dateInputRef.current) {
+      dateInputRef.current.showPicker?.();
+    }
   };
 
   // Handle text input blur for validation
@@ -157,17 +155,22 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(({
           maxLength={10}
         />
         
-        {/* Calendar icon */}
-        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        {/* Calendar icon - clickable */}
+        <div 
+          className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+          onClick={handleCalendarClick}
+        >
+          <Calendar className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+        </div>
         
-        {/* Hidden date picker */}
+        {/* Hidden date picker - positioned off-screen */}
         <input
           ref={dateInputRef}
           type="date"
           value={ddmmyyyyToISO(value)}
           onChange={handleDatePickerChange}
           disabled={disabled}
-          className="absolute inset-0 opacity-0 cursor-pointer"
+          className="absolute -left-[9999px] opacity-0 pointer-events-none"
           tabIndex={-1}
         />
       </div>
