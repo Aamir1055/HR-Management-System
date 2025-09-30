@@ -479,7 +479,7 @@ const employeeController = {
   },
   
   /**
-   * Get positions by office
+   * Get positions by office (configured positions)
    */
   async getPositionsByOffice(req, res) {
     try {
@@ -496,6 +496,28 @@ const employeeController = {
       res.json(results);
     } catch (error) {
       handleError(res, error, 'Failed to get positions by office');
+    }
+  },
+  
+  /**
+   * Get positions actually held by employees in office
+   */
+  async getActivePositionsByOffice(req, res) {
+    try {
+      const { officeId } = req.params;
+      
+      const [results] = await req.db.query(`
+        SELECT DISTINCT p.id, p.title, COUNT(e.id) as employee_count
+        FROM positions p
+        INNER JOIN employees e ON p.id = e.position_id
+        WHERE e.office_id = ? AND e.status = 1
+        GROUP BY p.id, p.title
+        ORDER BY p.title
+      `, [officeId]);
+      
+      res.json(results);
+    } catch (error) {
+      handleError(res, error, 'Failed to get active positions by office');
     }
   },
   

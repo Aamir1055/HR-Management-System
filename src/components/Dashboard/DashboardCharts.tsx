@@ -393,16 +393,6 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
         </div>
       </div>
 
-      {/* Employee Distribution Doughnut Chart - Full Width */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">Employee Distribution by Office</h3>
-        <div className="h-80 flex justify-center">
-          <div className="w-full max-w-lg">
-            <Doughnut data={doughnutChartData} options={doughnutChartOptions} />
-          </div>
-        </div>
-      </div>
-
       {/* Summary Statistics */}
       <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-xl p-8 text-white">
         <h3 className="text-2xl font-bold mb-6 text-center">Quick Statistics</h3>

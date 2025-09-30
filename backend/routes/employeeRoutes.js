@@ -56,6 +56,7 @@ router.get('/summary-by-platform', requireAuth, employeeController.getSummaryByP
 router.get('/offices/options', requireAuth, addUserOffices, employeeController.getOfficeOptions);
 router.get('/positions/options', requireAuth, employeeController.getPositionOptions);
 router.get('/positions/by-office/:officeId', requireAuth, employeeController.getPositionsByOffice);
+router.get('/positions/active-by-office/:officeId', requireAuth, employeeController.getActivePositionsByOffice);
 router.get('/platforms/options', requireAuth, employeeController.getPlatformOptions);
 
 // =================== SHIFT TIMINGS UTILITY ROUTES ======================

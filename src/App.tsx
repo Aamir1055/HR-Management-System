@@ -10,6 +10,7 @@ import { LoginForm } from './components/Auth/LoginForm';
 import FirstLogin2FASetupPage from './pages/FirstLogin2FASetupPage';
 import AddEmployeePage from './pages/AddEmployee';
 import { Dashboard } from './pages/Dashboard';
+import { UnifiedDashboard } from './pages/UnifiedDashboard';
 import { Employees } from './pages/Employees';
 import PayrollReports from './pages/PayrollReports';
 import HalfDayManagement from './pages/HalfDayManagement';
@@ -133,8 +134,28 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
+      {/* === UNIFIED DASHBOARD ROUTE === */}
       <Route
         path="/"
+        element={
+          <ProtectedRoute permission="view_dashboard">
+            <UnifiedDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute permission="view_dashboard">
+            <UnifiedDashboard />
+          </ProtectedRoute>
+        }
+      />
+      {/* === END UNIFIED DASHBOARD ROUTE === */}
+
+      {/* === LEGACY DASHBOARD ROUTES (for backward compatibility) === */}
+      <Route
+        path="/dashboard-overview"
         element={
           <ProtectedRoute permission="view_dashboard">
             <Dashboard />
@@ -149,6 +170,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* === END LEGACY DASHBOARD ROUTES === */}
 
       {/* === EMPLOYEE ROUTES === */}
       <Route

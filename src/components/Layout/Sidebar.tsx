@@ -25,8 +25,6 @@ const navigationGroups = [
     name: 'Overview',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Dashboard by Platform', href: '/dashboard-by-platform', icon: LayoutDashboard },
-      { name: 'Celebrations', href: '/celebrations', icon: Gift },
     ]
   },
   {
