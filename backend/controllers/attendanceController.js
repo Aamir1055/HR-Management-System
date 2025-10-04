@@ -5,6 +5,7 @@
 const db = require('../db');
 const XLSX = require('xlsx');
 const axios = require('axios');
+const { calculateAttendanceMetrics, batchCalculateAttendanceMetrics } = require('../utils/attendanceCalculator');
 
 // Helper function to get user's office names
 async function getUserOfficeNames(req) {
@@ -203,10 +204,51 @@ exports.upload = async (req, res) => {
       throw new Error('No valid records found after validation');
     }
 
-    await db.query(
-      'INSERT INTO attendance (employee_id, date, punch_in, punch_out) VALUES ?',
-      [validRecords.map(r => [r.employee_id, r.date, r.punch_in, r.punch_out])]
+    // Get employee data for calculations
+    const employeeIds = [...new Set(validRecords.map(r => r.employee_id))];
+    const [employees] = await db.query(
+      `SELECT employeeId, shift_timings FROM employees WHERE employeeId IN (${employeeIds.map(() => '?').join(',')})
+      `,
+      employeeIds
     );
+    
+    // Calculate attendance metrics for each record
+    const recordsWithCalculations = batchCalculateAttendanceMetrics(validRecords, employees);
+    
+    // Prepare data for insertion with calculated values
+    const insertData = recordsWithCalculations.map(r => [
+      r.employee_id, 
+      r.date, 
+      r.punch_in, 
+      r.punch_out,
+      r.actual_hours_worked,
+      r.late_minutes,
+      r.early_departure_minutes,
+      r.attendance_status,
+      r.is_half_day,
+      r.is_late,
+      r.duty_hours_deficit,
+      r.duty_hours
+    ]);
+    
+    await db.query(`
+      INSERT INTO attendance (
+        employee_id, date, punch_in, punch_out, 
+        actual_hours_worked, late_minutes, early_departure_minutes, 
+        attendance_status, is_half_day, is_late, duty_hours_deficit, duty_hours
+      ) VALUES ?
+      ON DUPLICATE KEY UPDATE
+        punch_in = VALUES(punch_in),
+        punch_out = VALUES(punch_out),
+        actual_hours_worked = VALUES(actual_hours_worked),
+        late_minutes = VALUES(late_minutes),
+        early_departure_minutes = VALUES(early_departure_minutes),
+        attendance_status = VALUES(attendance_status),
+        is_half_day = VALUES(is_half_day),
+        is_late = VALUES(is_late),
+        duty_hours_deficit = VALUES(duty_hours_deficit),
+        duty_hours = VALUES(duty_hours)
+    `, [insertData]);
 
     res.json({ success: true, message: 'Attendance data uploaded successfully', recordsProcessed: validRecords.length });
   } catch (err) {
@@ -318,14 +360,50 @@ exports.createOrUpdate = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found or access denied' });
     }
 
-    // MySQL 8.0+: upsert with ON DUPLICATE KEY UPDATE
+    // Get employee data for calculations
+    const [employees] = await db.query(
+      'SELECT employeeId, shift_timings FROM employees WHERE employeeId = ?',
+      [employee_id]
+    );
+    
+    if (employees.length === 0) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    
+    // Calculate attendance metrics
+    const attendanceRecord = { employee_id, date, punch_in, punch_out };
+    const calculations = calculateAttendanceMetrics(attendanceRecord, employees[0]);
+    
+    // MySQL 8.0+: upsert with calculated values
     await db.query(
-      `INSERT INTO attendance (employee_id, date, punch_in, punch_out)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO attendance (
+        employee_id, date, punch_in, punch_out,
+        actual_hours_worked, late_minutes, early_departure_minutes,
+        attendance_status, is_half_day, is_late, duty_hours_deficit, duty_hours
+      )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         punch_in  = VALUES(punch_in),
-         punch_out = VALUES(punch_out)`,
-      [employee_id, date, punch_in, punch_out]
+         punch_in = VALUES(punch_in),
+         punch_out = VALUES(punch_out),
+         actual_hours_worked = VALUES(actual_hours_worked),
+         late_minutes = VALUES(late_minutes),
+         early_departure_minutes = VALUES(early_departure_minutes),
+         attendance_status = VALUES(attendance_status),
+         is_half_day = VALUES(is_half_day),
+         is_late = VALUES(is_late),
+         duty_hours_deficit = VALUES(duty_hours_deficit),
+         duty_hours = VALUES(duty_hours)`,
+      [
+        employee_id, date, punch_in, punch_out,
+        calculations.actual_hours_worked,
+        calculations.late_minutes,
+        calculations.early_departure_minutes,
+        calculations.attendance_status,
+        calculations.is_half_day,
+        calculations.is_late,
+        calculations.duty_hours_deficit,
+        calculations.duty_hours
+      ]
     );
 
     // Fetch the freshly-inserted/updated row

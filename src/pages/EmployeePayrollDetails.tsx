@@ -77,122 +77,122 @@
       return approvedLeaves.has(`${empId}-${date}`);
     }, [approvedLeaves]);
 
-    // Calculate payroll data with missing dates
-    const payrollData = useMemo(() => {
-      console.log('🔄 Calculating payroll data...', {
-        employeeExists: !!employee,
-        dailyRowsCount: dailyRows.length,
-        approvedLeavesCount: approvedLeaves.size,
-        workingDays
-      });
+  // Calculate payroll data with missing dates - FIXED: Use backend calculated values
+  const payrollData = useMemo(() => {
+    console.log('🔄 Calculating payroll data...', {
+      employeeExists: !!employee,
+      dailyRowsCount: dailyRows.length,
+      approvedLeavesCount: approvedLeaves.size,
+      workingDays
+    });
 
-      if (!employee) {
-        return {
-          baseSalary: 0,
-          perDaySalary: 0,
-          actualPresentDays: 0,
-          totalHalfDays: 0,
-          totalLateDays: 0,
-          actualAbsentDays: 0,
-          approvedLeaveDays: 0,
-          missingDays: 0,
-          missingDates: [] as string[],
-          excessLeaves: 0,
-          totalDeductions: 0,
-          netSalary: 0,
-          deductionsCapped: false,
-          deductionBreakdown: {
-            absentDaysDeduction: 0,
-            approvedLeavesDeduction: 0,
-            halfDaysDeduction: 0,
-            missingDaysDeduction: 0,
-            excessLeavesDeduction: 0,
-            totalBeforeCapping: 0
-          }
-        };
-      }
-
-      const baseSalary = parseFloat(employee.monthlySalary.toString() || '0');
-      const perDaySalary = workingDays ? (baseSalary / workingDays) : 0;
-      
-      // Count approved leaves
-      const approvedLeaveDays = approvedLeaves.size;
-      
-      // Calculate actual attendance stats (excluding approved leaves)
-      let actualPresentDays = 0;
-      let totalHalfDays = 0;
-      let totalLateDays = 0;
-      let actualAbsentDays = 0;
-      let excessLeaves = 0;
-
-      dailyRows.forEach(row => {
-        const dateKey = `${row.employeeId}-${row.date}`;
-        const isApproved = approvedLeaves.has(dateKey);
-        
-        if (!isApproved) {
-          // Only count non-approved leave days
-          actualPresentDays += row.presentDays || 0;
-          totalHalfDays += row.halfDays || 0;
-          totalLateDays += row.lateDays || 0;
-          if (row.excessLeaves > 0) {
-            excessLeaves += row.excessLeaves || 0;
-          } else {
-            actualAbsentDays += row.absentDays || 0;
-          }
-        }
-      });
-
-      // Calculate missing days and dates (working days without attendance records or approved leaves)
-      const allRecordedDates = new Set(dailyRows.map(row => moment(row.date).format('YYYY-MM-DD')));
-      const approvedLeaveDates = new Set(
-        Array.from(approvedLeaves).map(key => key.split('-').slice(1).join('-'))
-      );
-      
-      const missingDates = workingDaysArray.filter(date => 
-        !allRecordedDates.has(date) && !approvedLeaveDates.has(date)
-      );
-      const missingDays = missingDates.length;
-
-      // Calculate deductions
-      const absentDaysDeduction = actualAbsentDays * perDaySalary;
-      const approvedLeavesDeduction = approvedLeaveDays * perDaySalary;
-      const halfDaysDeduction = totalHalfDays * (perDaySalary / 2);
-      const missingDaysDeduction = missingDays * perDaySalary;
-      const excessLeavesDeduction = excessLeaves * 2 * perDaySalary;
-
-      const totalDeductionsBeforeCapping = absentDaysDeduction + approvedLeavesDeduction + 
-                                            halfDaysDeduction + missingDaysDeduction + excessLeavesDeduction;
-      
-      const cappedDeductions = Math.min(totalDeductionsBeforeCapping, baseSalary);
-      const netSalary = baseSalary - cappedDeductions;
-      
-      // Display absent days includes approved leaves
-      const displayAbsentDays = actualAbsentDays + approvedLeaveDays;
-
+    if (!employee) {
       return {
-        baseSalary,
-        perDaySalary,
-        actualPresentDays,
-        totalHalfDays,
-        totalLateDays,
-        actualAbsentDays: displayAbsentDays,
-        approvedLeaveDays,
-        missingDays,
-        missingDates,
-        excessLeaves,
-        totalDeductions: cappedDeductions,
-        netSalary,
-        deductionsCapped: totalDeductionsBeforeCapping > baseSalary,
+        baseSalary: 0,
+        perDaySalary: 0,
+        actualPresentDays: 0,
+        totalHalfDays: 0,
+        totalLateDays: 0,
+        actualAbsentDays: 0,
+        approvedLeaveDays: 0,
+        missingDays: 0,
+        missingDates: [] as string[],
+        excessLeaves: 0,
+        totalDeductions: 0,
+        netSalary: 0,
+        deductionsCapped: false,
         deductionBreakdown: {
-          absentDaysDeduction,
-          approvedLeavesDeduction,
-          halfDaysDeduction,
-          missingDaysDeduction,
-          excessLeavesDeduction,
-          totalBeforeCapping: totalDeductionsBeforeCapping
+          absentDaysDeduction: 0,
+          approvedLeavesDeduction: 0,
+          halfDaysDeduction: 0,
+          missingDaysDeduction: 0,
+          excessLeavesDeduction: 0,
+          totalBeforeCapping: 0
         }
       };
-    }, [employee, dailyRows, workingDays, workingDaysArray, approvedLeaves]);
+    }
+
+    // FIXED: Use backend calculated values for salary data
+    const baseSalary = parseFloat(employee.baseSalary?.toString() || employee.monthlySalary?.toString() || '0');
+    const totalDeductions = parseFloat(employee.totalDeductions?.toString() || '0');
+    const netSalary = parseFloat(employee.netSalary?.toString() || '0');
+    const perDaySalary = workingDays ? (baseSalary / workingDays) : 0;
+    
+    // Count approved leaves
+    const approvedLeaveDays = approvedLeaves.size;
+    
+    // Calculate actual attendance stats (excluding approved leaves) for display
+    let actualPresentDays = 0;
+    let totalHalfDays = 0;
+    let totalLateDays = 0;
+    let actualAbsentDays = 0;
+    let excessLeaves = 0;
+
+    dailyRows.forEach(row => {
+      const dateKey = `${row.employeeId}-${row.date}`;
+      const isApproved = approvedLeaves.has(dateKey);
+      
+      if (!isApproved) {
+        // Only count non-approved leave days
+        actualPresentDays += row.presentDays || 0;
+        totalHalfDays += row.halfDays || 0;
+        totalLateDays += row.lateDays || 0;
+        if (row.excessLeaves > 0) {
+          excessLeaves += row.excessLeaves || 0;
+        } else {
+          actualAbsentDays += row.absentDays || 0;
+        }
+      }
+    });
+
+    // Calculate missing days and dates (working days without attendance records or approved leaves)
+    const allRecordedDates = new Set(dailyRows.map(row => moment(row.date).format('YYYY-MM-DD')));
+    const approvedLeaveDates = new Set(
+      Array.from(approvedLeaves).map(key => key.split('-').slice(1).join('-'))
+    );
+    
+    const missingDates = workingDaysArray.filter(date => 
+      !allRecordedDates.has(date) && !approvedLeaveDates.has(date)
+    );
+    const missingDays = missingDates.length;
+
+    // Calculate deductions for display breakdown only
+    const absentDaysDeduction = actualAbsentDays * perDaySalary;
+    const approvedLeavesDeduction = approvedLeaveDays * perDaySalary;
+    const halfDaysDeduction = totalHalfDays * (perDaySalary / 2);
+    const missingDaysDeduction = missingDays * perDaySalary;
+    const excessLeavesDeduction = excessLeaves * 2 * perDaySalary;
+
+    const totalDeductionsBeforeCapping = absentDaysDeduction + approvedLeavesDeduction + 
+                                          halfDaysDeduction + missingDaysDeduction + excessLeavesDeduction;
+    
+    // Display absent days includes approved leaves
+    const displayAbsentDays = actualAbsentDays + approvedLeaveDays;
+
+    return {
+      baseSalary, // From backend
+      perDaySalary,
+      actualPresentDays,
+      totalHalfDays,
+      totalLateDays,
+      actualAbsentDays: displayAbsentDays,
+      approvedLeaveDays,
+      missingDays,
+      missingDates,
+      excessLeaves,
+      totalDeductions, // From backend
+      netSalary, // From backend - this should fix the 0.00 issue
+      deductionsCapped: totalDeductionsBeforeCapping > baseSalary,
+      deductionBreakdown: {
+        absentDaysDeduction,
+        approvedLeavesDeduction,
+        halfDaysDeduction,
+        missingDaysDeduction,
+        excessLeavesDeduction,
+        totalBeforeCapping: totalDeductionsBeforeCapping
+      }
+    };
+  }, [employee, dailyRows, workingDays, workingDaysArray, approvedLeaves]);
 
     // Format date helper
     const formatDate = (dateString: string) => {

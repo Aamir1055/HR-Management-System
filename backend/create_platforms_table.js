@@ -1,5 +1,3 @@
-// Database migration to create platforms table for categorizing employee work platforms
-// Sets up platform master data with sample entries for Web Dev, Mobile Dev, Data Analytics, etc.
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 

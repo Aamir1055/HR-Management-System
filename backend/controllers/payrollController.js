@@ -10,6 +10,7 @@ console.log("==> payrollController.js loaded");
 const db = require('../db');
 const moment = require('moment');
 const axios = require('axios');
+const { batchCalculateAttendanceMetrics } = require('../utils/attendanceCalculator');
 
 // Configure moment to use consistent timezone handling
 moment.suppressDeprecationWarnings = true;
@@ -199,30 +200,33 @@ const getEmployeeTimingConfig = async (employee) => {
    Enhanced Attendance Metrics with Half Day Support (NEW)
 ------------------------------------------------------------------ */
 const calculateAttendanceMetricsEnhanced = async (employee, attRecords, workingDays, approvedLeavesSet = new Set()) => {
-  // First, check if employee is eligible for half day shifts
-  const isHalfDayEligible = await isEmployeeEligibleForHalfDay(employee);
+  // Get employee shift timing data
+  const [employees] = await db.query(
+    'SELECT employeeId, shift_timings FROM employees WHERE employeeId = ?',
+    [employee.employeeId]
+  );
   
-  // If not eligible, use existing logic
-  if (!isHalfDayEligible) {
-    console.log(`Employee ${employee.employeeId} not eligible for half day shifts, using standard calculation`);
-    return await calculateAttendanceMetrics(employee, attRecords, workingDays, approvedLeavesSet);
+  if (employees.length === 0) {
+    console.error(`Employee ${employee.employeeId} not found`);
+    return {
+      presentDays: 0, halfDays: 0, lateDays: 0, plannedHalfDays: 0,
+      absentDays: 0, approvedLeaveDays: approvedLeavesSet.size,
+      excessLeaves: 0, dayStatus: [], streakMasks: {}
+    };
   }
-  
-  // Enhanced calculation with half day support
-  const { duty_hours, reporting_time } = await getEmployeeTimingConfig(employee);
-  const dutyMinutes = Math.round(Number(duty_hours) * 60);
-  const repMoment = moment(reporting_time, ['HH:mm:ss', 'HH:mm']);
 
   let presentDays = 0, halfDays = 0, lateDays = 0, plannedHalfDays = 0;
   let dayStatus = [];
   let lateRecords = [];
 
-  console.log(`\n🔄 ENHANCED CALCULATION for ${employee.employeeId} (Half Day Eligible)`);
+  console.log(`\n🔄 ENHANCED CALCULATION for ${employee.employeeId} (Using Shift Timings)`);
   
-  const sortedRecords = attRecords.slice().sort((a, b) => moment(a.date).diff(moment(b.date)));
-
-  for (const rec of sortedRecords) {
-    const dateStr = formatDateForDB(rec.date);
+  // Use the new attendance calculation system
+  const recordsWithCalculations = batchCalculateAttendanceMetrics(attRecords, employees);
+  
+  // Process calculated records and handle approved leaves
+  for (const calculatedRecord of recordsWithCalculations) {
+    const dateStr = formatDateForDB(calculatedRecord.date);
     const isApprovedLeave = approvedLeavesSet.has(dateStr);
     
     if (isApprovedLeave) {
@@ -230,86 +234,47 @@ const calculateAttendanceMetricsEnhanced = async (employee, attRecords, workingD
       continue;
     }
 
-    const punchInStr = rec.punch_in?.toString().trim();
-    const punchOutStr = rec.punch_out?.toString().trim();
-    
-    const punchIn = moment(punchInStr, ['HH:mm:ss', 'HH:mm'], true);
-    const punchOut = moment(punchOutStr, ['HH:mm:ss', 'HH:mm'], true);
-    
-    if (!punchInStr || !punchOutStr || 
-        punchInStr === "00:00" || punchOutStr === "00:00" ||
-        punchInStr === "00:00:00" || punchOutStr === "00:00:00" ||
-        !punchIn.isValid() || !punchOut.isValid()) {
-      dayStatus.push({ date: dateStr, status: 'A' });
-      continue;
-    }
-
-    const worked = punchOut.diff(punchIn, 'minutes');
-    const lateMins = punchIn.diff(repMoment, 'minutes');
-    
-    if (isNaN(worked) || worked <= 0 || worked > 24 * 60) {
-      dayStatus.push({ date: dateStr, status: 'A' });
-      continue;
-    }
-
-    // NEW: Check for planned half day shift
-    const halfDayInfo = await detectHalfDayShift(punchInStr, punchOutStr, worked);
-    
-    if (halfDayInfo.isHalfDayShift && halfDayInfo.isValidHalfDay) {
-      // This is a valid planned half day
-      plannedHalfDays++;
-      presentDays += 0.5; // Count as half attendance
-      
-      // Check if employee was late for the half day shift
-      if (halfDayInfo.isLate) {
-        lateDays++; // Add to late count
-        lateRecords.push({ 
-          date: dateStr, 
-          index: dayStatus.length, 
-          isFullDay: false,
-          isHalfDay: true,
-          lateByMinutes: halfDayInfo.lateByMinutes
-        });
-      }
-      
-      // Determine status based on shift type and lateness
-      let status;
-      if (halfDayInfo.shiftType.includes('Morning')) {
-        status = halfDayInfo.isLate ? 'MHDL' : 'MHD'; // Morning Half Day Late/Regular
-      } else {
-        status = halfDayInfo.isLate ? 'AHDL' : 'AHD'; // Afternoon Half Day Late/Regular
-      }
-      
-      dayStatus.push({ 
-        date: dateStr, 
-        status,
-        shiftType: halfDayInfo.shiftType,
-        lateByMinutes: halfDayInfo.lateByMinutes || 0
-      });
-      
-      console.log(`  -> Planned Half Day: ${halfDayInfo.shiftType} ${halfDayInfo.isLate ? `(Late by ${halfDayInfo.lateByMinutes} min)` : ''}`);
-      continue;
-    }
-
-    // Standard attendance calculation (existing logic)
-    presentDays++;
-    const isLate = lateMins >= 1;
-    const isFullDay = worked >= dutyMinutes;
-    
-    if (isLate) {
-      lateDays++;
-      lateRecords.push({ date: dateStr, index: dayStatus.length, isFullDay });
-    }
-    
+    // Use calculated status from attendance calculator
     let status;
-    if (isFullDay) {
-      status = isLate ? 'PL' : 'P';
-    } else {
-      halfDays++;
-      status = isLate ? 'HDL' : 'HD';
+    switch (calculatedRecord.attendance_status) {
+      case 'PRESENT':
+        status = 'P';
+        presentDays++;
+        break;
+      case 'PRESENT_LATE':
+        status = 'PL';
+        presentDays++;
+        lateDays++;
+        lateRecords.push({
+          date: dateStr,
+          index: dayStatus.length,
+          isFullDay: true
+        });
+        break;
+      case 'HALF_DAY':
+        status = 'HD';
+        presentDays++;
+        halfDays++;
+        break;
+      case 'HALF_DAY_LATE':
+        status = 'HDL';
+        presentDays++;
+        halfDays++;
+        lateDays++;
+        lateRecords.push({
+          date: dateStr,
+          index: dayStatus.length,
+          isFullDay: false
+        });
+        break;
+      case 'ABSENT':
+      default:
+        status = 'A';
+        break;
     }
     
     dayStatus.push({ date: dateStr, status });
+    console.log(`  -> ${dateStr}: ${status} (Hours: ${calculatedRecord.actual_hours_worked}/${calculatedRecord.duty_hours}, Late: ${calculatedRecord.late_minutes}min)`);
   }
 
   // Apply existing late day penalties
@@ -376,26 +341,42 @@ const calculateAttendanceMetricsEnhanced = async (employee, attRecords, workingD
 };
 
 /* ------------------------------------------------------------------
-   ORIGINAL: Attendance metrics with proper approved leave handling
+   UPDATED: Attendance metrics using new shift timing logic
 ------------------------------------------------------------------ */
 const calculateAttendanceMetrics = async (employee, attRecords, workingDays, approvedLeavesSet = new Set()) => {
-  const { duty_hours, reporting_time } = await getEmployeeTimingConfig(employee);
-  const dutyMinutes = Math.round(Number(duty_hours) * 60);
-  const repMoment = moment(reporting_time, ['HH:mm:ss', 'HH:mm']);
-
   let presentDays = 0, halfDays = 0, lateDays = 0;
   let dayStatus = [];
   let lateRecords = [];
+  
+  // First, get all employees' shift timing data
+  const [employees] = await db.query(
+    'SELECT employeeId, shift_timings FROM employees WHERE employeeId = ?',
+    [employee.employeeId]
+  );
+  
+  if (employees.length === 0) {
+    console.error(`Employee ${employee.employeeId} not found`);
+    return {
+      presentDays: 0,
+      halfDays: 0, 
+      lateDays: 0,
+      absentDays: 0,
+      approvedLeaveDays: approvedLeavesSet.size,
+      excessLeaves: 0,
+      dayStatus: [],
+      streakMasks: {}
+    };
+  }
 
   console.log(`\n🔄 CALCULATING METRICS for ${employee.employeeId}`);
   console.log(`Approved leaves set:`, Array.from(approvedLeavesSet));
 
-  // Sort records by date for consistent processing
-  const sortedRecords = attRecords.slice().sort((a, b) => moment(a.date).diff(moment(b.date)));
-
-  // Process each attendance record
-  for (const rec of sortedRecords) {
-    const dateStr = formatDateForDB(rec.date);
+  // Use the new attendance calculation system
+  const recordsWithCalculations = batchCalculateAttendanceMetrics(attRecords, employees);
+  
+  // Process calculated records and handle approved leaves
+  for (const calculatedRecord of recordsWithCalculations) {
+    const dateStr = formatDateForDB(calculatedRecord.date);
     const isApprovedLeave = approvedLeavesSet.has(dateStr);
     
     console.log(`Processing date ${dateStr}: approved_leave=${isApprovedLeave}`);
@@ -407,60 +388,47 @@ const calculateAttendanceMetrics = async (employee, attRecords, workingDays, app
       continue;
     }
 
-    const punchInStr = rec.punch_in?.toString().trim();
-    const punchOutStr = rec.punch_out?.toString().trim();
-    
-    // Validate punch times with multiple formats
-    const punchIn = moment(punchInStr, ['HH:mm:ss', 'HH:mm'], true);
-    const punchOut = moment(punchOutStr, ['HH:mm:ss', 'HH:mm'], true);
-    
-    // Check for invalid or missing punch data
-    if (
-      !punchInStr || !punchOutStr ||
-      punchInStr === "00:00" || punchOutStr === "00:00" ||
-      punchInStr === "00:00:00" || punchOutStr === "00:00:00" ||
-      !punchIn.isValid() || !punchOut.isValid()
-    ) {
-      dayStatus.push({ date: dateStr, status: 'A' });
-      console.log(`  -> Marked as Absent (invalid punch)`);
-      continue;
-    }
-
-    const worked = punchOut.diff(punchIn, 'minutes');
-    const lateMins = punchIn.diff(repMoment, 'minutes');
-    
-    // Validate worked time
-    if (isNaN(worked) || worked <= 0 || worked > 24 * 60) {
-      dayStatus.push({ date: dateStr, status: 'A' });
-      console.log(`  -> Marked as Absent (invalid work hours)`);
-      continue;
-    }
-
-    // Employee is present if they have valid punch in/out
-    presentDays++;
-    const isLate = lateMins >= 1;
-    const isFullDay = worked >= dutyMinutes;
-    
-    if (isLate) {
-      lateDays++;
-      lateRecords.push({
-        date: dateStr,
-        index: dayStatus.length,
-        isFullDay
-      });
-    }
-    
-    // Determine status based on work hours and punctuality
+    // Use calculated status from attendance calculator
     let status;
-    if (isFullDay) {
-      status = isLate ? 'PL' : 'P'; // Present Late or Present
-    } else {
-      halfDays++;
-      status = isLate ? 'HDL' : 'HD'; // Half Day Late or Half Day
+    switch (calculatedRecord.attendance_status) {
+      case 'PRESENT':
+        status = 'P';
+        presentDays++;
+        break;
+      case 'PRESENT_LATE':
+        status = 'PL';
+        presentDays++;
+        lateDays++;
+        lateRecords.push({
+          date: dateStr,
+          index: dayStatus.length,
+          isFullDay: true
+        });
+        break;
+      case 'HALF_DAY':
+        status = 'HD';
+        presentDays++;
+        halfDays++;
+        break;
+      case 'HALF_DAY_LATE':
+        status = 'HDL';
+        presentDays++;
+        halfDays++;
+        lateDays++;
+        lateRecords.push({
+          date: dateStr,
+          index: dayStatus.length,
+          isFullDay: false
+        });
+        break;
+      case 'ABSENT':
+      default:
+        status = 'A';
+        break;
     }
     
     dayStatus.push({ date: dateStr, status });
-    console.log(`  -> Marked as ${status}`);
+    console.log(`  -> Marked as ${status} (Hours: ${calculatedRecord.actual_hours_worked}/${calculatedRecord.duty_hours}, Late: ${calculatedRecord.late_minutes}min)`);
   }
 
   // Handle excess late days (convert to half days after 3rd occurrence)
@@ -683,9 +651,9 @@ const getEmployeePayrollDetails = async (req, res) => {
     const workingDays = await fetchWorkingDaysCount(year, month);
     const workingDaysArray = await fetchWorkingDaysArray(year, month);
 
-    // FIXED: Fetch attendance records WITHOUT approved leave info initially
+    // FIXED: Fetch attendance records WITHOUT approved leave info initially - include employee_id
     const [attRows] = await db.query(
-      `SELECT a.date, a.punch_in, a.punch_out
+      `SELECT a.employee_id, a.date, a.punch_in, a.punch_out
        FROM attendance a
        WHERE a.employee_id=? AND a.date BETWEEN ? AND ?`,
       [employeeId, fromDate, toDate]
