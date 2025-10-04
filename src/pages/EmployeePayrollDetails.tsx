@@ -49,6 +49,7 @@
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
     const [approvedLeaves, setApprovedLeaves] = useState<Set<string>>(new Set());
+    const [halfDayWaivers, setHalfDayWaivers] = useState<Set<string>>(new Set()); // NEW: Track waived half days
     const [workingDays, setWorkingDays] = useState<number>(1);
     const [workingDaysArray, setWorkingDaysArray] = useState<string[]>([]);
     const [selectedMonth, setSelectedMonth] = useState('');
@@ -346,6 +347,77 @@
       }
     };
 
+    // 🔥 NEW: Half day waiver toggle handler
+    const handleHalfDayWaiverToggle = async (empId: string, date: string, isChecked: boolean, event: React.ChangeEvent<HTMLInputElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const dateKey = `${empId}-${date}`;
+      
+      // Prevent multiple simultaneous operations on the same waiver
+      if (processingLeaves.has(dateKey)) {
+        return;
+      }
+
+      console.log(`🔄 Toggling half day waiver: ${dateKey} -> ${isChecked}`);
+      setProcessingLeaves(prev => new Set([...prev, dateKey]));
+
+      // Store current scroll position to restore after data refresh
+      const scrollContainer = document.querySelector('.max-h-\\[550px\\]');
+      const currentScrollTop = scrollContainer?.scrollTop || 0;
+
+      try {
+        // Backend operations first
+        if (isChecked) {
+          console.log(`✅ Adding half day waiver for ${dateKey} to backend`);
+          
+          await axios.post('/half-day-waivers/toggle', {
+            employee_id: parseInt(empId),
+            date: moment(date).format('YYYY-MM-DD')
+          });
+        } else {
+          console.log(`❌ Removing half day waiver for ${dateKey} from backend`);
+          
+          await axios.delete(`/half-day-waivers/${empId}/${moment(date).format('YYYY-MM-DD')}`);
+        }
+
+        console.log(`✅ Successfully ${isChecked ? 'added' : 'removed'} half day waiver for ${dateKey}`);
+
+        // Update local state
+        if (isChecked) {
+          setHalfDayWaivers(prev => new Set([...prev, dateKey]));
+        } else {
+          setHalfDayWaivers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(dateKey);
+            return newSet;
+          });
+        }
+
+        // Refresh payroll data to reflect changes
+        await fetchDetailsWithoutLoading(selectedMonth);
+
+        // Restore scroll position after data is loaded
+        setTimeout(() => {
+          if (scrollContainer) {
+            scrollContainer.scrollTop = currentScrollTop;
+          }
+        }, 100);
+
+        console.log(`✅ Data refreshed successfully for ${dateKey}`);
+
+      } catch (error: any) {
+        console.error(`❌ Error toggling half day waiver:`, error);
+        alert(`Failed to ${isChecked ? 'add' : 'remove'} half day waiver: ${error.response?.data?.message || error.message}`);
+      } finally {
+        setProcessingLeaves(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(dateKey);
+          return newSet;
+        });
+      }
+    };
+
     // Fetch approved leaves
     const fetchApprovedLeaves = async () => {
       if (!employeeId || !selectedMonth) return;
@@ -368,6 +440,31 @@
       } catch (error: any) {
         console.error('Error fetching approved leaves:', error);
         setApprovedLeaves(new Set());
+      }
+    };
+
+    // 🔥 NEW: Fetch half day waivers
+    const fetchHalfDayWaivers = async () => {
+      if (!employeeId || !selectedMonth) return;
+      
+      try {
+        const [year, month] = selectedMonth.split('-');
+        const { data } = await axios.get(`/half-day-waivers/${employeeId}?year=${year}&month=${month}`);
+        
+        const halfDayWaiversSet = new Set<string>();
+        if (data.data && Array.isArray(data.data)) {
+          data.data.forEach((waiver: any) => {
+            const dateKey = `${employeeId}-${waiver.date}`;
+            halfDayWaiversSet.add(dateKey);
+          });
+        }
+        
+        console.log('📥 Setting half day waivers:', Array.from(halfDayWaiversSet));
+        setHalfDayWaivers(halfDayWaiversSet);
+        
+      } catch (error: any) {
+        console.error('Error fetching half day waivers:', error);
+        setHalfDayWaivers(new Set());
       }
     };
 
@@ -631,7 +728,8 @@
             await Promise.all([
               fetchDetails(selectedMonth),
               fetchWorkingDays(selectedMonth),
-              fetchApprovedLeaves()
+              fetchApprovedLeaves(),
+              fetchHalfDayWaivers() // NEW: Also fetch half day waivers
             ]);
           } catch (error) {
             console.error('Error fetching data:', error);
@@ -953,6 +1051,7 @@
                           {renderSortIcon('approvedLeave' as any)}
                         </div>
                       </th>
+                      <th className="py-3 px-4 font-bold text-purple-700 text-center">Half Day Waiver</th>
                       <th className="py-3 px-4 font-bold text-gray-700 text-center">Action</th>
                     </tr>
                   </thead>
@@ -1054,6 +1153,35 @@
                                 disabled={processingLeaves.has(`${row.employeeId}-${row.date}`)}
                                 title={`Toggle approved leave for ${moment(row.date).format('YYYY-MM-DD')}`}
                               />
+                            )}
+                          </td>
+                          <td 
+                            className="py-3 px-4 text-center"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          >
+                            {/* Half Day Waiver Toggle - only show if employee has half days */}
+                            {row.halfDays > 0 && !isApprovedLeave ? (
+                              processingLeaves.has(`${row.employeeId}-${row.date}`) ? (
+                                <div className="w-5 h-5 mx-auto">
+                                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  className="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2 cursor-pointer"
+                                  checked={halfDayWaivers.has(`${row.employeeId}-${row.date}`)}
+                                  onChange={(e) => {
+                                    handleHalfDayWaiverToggle(row.employeeId, row.date, e.target.checked, e);
+                                  }}
+                                  disabled={processingLeaves.has(`${row.employeeId}-${row.date}`)}
+                                  title={`Toggle half day waiver for ${moment(row.date).format('YYYY-MM-DD')}`}
+                                />
+                              )
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">

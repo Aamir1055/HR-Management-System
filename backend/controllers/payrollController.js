@@ -524,7 +524,7 @@ const calculateAttendanceMetrics = async (employee, attRecords, workingDays, app
 /* ------------------------------------------------------------------
    FIXED: Salary & deductions with approved leaves included
 ------------------------------------------------------------------ */
-const calculateSalaryAndDeductions = (employee, metrics, workingDays, workingDaysArray, approvedLeavesSet) => {
+const calculateSalaryAndDeductions = async (employee, metrics, workingDays, workingDaysArray, approvedLeavesSet, fromDate, toDate) => {
   const baseSalary = parseFloat(employee.monthlySalary || 0);
   const perDaySalary = workingDays ? (baseSalary / workingDays) : 0;
   
@@ -579,8 +579,45 @@ const calculateSalaryAndDeductions = (employee, metrics, workingDays, workingDay
     totalDeductions += excessDeduction;
   }
   
-  if (metrics.halfDays > 0) {
-    halfDayDeduction = metrics.halfDays * (perDaySalary / 2);
+  // NEW: Fetch half day waivers to exclude from deduction
+  let halfDayWaivers = [];
+  try {
+    const [waiverRows] = await db.query(
+      `SELECT date FROM half_day_waivers 
+       WHERE employee_id = ? AND date BETWEEN ? AND ?`,
+      [employee.employeeId, fromDate, toDate]
+    );
+    halfDayWaivers = waiverRows.map(row => moment(row.date).format('YYYY-MM-DD'));
+    console.log(`Half day waivers for ${employee.employeeId}:`, halfDayWaivers);
+  } catch (error) {
+    console.error('Error fetching half day waivers:', error);
+  }
+  
+  // Calculate effective half days (excluding waived ones)
+  let effectiveHalfDays = metrics.halfDays;
+  if (metrics.halfDays > 0 && halfDayWaivers.length > 0) {
+    // Count how many half day dates have waivers
+    let waivedHalfDays = 0;
+    
+    // We need to check against the actual half day dates from dayStatus
+    if (metrics.dayStatus) {
+      for (const dayStatus of metrics.dayStatus) {
+        const isHalfDay = ['HD', 'HDL', 'MHD', 'MHDL', 'AHD', 'AHDL'].includes(dayStatus.status);
+        if (isHalfDay && halfDayWaivers.includes(dayStatus.date)) {
+          waivedHalfDays++;
+        }
+      }
+    }
+    
+    effectiveHalfDays = Math.max(0, metrics.halfDays - waivedHalfDays);
+    console.log(`Half day deduction calculation:`);
+    console.log(`- Total half days: ${metrics.halfDays}`);
+    console.log(`- Waived half days: ${waivedHalfDays}`);
+    console.log(`- Effective half days for deduction: ${effectiveHalfDays}`);
+  }
+  
+  if (effectiveHalfDays > 0) {
+    halfDayDeduction = effectiveHalfDays * (perDaySalary / 2);
     totalDeductions += halfDayDeduction;
   }
   
@@ -596,7 +633,7 @@ const calculateSalaryAndDeductions = (employee, metrics, workingDays, workingDay
   console.log(`- Approved Leaves (${approvedLeaveDays}): ${approvedLeaveDeduction}`);
   console.log(`- Missing Days (${metrics.missingDays || 0}): ${missingDeduction}`);
   console.log(`- Excess Leaves (${metrics.excessLeaves}): ${excessDeduction}`);
-  console.log(`- Half Days (${metrics.halfDays}): ${halfDayDeduction}`);
+  console.log(`- Half Days (${metrics.halfDays}, effective: ${effectiveHalfDays}): ${halfDayDeduction}`);
   console.log(`Total Deductions: ${totalDeductions}`);
   
   // Cap deductions to not exceed base salary
@@ -699,7 +736,7 @@ const getEmployeePayrollDetails = async (req, res) => {
     // Add missing days to metrics
     overallMetrics.missingDays = missingDays;
     
-    const salaryData = calculateSalaryAndDeductions(employee, overallMetrics, workingDays, workingDaysArray, approvedLeavesSet);
+    const salaryData = await calculateSalaryAndDeductions(employee, overallMetrics, workingDays, workingDaysArray, approvedLeavesSet, fromDate, toDate);
 
     // FIXED: Create daily rows with approved leave information
     const dailyRows = [];
@@ -973,7 +1010,7 @@ const getPayrollReports = async (req, res) => {
         }
         metrics.missingDays = missingDays;
         
-        const salaryData = calculateSalaryAndDeductions(employee, metrics, workingDays, workingDaysArray, empApprovedLeaves);
+        const salaryData = await calculateSalaryAndDeductions(employee, metrics, workingDays, workingDaysArray, empApprovedLeaves, fromDate, toDate);
 
         // Save payroll data with proper leave breakdown
         await savePayroll({

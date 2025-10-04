@@ -44,6 +44,7 @@ const commentsRoutes = require('./routes/commentsRoutes'); // NEW - EMPLOYEE COM
 const dashboardRoutes = require('./routes/dashboardRoutes'); // NEW - DASHBOARD
 const recruitmentRoutes = require('./routes/recruitmentRoutes'); // NEW - RECRUITMENT PANEL
 const peticashRoutes = require('./routes/peticashRoutes'); // NEW - PETICASH MANAGEMENT
+const halfDayWaiverRoutes = require('./routes/halfDayWaiverRoutes'); // NEW - HALF DAY WAIVERS
 
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
@@ -148,6 +149,7 @@ app.use('/api/comments', verifyToken, commentsRoutes); // NEW - EMPLOYEE COMMENT
 app.use('/api/dashboard', dashboardRoutes); // NEW - DASHBOARD
 app.use('/api/recruitment', recruitmentRoutes); // NEW - RECRUITMENT PANEL
 app.use('/api/peticash', peticashRoutes); // NEW - PETICASH MANAGEMENT
+app.use('/api/half-day-waivers', halfDayWaiverRoutes); // NEW - HALF DAY WAIVERS
 
 // Error handling middleware
 app.use((err, req, res, next) => {
