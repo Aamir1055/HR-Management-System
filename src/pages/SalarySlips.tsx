@@ -971,6 +971,15 @@ export const SalarySlips: React.FC = () => {
     }
   }, [simplifiedSalarySlips, filters.month, filters.year, setLoadingState]);
 
+  // Grand totals across all generated slips (for synced summary)
+  const grandTotals = useMemo(() => {
+    if (!simplifiedSalarySlips || simplifiedSalarySlips.length === 0) return null;
+    const totalGross = simplifiedSalarySlips.reduce((sum, s) => sum + Number(s.grossSalary || 0), 0);
+    const totalDeductions = simplifiedSalarySlips.reduce((sum, s) => sum + Number(s.totalDeduction || 0), 0);
+    const totalNet = simplifiedSalarySlips.reduce((sum, s) => sum + Number(s.netSalary || 0), 0);
+    return { totalGross, totalDeductions, totalNet, totalEmployees: simplifiedSalarySlips.length };
+  }, [simplifiedSalarySlips]);
+
   // Render loading state
   if (dataLoading) {
     return (
@@ -1536,6 +1545,7 @@ export const SalarySlips: React.FC = () => {
             onPageChange={setCurrentPage}
             filters={filters}
             totalEmployees={filteredEmployees.length}
+            grandTotals={grandTotals || undefined}
           />
         )}
       </div>

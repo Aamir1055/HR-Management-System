@@ -13,6 +13,7 @@
   import moment from 'moment';
   import * as XLSX from 'xlsx';
   import { saveAs } from 'file-saver';
+  import { formatAttendanceDateForDisplay, formatAttendanceDateForServer } from '../utils/dateUtils';
 
   interface DailyRow {
     employeeId: string;
@@ -708,10 +709,36 @@
       }
     };
 
-    // useEffect hooks
+    // Build query string for URL state persistence
+    const buildQueryString = useCallback(() => {
+      const params = new URLSearchParams(window.location.search);
+      
+      // Preserve the month selection by updating fromDate and toDate
+      if (selectedMonth) {
+        const fromDate = moment(selectedMonth).startOf('month').format('YYYY-MM-DD');
+        const toDate = moment(selectedMonth).endOf('month').format('YYYY-MM-DD');
+        params.set('fromDate', fromDate);
+        params.set('toDate', toDate);
+      }
+      
+      // Preserve other parameters that might be passed from parent pages
+      return params.toString();
+    }, [selectedMonth]);
+
+    // Update URL when state changes (for browser back/forward and refresh)
+    useEffect(() => {
+      if (selectedMonth) {
+        const queryString = buildQueryString();
+        const newUrl = queryString ? `?${queryString}` : window.location.pathname;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }, [selectedMonth, buildQueryString]);
+
+    // useEffect hooks - Parse URL parameters on mount
     useEffect(() => {
       const p = new URLSearchParams(window.location.search);
       const fromDateParam = p.get('fromDate');
+      
       if (fromDateParam) {
         const date = moment(fromDateParam);
         setSelectedMonth(date.format('YYYY-MM'));
@@ -793,7 +820,10 @@
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                navigate(-1);
+                // Navigate back with current query string to preserve state
+                const currentQuery = buildQueryString();
+                const backUrl = currentQuery ? `/payroll?${currentQuery}` : '/payroll';
+                navigate(backUrl);
               }}
               className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 border border-blue-300 text-blue-700 rounded hover:bg-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-400"
               aria-label="Back to Payroll Reports"
@@ -823,7 +853,7 @@
                   e.preventDefault();
                   if (dailyRows.length === 0) return;
                   const exportData = dailyRows.map(row => ({
-                    Date: moment(row.date).format('YYYY-MM-DD'),
+                    Date: formatAttendanceDateForDisplay(row.date),
                     'Punch In': row.punch_in,
                     'Punch Out': row.punch_out,
                     'Working Hours': row.workingHours,
@@ -950,7 +980,7 @@
                               key={index}
                               className="inline-block px-2 py-1 bg-amber-200 text-amber-800 text-xs rounded font-medium"
                             >
-                              {formatDate(date)}
+                              {formatAttendanceDateForDisplay(date)}
                             </span>
                           ))}
                         </div>
@@ -1081,7 +1111,7 @@
                         >
                           <td className="py-3 px-4 whitespace-nowrap font-semibold text-gray-800">
                             <div className="flex items-center gap-2">
-                              {moment(row.date).format('YYYY-MM-DD')}
+                              {formatAttendanceDateForDisplay(row.date)}
                               {isApprovedLeave && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                   Approved Leave
@@ -1151,7 +1181,7 @@
                                   handleApprovedLeaveToggle(row.employeeId, row.date, e.target.checked, e);
                                 }}
                                 disabled={processingLeaves.has(`${row.employeeId}-${row.date}`)}
-                                title={`Toggle approved leave for ${moment(row.date).format('YYYY-MM-DD')}`}
+                                title={`Toggle approved leave for ${formatAttendanceDateForDisplay(row.date)}`}
                               />
                             )}
                           </td>
@@ -1177,7 +1207,7 @@
                                     handleHalfDayWaiverToggle(row.employeeId, row.date, e.target.checked, e);
                                   }}
                                   disabled={processingLeaves.has(`${row.employeeId}-${row.date}`)}
-                                  title={`Toggle half day waiver for ${moment(row.date).format('YYYY-MM-DD')}`}
+                                  title={`Toggle half day waiver for ${formatAttendanceDateForDisplay(row.date)}`}
                                 />
                               )
                             ) : (

@@ -67,7 +67,7 @@ const recalculateAttendance = async () => {
     console.log(`👥 Processing ${employees.length} unique employees`);
 
     // Calculate metrics for all records
-    const recordsWithCalculations = batchCalculateAttendanceMetrics(attendanceRecords, employees);
+    const recordsWithCalculations = await batchCalculateAttendanceMetrics(attendanceRecords, employees);
 
     // Update records in batches to avoid memory issues
     const batchSize = 100;

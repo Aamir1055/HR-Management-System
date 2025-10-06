@@ -35,6 +35,12 @@ interface SalarySlipDataTableProps {
     year: string;
   };
   totalEmployees: number;
+  grandTotals?: {
+    totalGross: number;
+    totalDeductions: number;
+    totalNet: number;
+    totalEmployees: number;
+  };
 }
 
 type SortField = keyof SimplifiedSalarySlip;
@@ -56,7 +62,8 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
   onExportPDF,
   onPageChange,
   filters,
-  totalEmployees
+  totalEmployees,
+  grandTotals
 }) => {
   // Sorting state
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -451,24 +458,24 @@ const SalarySlipDataTable: React.FC<SalarySlipDataTableProps> = ({
       <div className="px-4 py-3 bg-gray-100 border-t border-gray-200">
         <div className="grid grid-cols-4 gap-4 text-sm">
           <div className="text-center">
-            <div className="text-lg font-semibold text-gray-900">{sortedData.length}</div>
+            <div className="text-lg font-semibold text-gray-900">{grandTotals ? grandTotals.totalEmployees : sortedData.length}</div>
             <div className="text-xs text-gray-600">Employees</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-green-600">
-              {formatCurrency(sortedData.reduce((sum, slip) => sum + slip.grossSalary, 0))}
+              {formatCurrency(grandTotals ? grandTotals.totalGross : sortedData.reduce((sum, slip) => sum + slip.grossSalary, 0))}
             </div>
             <div className="text-xs text-gray-600">Total Gross</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-red-600">
-              {formatCurrency(sortedData.reduce((sum, slip) => sum + slip.totalDeduction, 0))}
+              {formatCurrency(grandTotals ? grandTotals.totalDeductions : sortedData.reduce((sum, slip) => sum + slip.totalDeduction, 0))}
             </div>
             <div className="text-xs text-gray-600">Total Deductions</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-semibold text-blue-600">
-              {formatCurrency(sortedData.reduce((sum, slip) => sum + slip.netSalary, 0))}
+              {formatCurrency(grandTotals ? grandTotals.totalNet : sortedData.reduce((sum, slip) => sum + slip.netSalary, 0))}
             </div>
             <div className="text-xs text-gray-600">Total Net</div>
           </div>

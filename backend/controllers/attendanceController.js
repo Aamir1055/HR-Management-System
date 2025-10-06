@@ -5,6 +5,7 @@
 const db = require('../db');
 const XLSX = require('xlsx');
 const axios = require('axios');
+const moment = require('moment');
 const { calculateAttendanceMetrics, batchCalculateAttendanceMetrics } = require('../utils/attendanceCalculator');
 
 // Helper function to get user's office names
@@ -213,7 +214,7 @@ exports.upload = async (req, res) => {
     );
     
     // Calculate attendance metrics for each record
-    const recordsWithCalculations = batchCalculateAttendanceMetrics(validRecords, employees);
+    const recordsWithCalculations = await batchCalculateAttendanceMetrics(validRecords, employees);
     
     // Prepare data for insertion with calculated values
     const insertData = recordsWithCalculations.map(r => [
@@ -228,7 +229,10 @@ exports.upload = async (req, res) => {
       r.is_half_day,
       r.is_late,
       r.duty_hours_deficit,
-      r.duty_hours
+      r.duty_hours,
+      r.is_planned_half_day || false,
+      r.planned_half_day_shift_id || null,
+      r.planned_half_day_shift_name || null
     ]);
     
     await db.query(`
@@ -372,7 +376,7 @@ exports.createOrUpdate = async (req, res) => {
     
     // Calculate attendance metrics
     const attendanceRecord = { employee_id, date, punch_in, punch_out };
-    const calculations = calculateAttendanceMetrics(attendanceRecord, employees[0]);
+    const calculations = await calculateAttendanceMetrics(attendanceRecord, employees[0]);
     
     // MySQL 8.0+: upsert with calculated values
     await db.query(

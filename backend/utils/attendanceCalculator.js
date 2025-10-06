@@ -6,6 +6,7 @@
 
 const moment = require('moment');
 const { parseShiftTiming, amPmTo24Hour } = require('./shiftUtils');
+const db = require('../db');
 
 /**
  * Parse shift timing string and extract start/end times in 24-hour format
@@ -162,12 +163,143 @@ function calculateDutyHoursDeficit(actualHours, dutyHours) {
 }
 
 /**
+ * Get active half-day shifts from database
+ * @returns {Array} - Array of active half-day shift configurations
+ */
+async function getHalfDayShifts() {
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM half_day_shifts WHERE is_active = TRUE ORDER BY start_time`
+    );
+    return rows;
+  } catch (error) {
+    console.warn('Error fetching half day shifts:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if punch times match any configured half-day shift pattern
+ * @param {string} punchIn - Punch in time
+ * @param {string} punchOut - Punch out time
+ * @param {number} actualHours - Actual hours worked
+ * @returns {Object|null} - Half-day shift match info or null
+ */
+async function detectHalfDayShift(punchIn, punchOut, actualHours) {
+  try {
+    const shifts = await getHalfDayShifts();
+    
+    if (!punchIn || !punchOut || !shifts.length) {
+      return null;
+    }
+    
+    const punchInTime = moment(punchIn, ['HH:mm:ss', 'HH:mm']);
+    const punchOutTime = moment(punchOut, ['HH:mm:ss', 'HH:mm']);
+    
+    if (!punchInTime.isValid() || !punchOutTime.isValid()) {
+      return null;
+    }
+    
+    // Calculate actual work duration in minutes
+    const workDurationMinutes = punchOutTime.diff(punchInTime, 'minutes');
+    
+    // Store all possible matches to select the best one
+    let bestMatch = null;
+    let bestScore = 0;
+    
+    for (const shift of shifts) {
+      const shiftStart = moment(shift.start_time, 'HH:mm:ss');
+      const shiftEnd = moment(shift.end_time, 'HH:mm:ss');
+      const minRequiredHours = parseFloat(shift.min_hours);
+      const shiftDurationMinutes = shiftEnd.diff(shiftStart, 'minutes');
+      
+      // Calculate overlap between work time and shift time
+      const overlapStart = moment.max(punchInTime, shiftStart);
+      const overlapEnd = moment.min(punchOutTime, shiftEnd);
+      const overlapMinutes = overlapEnd.isAfter(overlapStart) ? overlapEnd.diff(overlapStart, 'minutes') : 0;
+      
+      // CRITICAL: Only consider as half-day if worked hours are actually in half-day range
+      // Never mark someone as half-day if they worked 7+ hours (that's a full day or more)
+      const maxHalfDayHours = 6.5; // Maximum hours that can be considered half-day
+      const isWithinHalfDayHourRange = actualHours >= 3.5 && actualHours <= maxHalfDayHours;
+      
+      if (!isWithinHalfDayHourRange) {
+        // Skip this shift if hours worked are outside half-day range
+        continue;
+      }
+      
+      // Check if there's significant overlap with this half-day shift
+      const overlapPercentage = overlapMinutes / shiftDurationMinutes;
+      const minOverlapPercentage = 0.6; // At least 60% overlap required
+      
+      // Alternative check: if actual hours are close to the minimum required hours for half-day
+      const hoursCloseToHalfDay = Math.abs(actualHours - minRequiredHours) <= 1.0; // Within 1 hour of minimum
+      
+      // Check if this qualifies as a half-day shift
+      const hasSignificantOverlap = overlapPercentage >= minOverlapPercentage;
+      const workedApproximateHalfDayHours = actualHours >= (minRequiredHours - 0.5) && actualHours <= (minRequiredHours + 1.5);
+      
+      // Enhanced detection: Check if work pattern resembles this half-day shift
+      let isHalfDayMatch = false;
+      
+      if (shift.shift_name === 'Morning Half Day') {
+        // For morning half-day: punch in should be close to shift start, worked hours should be around 4.5-6 hours
+        const punchInCloseToShiftStart = Math.abs(punchInTime.diff(shiftStart, 'minutes')) <= 90; // Within 1.5 hour
+        const workedMorningHours = actualHours >= 4.0 && actualHours <= 6.5;
+        isHalfDayMatch = punchInCloseToShiftStart && workedMorningHours;
+      } else if (shift.shift_name === 'Afternoon Half Day') {
+        // For afternoon half-day: punch out should be close to shift end, worked hours should be around 4.5-6 hours  
+        const punchOutCloseToShiftEnd = Math.abs(punchOutTime.diff(shiftEnd, 'minutes')) <= 90; // Within 1.5 hour
+        const workedAfternoonHours = actualHours >= 4.0 && actualHours <= 6.5;
+        isHalfDayMatch = punchOutCloseToShiftEnd && workedAfternoonHours;
+      }
+      
+      // Final decision: Must meet hours requirement AND have good overlap or pattern match
+      if (isWithinHalfDayHourRange && (hasSignificantOverlap || isHalfDayMatch || workedApproximateHalfDayHours)) {
+        // Calculate a score to determine the best match
+        let score = 0;
+        if (hasSignificantOverlap) score += overlapPercentage * 100;
+        if (isHalfDayMatch) score += 50; // High score for pattern match
+        if (workedApproximateHalfDayHours) score += 30;
+        
+        console.log(`Half-day candidate: ${shift.shift_name}, overlap: ${overlapMinutes}min (${Math.round(overlapPercentage * 100)}%), actual hours: ${actualHours}, score: ${score}`);
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = {
+            shiftId: shift.id,
+            shiftName: shift.shift_name,
+            shiftStartTime: shift.start_time,
+            shiftEndTime: shift.end_time,
+            isPlannedHalfDay: true,
+            minRequiredHours: minRequiredHours,
+            actualHours: actualHours,
+            overlapMinutes: overlapMinutes,
+            overlapPercentage: Math.round(overlapPercentage * 100)
+          };
+        }
+      }
+    }
+    
+    if (bestMatch) {
+      console.log(`Best half-day match selected: ${bestMatch.shiftName} (score: ${bestScore})`);
+      return bestMatch;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Error detecting half day shift:', error);
+    return null;
+  }
+}
+
+/**
  * Main function to calculate all attendance metrics for a single record
  * @param {Object} attendanceRecord - Attendance record with employee_id, date, punch_in, punch_out
  * @param {Object} employee - Employee object with shift_timings
  * @returns {Object} - Complete attendance calculation result
  */
-function calculateAttendanceMetrics(attendanceRecord, employee) {
+async function calculateAttendanceMetrics(attendanceRecord, employee) {
   const { punch_in, punch_out } = attendanceRecord;
   const { shift_timings } = employee;
   
@@ -197,14 +329,43 @@ function calculateAttendanceMetrics(attendanceRecord, employee) {
   const actualHours = calculateActualHours(punch_in, punch_out) || 0;
   
   // Calculate late and early departure minutes
-  const lateMinutes = calculateLateMinutes(start24, punch_in);
-  const earlyDepartureMinutes = calculateEarlyDepartureMinutes(end24, punch_out);
+  let lateMinutes = calculateLateMinutes(start24, punch_in);
+  let earlyDepartureMinutes = calculateEarlyDepartureMinutes(end24, punch_out);
+  
+  // Check for planned half-day shift
+  const halfDayShiftInfo = await detectHalfDayShift(punch_in, punch_out, actualHours);
+  const isPlannedHalfDay = !!(halfDayShiftInfo && halfDayShiftInfo.isPlannedHalfDay);
   
   // Determine attendance status
-  const statusInfo = determineAttendanceStatus(actualHours, dutyHours, lateMinutes, false);
+  let statusInfo = determineAttendanceStatus(actualHours, dutyHours, lateMinutes, false);
   
-  // Calculate duty hours deficit
-  const dutyHoursDeficit = calculateDutyHoursDeficit(actualHours, dutyHours);
+  // If this matches a planned half-day shift, recalculate late minutes based on half-day shift timing
+  if (isPlannedHalfDay) {
+    // Calculate late minutes based on half-day shift start time (not regular shift time)
+    const shiftStart = moment(halfDayShiftInfo.shiftStartTime, 'HH:mm:ss');
+    const punchInTime = moment(punch_in, ['HH:mm:ss', 'HH:mm']);
+    
+    // Calculate late minutes based on half-day shift start time
+    const halfDayLateMinutes = Math.max(0, punchInTime.diff(shiftStart, 'minutes'));
+    lateMinutes = halfDayLateMinutes;
+    
+    console.log(`Half-day late calculation: shift "${halfDayShiftInfo.shiftName}" starts ${halfDayShiftInfo.shiftStartTime}, punch in ${punch_in}, late minutes: ${halfDayLateMinutes}`);
+    
+    // No early departure penalty for half-day shifts
+    earlyDepartureMinutes = 0;
+    
+    // Determine if late based on half-day shift timing
+    const isLateForHalfDay = lateMinutes >= 1;
+    
+    statusInfo = {
+      attendance_status: isLateForHalfDay ? 'HALF_DAY_LATE' : 'HALF_DAY',
+      is_late: isLateForHalfDay,
+      is_half_day: true
+    };
+  }
+  
+  // Calculate duty hours deficit (no deficit for planned half-day if minimum hours met)
+  const dutyHoursDeficit = isPlannedHalfDay ? 0 : calculateDutyHoursDeficit(actualHours, dutyHours);
   
   return {
     actual_hours_worked: Math.round(actualHours * 100) / 100,
@@ -213,6 +374,9 @@ function calculateAttendanceMetrics(attendanceRecord, employee) {
     attendance_status: statusInfo.attendance_status,
     is_half_day: statusInfo.is_half_day,
     is_late: statusInfo.is_late,
+    is_planned_half_day: isPlannedHalfDay,
+    planned_half_day_shift_id: halfDayShiftInfo?.shiftId || null,
+    planned_half_day_shift_name: halfDayShiftInfo?.shiftName || null,
     duty_hours_deficit: dutyHoursDeficit,
     duty_hours: dutyHours
   };
@@ -224,7 +388,7 @@ function calculateAttendanceMetrics(attendanceRecord, employee) {
  * @param {Array} employees - Array of employee objects
  * @returns {Array} - Array of calculated attendance records
  */
-function batchCalculateAttendanceMetrics(attendanceRecords, employees) {
+async function batchCalculateAttendanceMetrics(attendanceRecords, employees) {
   // Create employee lookup map
   const employeeMap = new Map();
   employees.forEach(emp => {
@@ -237,7 +401,8 @@ function batchCalculateAttendanceMetrics(attendanceRecords, employees) {
     }
   });
   
-  return attendanceRecords.map(record => {
+  // Use Promise.all to handle async calculations
+  const calculationPromises = attendanceRecords.map(async (record) => {
     // Handle both employee_id and employeeId fields in records
     const recordEmpId = record.employee_id || record.employeeId;
     const employee = employeeMap.get(recordEmpId ? recordEmpId.toString() : '');
@@ -257,13 +422,15 @@ function batchCalculateAttendanceMetrics(attendanceRecords, employees) {
       };
     }
     
-    const calculations = calculateAttendanceMetrics(record, employee);
+    const calculations = await calculateAttendanceMetrics(record, employee);
     
     return {
       ...record,
       ...calculations
     };
   });
+  
+  return Promise.all(calculationPromises);
 }
 
 module.exports = {
@@ -274,6 +441,8 @@ module.exports = {
   calculateEarlyDepartureMinutes,
   determineAttendanceStatus,
   calculateDutyHoursDeficit,
+  getHalfDayShifts,
+  detectHalfDayShift,
   calculateAttendanceMetrics,
   batchCalculateAttendanceMetrics
 };

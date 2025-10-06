@@ -222,7 +222,7 @@ const calculateAttendanceMetricsEnhanced = async (employee, attRecords, workingD
   console.log(`\n🔄 ENHANCED CALCULATION for ${employee.employeeId} (Using Shift Timings)`);
   
   // Use the new attendance calculation system
-  const recordsWithCalculations = batchCalculateAttendanceMetrics(attRecords, employees);
+  const recordsWithCalculations = await batchCalculateAttendanceMetrics(attRecords, employees);
   
   // Process calculated records and handle approved leaves
   for (const calculatedRecord of recordsWithCalculations) {
@@ -372,7 +372,7 @@ const calculateAttendanceMetrics = async (employee, attRecords, workingDays, app
   console.log(`Approved leaves set:`, Array.from(approvedLeavesSet));
 
   // Use the new attendance calculation system
-  const recordsWithCalculations = batchCalculateAttendanceMetrics(attRecords, employees);
+  const recordsWithCalculations = await batchCalculateAttendanceMetrics(attRecords, employees);
   
   // Process calculated records and handle approved leaves
   for (const calculatedRecord of recordsWithCalculations) {

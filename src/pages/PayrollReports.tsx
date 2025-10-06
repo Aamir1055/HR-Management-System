@@ -621,11 +621,6 @@ const PayrollReports: React.FC = () => {
                   AED {(payrollData.reduce((sum, emp) => sum + emp.baseSalary, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h2>
               </div>
-              <span className="ml-4 bg-green-100 rounded-full p-4">
-                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </span>
             </div>
             <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl shadow p-6 border border-red-100 flex items-center">
               <div className="flex-1">

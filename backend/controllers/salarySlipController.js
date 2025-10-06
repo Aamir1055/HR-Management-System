@@ -595,6 +595,7 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
         const presentDays = payroll.present_days || 0;
         const halfDays = payroll.half_days || 0;
         const approvedLeaves = payroll.approved_leaves || 0;
+        const plannedHalfDays = payroll.planned_half_days || 0;
         const actualAbsentDays = payroll.leaves || 0;
         const excessLeaves = payroll.excess_leaves || 0;
         const lateDays = payroll.late_days || 0;
@@ -602,12 +603,19 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
         const grossSalary = parseFloat(employee.monthlySalary);
         const perDayRate = grossSalary / totalWorkingDays;
 
+        // Derive missing days to stay in sync with payroll calculation
+        const missingDays = Math.max(0, totalWorkingDays - presentDays - halfDays - approvedLeaves - actualAbsentDays);
+
         const absentDeduction = actualAbsentDays * perDayRate;
         const halfDayDeduction = halfDays * 0.5 * perDayRate;
+        const plannedHalfDayDeduction = plannedHalfDays * 0.5 * perDayRate;
         const approvedLeaveDeduction = approvedLeaves * perDayRate;
+        const missingDayDeduction = missingDays * perDayRate;
         const excessLeaveDeduction = excessLeaves * 2 * perDayRate;
-        const totalAbsentRelatedDeduction = absentDeduction + halfDayDeduction + approvedLeaveDeduction;
-        const totalDeduction = totalAbsentRelatedDeduction + excessLeaveDeduction + advanceAmount + totalLoanDeduction;
+
+        const attendanceRelatedDeduction = 
+          absentDeduction + halfDayDeduction + plannedHalfDayDeduction + approvedLeaveDeduction + missingDayDeduction + excessLeaveDeduction;
+        const totalDeduction = attendanceRelatedDeduction + advanceAmount + totalLoanDeduction;
         const netSalary = Math.max(0, grossSalary - totalDeduction);
 
         salarySlips.push({
@@ -615,11 +623,11 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
           name: employee.name,
           position: employee.position_title || 'N/A',
           workingDays: totalWorkingDays,
-          absentDays: parseFloat((actualAbsentDays + (halfDays * 0.5) + approvedLeaves).toFixed(1)),
+          absentDays: parseFloat((actualAbsentDays + (halfDays * 0.5) + approvedLeaves + (plannedHalfDays * 0.5)).toFixed(1)),
           latePunchIn: lateDays,
           excessLeaves,
           grossSalary: parseFloat(grossSalary.toFixed(2)),
-          absentDeduction: parseFloat(totalAbsentRelatedDeduction.toFixed(2)),
+          absentDeduction: parseFloat((absentDeduction + halfDayDeduction + plannedHalfDayDeduction + approvedLeaveDeduction + missingDayDeduction).toFixed(2)),
           excessLeaveDeduction: parseFloat(excessLeaveDeduction.toFixed(2)),
           advanceSalary: parseFloat(advanceAmount.toFixed(2)),
           loanDeductions: parseFloat(totalLoanDeduction.toFixed(2)),

@@ -307,3 +307,117 @@ export const formatTimestampSafely = (timestamp: string | number | Date | null |
     return ''; // Failed to parse, hide timestamp
   }
 };
+
+/**
+ * ATTENDANCE-SPECIFIC DATE FORMATTING FUNCTIONS
+ * These functions handle date formatting for attendance records
+ * without the +1 day adjustment used in employee data
+ */
+
+/**
+ * Convert attendance date from server format (YYYY-MM-DD) to display format (DD/MM/YYYY)
+ * This function does NOT apply the +1 day adjustment used in employee data
+ * @param dateString - Date string in YYYY-MM-DD format from attendance records
+ * @returns Date string in DD/MM/YYYY format, or empty string if invalid
+ */
+export const formatAttendanceDateForDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    // Handle YYYY-MM-DD format (standard server format)
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const datePart = dateString.split('T')[0]; // Remove time if present
+      const [year, month, day] = datePart.split('-');
+      
+      // Validate the extracted parts
+      if (year && month && day && year.length === 4 && month.length <= 2 && day.length <= 2) {
+        const paddedMonth = month.padStart(2, '0');
+        const paddedDay = day.padStart(2, '0');
+        
+        // Validate the result is a proper date
+        const testDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        if (!isNaN(testDate.getTime())) {
+          return `${paddedDay}/${paddedMonth}/${year}`;
+        }
+      }
+    }
+    
+    // If it's already in DD/MM/YYYY format, return as-is
+    if (typeof dateString === 'string' && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      return dateString;
+    }
+    
+    // Try to parse as a general date string
+    const parsedDate = new Date(dateString);
+    if (!isNaN(parsedDate.getTime())) {
+      const dd = String(parsedDate.getDate()).padStart(2, '0');
+      const mm = String(parsedDate.getMonth() + 1).padStart(2, '0');
+      const yyyy = String(parsedDate.getFullYear());
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    
+    console.warn('Unable to parse attendance date, returning as-is:', dateString);
+    return dateString;
+  } catch (error) {
+    console.error('Error formatting attendance date for display:', error, 'Input:', dateString);
+    return dateString;
+  }
+};
+
+/**
+ * Convert attendance date from display format (DD/MM/YYYY) to server format (YYYY-MM-DD)
+ * @param dateString - Date string in DD/MM/YYYY format
+ * @returns Date string in YYYY-MM-DD format, or empty string if invalid
+ */
+export const formatAttendanceDateForServer = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    // Handle DD/MM/YYYY format
+    if (typeof dateString === 'string' && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const [day, month, year] = dateString.split('/');
+      
+      // Validate the extracted parts
+      const testDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(testDate.getTime())) {
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+    
+    // If it's already in YYYY-MM-DD format, return as-is
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString;
+    }
+    
+    // Try to parse as a general date string
+    const parsedDate = new Date(dateString);
+    if (!isNaN(parsedDate.getTime())) {
+      const yyyy = String(parsedDate.getFullYear());
+      const mm = String(parsedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(parsedDate.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    
+    console.warn('Unable to parse attendance date for server, returning as-is:', dateString);
+    return dateString;
+  } catch (error) {
+    console.error('Error formatting attendance date for server:', error, 'Input:', dateString);
+    return dateString;
+  }
+};
+
+/**
+ * Parse URL query parameter dates and convert them for attendance display
+ * Assumes URL params are in YYYY-MM-DD format from the server
+ */
+export const parseAttendanceUrlDateParam = (paramValue: string | null): string => {
+  if (!paramValue) return '';
+  return formatAttendanceDateForDisplay(paramValue);
+};
+
+/**
+ * Convert display format date to URL param format for attendance API requests
+ */
+export const formatAttendanceDateForUrlParam = (displayDate: string): string => {
+  return formatAttendanceDateForServer(displayDate);
+};
