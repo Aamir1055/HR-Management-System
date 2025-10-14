@@ -45,7 +45,7 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
       email: '',
       recruitmentSource: '',
       recruitmentPipeline: '',
-      nationality: '',
+      comments: '',
     },
   });
 
@@ -240,7 +240,29 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
   }
 
   const formContent = (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <>
+      <style>
+        {`
+          /* Ensure dropdowns open downward */
+          select {
+            appearance: menulist !important;
+            -webkit-appearance: menulist !important;
+            -moz-appearance: menulist !important;
+          }
+          
+          /* Force dropdown direction */
+          .dropdown-container {
+            position: relative;
+            z-index: 1;
+          }
+          
+          .dropdown-container select {
+            position: relative;
+            z-index: 2;
+          }
+        `}
+      </style>
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       {/* Date */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -331,49 +353,61 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
 
       {/* Recruitment Source & Pipeline */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div className="dropdown-container">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Recruitment Source *
           </label>
-          <input
-            type="text"
-            placeholder="e.g., LinkedIn, Indeed, Company Website, Referral"
+          <select
             {...register('recruitmentSource', { required: 'Recruitment source is required' })}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
+          >
+            <option value="">Select recruitment source</option>
+            <option value="Indeed">Indeed</option>
+            <option value="Candidate Reference">Candidate Reference</option>
+            <option value="Employee Reference">Employee Reference</option>
+            <option value="Walk-In">Walk-In</option>
+          </select>
           {errors.recruitmentSource && (
             <p className="mt-1 text-sm text-red-600">{errors.recruitmentSource.message}</p>
           )}
         </div>
-        <div>
+        <div className="dropdown-container">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Recruitment Pipeline *
           </label>
-          <input
-            type="text"
-            placeholder="e.g., Application Received, First Interview, Technical Assessment"
+          <select
             {...register('recruitmentPipeline', { required: 'Recruitment pipeline is required' })}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
+          >
+            <option value="">Select pipeline stage</option>
+            <option value="HR Screening">HR Screening</option>
+            <option value="Screening Reject">Screening Reject</option>
+            <option value="R1">R1</option>
+            <option value="R1 Reject">R1 Reject</option>
+            <option value="R2">R2</option>
+            <option value="R2 Reject">R2 Reject</option>
+            <option value="Offered">Offered</option>
+            <option value="Onboarded">Onboarded</option>
+          </select>
           {errors.recruitmentPipeline && (
             <p className="mt-1 text-sm text-red-600">{errors.recruitmentPipeline.message}</p>
           )}
         </div>
       </div>
 
-      {/* Nationality */}
+      {/* Comments */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nationality *
+          Comments
         </label>
-        <input
-          type="text"
-          placeholder="e.g., UAE, India, United Kingdom, Philippines"
-          {...register('nationality', { required: 'Nationality is required' })}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        <textarea
+          {...register('comments')}
+          rows={3}
+          placeholder="Add any additional comments or notes about the candidate..."
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-vertical"
         />
-        {errors.nationality && (
-          <p className="mt-1 text-sm text-red-600">{errors.nationality.message}</p>
+        {errors.comments && (
+          <p className="mt-1 text-sm text-red-600">{errors.comments.message}</p>
         )}
       </div>
 
@@ -495,6 +529,7 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
         </button>
       </div>
     </form>
+    </>
   );
 
   if (fullPage) {

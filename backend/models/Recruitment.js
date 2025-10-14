@@ -13,7 +13,8 @@ const RecruitmentSchema = {
   email: { type: 'string', required: true, unique: true, maxLength: 255 },
   recruitmentSource: { type: 'string', required: true, maxLength: 100 },
   recruitmentPipeline: { type: 'string', required: true, maxLength: 100 },
-  nationality: { type: 'string', required: true, maxLength: 100 },
+  nationality: { type: 'string', required: false, maxLength: 100 }, // Made optional for backward compatibility
+  comments: { type: 'text', required: false }, // New comments field
   cvFilePath: { type: 'string', required: false, maxLength: 500 },
   cvOriginalName: { type: 'string', required: false, maxLength: 255 },
   cvFileSize: { type: 'number', required: false },
@@ -28,37 +29,24 @@ const RecruitmentTableName = 'recruitments';
 
 // Recruitment sources enum
 const RecruitmentSources = {
-  LINKEDIN: 'LinkedIn',
   INDEED: 'Indeed',
-  BAYT: 'Bayt.com',
-  NAUKRI_GULF: 'Naukri Gulf',
-  COMPANY_WEBSITE: 'Company Website',
-  EMPLOYEE_REFERRAL: 'Employee Referral',
-  RECRUITMENT_AGENCY: 'Recruitment Agency',
-  WALK_IN: 'Walk-in',
-  JOB_FAIR: 'Job Fair',
-  SOCIAL_MEDIA: 'Social Media',
-  OTHER: 'Other',
+  CANDIDATE_REFERENCE: 'Candidate Reference',
+  EMPLOYEE_REFERENCE: 'Employee Reference',
+  WALK_IN: 'Walk-In',
   
   getAll: () => Object.values(RecruitmentSources).filter(value => typeof value === 'string')
 };
 
 // Recruitment pipeline stages
 const RecruitmentPipelines = {
-  APPLICATION_RECEIVED: 'Application Received',
-  SCREENING: 'Initial Screening',
-  PHONE_INTERVIEW: 'Phone Interview',
-  TECHNICAL_ASSESSMENT: 'Technical Assessment',
-  FIRST_INTERVIEW: 'First Interview',
-  SECOND_INTERVIEW: 'Second Interview',
-  FINAL_INTERVIEW: 'Final Interview',
-  REFERENCE_CHECK: 'Reference Check',
-  OFFER_EXTENDED: 'Offer Extended',
-  OFFER_ACCEPTED: 'Offer Accepted',
-  OFFER_DECLINED: 'Offer Declined',
-  REJECTED: 'Rejected',
-  WITHDRAWN: 'Withdrawn',
-  HIRED: 'Hired',
+  HR_SCREENING: 'HR Screening',
+  SCREENING_REJECT: 'Screening Reject',
+  R1: 'R1',
+  R1_REJECT: 'R1 Reject',
+  R2: 'R2',
+  R2_REJECT: 'R2 Reject',
+  OFFERED: 'Offered',
+  ONBOARDED: 'Onboarded',
   
   getAll: () => Object.values(RecruitmentPipelines).filter(value => typeof value === 'string')
 };
@@ -88,7 +76,7 @@ const FileValidation = {
 
 // Required fields for different operations
 const RequiredFields = {
-  create: ['date', 'fullName', 'mobile', 'email', 'recruitmentSource', 'recruitmentPipeline', 'nationality'],
+  create: ['date', 'fullName', 'mobile', 'email', 'recruitmentSource', 'recruitmentPipeline'],
   update: ['id'], // Only ID required for updates
   search: [] // No required fields for search
 };
@@ -153,19 +141,14 @@ class Recruitment {
       }
     }
 
-    // Validate recruitment source
+    // Validate recruitment source (strict validation)
     if (this.recruitmentSource && !RecruitmentSources.getAll().includes(this.recruitmentSource)) {
-      warnings.push(`Recruitment source '${this.recruitmentSource}' is not in the predefined list`);
+      errors.push(`Invalid recruitment source. Must be one of: ${RecruitmentSources.getAll().join(', ')}`);
     }
 
-    // Validate recruitment pipeline
+    // Validate recruitment pipeline (strict validation)
     if (this.recruitmentPipeline && !RecruitmentPipelines.getAll().includes(this.recruitmentPipeline)) {
-      warnings.push(`Recruitment pipeline '${this.recruitmentPipeline}' is not in the predefined list`);
-    }
-
-    // Validate nationality
-    if (this.nationality && !CommonNationalities.includes(this.nationality)) {
-      warnings.push(`Nationality '${this.nationality}' is not in the common list`);
+      errors.push(`Invalid recruitment pipeline. Must be one of: ${RecruitmentPipelines.getAll().join(', ')}`);
     }
 
     // Validate CV file if provided

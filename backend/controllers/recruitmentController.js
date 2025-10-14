@@ -371,6 +371,7 @@ const recruitmentController = {
         'Nationality': recruitment.nationality,
         'Recruitment Source': recruitment.recruitmentSource,
         'Recruitment Pipeline': recruitment.recruitmentPipeline,
+        'Comments': recruitment.comments || '',
         'Position Applied': recruitment.positionApplied,
         'Expected Salary': recruitment.expectedSalary,
         'Experience Years': recruitment.experienceYears,
@@ -394,6 +395,7 @@ const recruitmentController = {
         { wch: 15 }, // Nationality
         { wch: 20 }, // Recruitment Source
         { wch: 20 }, // Recruitment Pipeline
+        { wch: 30 }, // Comments
         { wch: 20 }, // Position Applied
         { wch: 15 }, // Expected Salary
         { wch: 12 }, // Experience Years

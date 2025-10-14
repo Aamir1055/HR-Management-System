@@ -143,7 +143,8 @@ export interface Recruitment {
   email: string;
   recruitmentSource: string;
   recruitmentPipeline: string;
-  nationality: string;
+  nationality?: string; // Optional for backward compatibility with existing records
+  comments?: string; // Optional comments field
   cvFilePath?: string;
   cvOriginalName?: string;
   cvFileSize?: number;
@@ -161,7 +162,7 @@ export interface RecruitmentSearchFilters {
   search?: string;
   source?: string;
   pipeline?: string;
-  nationality?: string;
+  nationality?: string; // Keep for backward compatibility with existing records
   dateFrom?: string;
   dateTo?: string;
   orderBy?: string;
@@ -174,7 +175,7 @@ export interface RecruitmentStatistics {
   total: number;
   bySource: Array<{ recruitmentSource: string; count: number }>;
   byPipeline: Array<{ recruitmentPipeline: string; count: number }>;
-  byNationality: Array<{ nationality: string; count: number }>;
+  byNationality?: Array<{ nationality: string; count: number }>; // Optional for backward compatibility
   recentApplications: number;
   thisMonth: number;
 }
