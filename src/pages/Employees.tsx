@@ -410,8 +410,12 @@ placeholder="Search by name, employee ID, office, position, or platform"
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[140px]"
             >
               <option value="">All Positions</option>
-              {Array.from(new Set(positions.map(position => getDisplayName(position, 'title', 'position_name'))))
-                .filter(positionName => positionName.trim() !== '')
+              {Array.from(new Set(
+                normalizedEmployees
+                  .filter(emp => !selectedOffice || getDisplayName(emp.office_name, 'name', 'office_name') === selectedOffice)
+                  .map(emp => emp.position_title || emp.position_name)
+                  .filter(position => position && position.trim() !== '')
+              ))
                 .sort()
                 .map((positionName, index) => (
                   <option key={`position-${index}`} value={positionName}>
