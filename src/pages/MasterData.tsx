@@ -26,7 +26,7 @@ import MasterDataForm from '../components/Masters/MasterDataForm';
 import MasterDataStats from '../components/Masters/MasterDataStats';
 
 const MasterData = () => {
-  const [activeTab, setActiveTab] = useState<'office' | 'position' | 'visaType' | 'platform' | 'role'>('office');
+  const [activeTab, setActiveTab] = useState<'office' | 'position' | 'visaType' | 'platform' | 'role' | 'recruitmentSource' | 'recruitmentPipeline' | 'recruitmentPlatform'>('office');
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [viewingItem, setViewingItem] = useState<any>(null);
@@ -118,8 +118,23 @@ const MasterData = () => {
         return (
           item.roleName?.toLowerCase().includes(searchTermLower)
         );
+      case 'recruitmentSource':
+        return (
+          item.sourceName?.toLowerCase().includes(searchTermLower) ||
+          item.description?.toLowerCase().includes(searchTermLower)
+        );
+      case 'recruitmentPipeline':
+        return (
+          item.pipelineName?.toLowerCase().includes(searchTermLower) ||
+          item.description?.toLowerCase().includes(searchTermLower)
+        );
+      case 'recruitmentPlatform':
+        return (
+          item.platformName?.toLowerCase().includes(searchTermLower) ||
+          item.description?.toLowerCase().includes(searchTermLower)
+        );
       default:
-        return false;
+        return true;
     }
   });
 
@@ -140,8 +155,11 @@ const MasterData = () => {
       office: { name: 'Offices', color: 'blue', bg: 'bg-blue-50', icon: Building },
       position: { name: 'Positions', color: 'green', bg: 'bg-green-50', icon: Briefcase },
       visaType: { name: 'Visa Types', color: 'purple', bg: 'bg-purple-50', icon: FileText },
-      platform: { name: 'Platforms', color: 'orange', bg: 'bg-orange-50', icon: Monitor },
-      role: { name: 'Roles', color: 'indigo', bg: 'bg-indigo-50', icon: UserCheck }
+      platform: { name: 'Employee Platforms', color: 'orange', bg: 'bg-orange-50', icon: Monitor },
+      role: { name: 'Roles', color: 'indigo', bg: 'bg-indigo-50', icon: UserCheck },
+      recruitmentSource: { name: 'Recruitment Sources', color: 'red', bg: 'bg-red-50', icon: Users },
+      recruitmentPipeline: { name: 'Recruitment Pipeline', color: 'rose', bg: 'bg-rose-50', icon: Activity },
+      recruitmentPlatform: { name: 'Recruitment Platforms', color: 'emerald', bg: 'bg-emerald-50', icon: TrendingUp }
     };
     return configs[tab as keyof typeof configs] || configs.office;
   };
@@ -196,9 +214,15 @@ const MasterData = () => {
                     onClick={handleAddNew}
                     className={`inline-flex items-center px-6 py-3 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold ${
                       activeTab === 'visaType' 
-                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800'
                         : activeTab === 'platform'
-                        ? 'bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800'
+                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
+                        : activeTab === 'recruitmentSource'
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                        : activeTab === 'recruitmentPipeline'
+                        ? 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800'
+                        : activeTab === 'recruitmentPlatform'
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
                         : `bg-gradient-to-r from-${currentTabConfig.color}-600 to-${currentTabConfig.color}-700 hover:from-${currentTabConfig.color}-700 hover:to-${currentTabConfig.color}-800`
                     }`}
                   >
@@ -213,13 +237,16 @@ const MasterData = () => {
         {/* Enhanced Tabs with modern styling */}
         <div className="mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
-            <nav className="flex space-x-2" aria-label="Tabs">
+            <nav className="flex flex-wrap gap-2" aria-label="Tabs">
               {[
                 { key: 'office', icon: Building, label: 'Offices', color: 'blue' },
                 { key: 'position', icon: Briefcase, label: 'Positions', color: 'green' },
                 { key: 'visaType', icon: FileText, label: 'Visa Types', color: 'purple' },
-                { key: 'platform', icon: Monitor, label: 'Platforms', color: 'orange' },
-                { key: 'role', icon: UserCheck, label: 'Roles', color: 'indigo' }
+                { key: 'platform', icon: Monitor, label: 'Employee Platforms', color: 'orange' },
+                { key: 'role', icon: UserCheck, label: 'Roles', color: 'indigo' },
+                { key: 'recruitmentSource', icon: Users, label: 'Recruitment Sources', color: 'red' },
+                { key: 'recruitmentPipeline', icon: Activity, label: 'Recruitment Pipeline', color: 'rose' },
+                { key: 'recruitmentPlatform', icon: TrendingUp, label: 'Recruitment Platforms', color: 'emerald' }
               ].map(({ key, icon: Icon, label, color }) => {
                 const isActive = activeTab === key;
                 const recordCount = key === activeTab ? filteredData.length : data.length;
@@ -261,8 +288,11 @@ const MasterData = () => {
                 office: 'Manage office locations and their details across your organization.',
                 position: 'Define job positions, roles, and their associated office locations.',
                 visaType: 'Configure different visa types and their descriptions for employees.',
-                platform: 'Set up and manage different platforms used within your organization.',
-                role: 'Define and manage job roles and positions available in your organization.'
+                platform: 'Set up and manage employee platforms used within your organization.',
+                role: 'Define and manage job roles and positions available in your organization.',
+                recruitmentSource: 'Manage recruitment sources like Indeed, Employee Reference, Walk-In, etc.',
+                recruitmentPipeline: 'Configure recruitment pipeline stages from screening to onboarding.',
+                recruitmentPlatform: 'Manage recruitment platforms like National Stock Exchange, Forex, and other trading platforms.'
               }[activeTab]}
             </p>
           </div>
@@ -311,7 +341,10 @@ const MasterData = () => {
                   position: 'title, office',
                   visaType: 'type, description',
                   platform: 'name',
-                  role: 'name'
+                  role: 'name',
+                  recruitmentSource: 'name, description',
+                  recruitmentPipeline: 'name, description',
+                  recruitmentPlatform: 'name, description'
                 }[activeTab]}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

@@ -35,6 +35,9 @@ const payrollRoutes = require('./routes/payrollRoutes');
 const holidaysRoutes = require('./routes/holidaysRoutes');
 const masterRoutes = require('./routes/masterRoutes');
 const roleRoutes = require('./routes/roleRoutes');
+const recruitmentSourceRoutes = require('./routes/recruitmentSourceRoutes'); // NEW - RECRUITMENT SOURCES
+const recruitmentPipelineRoutes = require('./routes/recruitmentPipelineRoutes'); // NEW - RECRUITMENT PIPELINES
+const recruitmentPlatformRoutes = require('./routes/recruitmentPlatformRoutes'); // NEW - RECRUITMENT PLATFORMS
 const flushRoutes = require('./routes/flushRoutes'); // NEW
 const approvedLeaveRoutes = require('./routes/approvedLeaveRoutes'); // NEW
 const advanceSalaryRoutes = require('./routes/advanceSalaryRoutes'); // NEW
@@ -139,6 +142,9 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/holidays', holidaysRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/recruitment-sources', recruitmentSourceRoutes); // NEW - RECRUITMENT SOURCES
+app.use('/api/recruitment-pipelines', recruitmentPipelineRoutes); // NEW - RECRUITMENT PIPELINES
+app.use('/api/recruitment-platforms', recruitmentPlatformRoutes); // NEW - RECRUITMENT PLATFORMS
 app.use('/api/masters', masterRoutes);
 app.use('/api/flush', verifyToken, flushRoutes); // NEW - ADMIN ONLY
 app.use('/api/approved-leaves', approvedLeaveRoutes); // NEW - APPROVED LEAVES

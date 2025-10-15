@@ -8,7 +8,7 @@ import PositionOfficeSelection from './PositionOfficeSelection';
 interface MasterDataFormProps {
   isOpen: boolean;
   mode: 'add' | 'edit' | 'view';
-  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role' | 'recruitmentSource' | 'recruitmentPipeline' | 'recruitmentPlatform';
   data: any;
   onSubmit: (data: any) => void;
   onClose: () => void;
@@ -82,7 +82,10 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
     visaType: 'Visa Type',
     platform: 'Platform',
     loan: 'Employee Loan',
-    role: 'Role'
+    role: 'Role',
+    recruitmentSource: 'Recruitment Source',
+    recruitmentPipeline: 'Recruitment Pipeline',
+    recruitmentPlatform: 'Recruitment Platform'
   };
 
   // ✅ SIMPLIFIED: Basic form submission without auto-deduction processing
@@ -448,6 +451,156 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
               {errors.roleName && (
                 <p className="mt-1 text-sm text-red-600">{errors.roleName.message as string}</p>
               )}
+            </div>
+          </>
+        );
+
+      case 'recruitmentSource':
+        return (
+          <>
+            <div className="mb-4">
+              <label htmlFor="sourceName" className="block text-sm font-medium text-gray-700">
+                Source Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="sourceName"
+                {...register('sourceName', { 
+                  required: mode !== 'view' ? 'Source name is required' : false,
+                  minLength: {
+                    value: 2,
+                    message: 'Source name must be at least 2 characters'
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: 'Source name must be 100 characters or less'
+                  }
+                })}
+                disabled={mode === 'view'}
+                placeholder="Enter recruitment source name"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+              {errors.sourceName && (
+                <p className="mt-1 text-sm text-red-600">{errors.sourceName.message as string}</p>
+              )}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                id="description"
+                {...register('description')}
+                disabled={mode === 'view'}
+                rows={3}
+                placeholder="Optional description..."
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              ></textarea>
+            </div>
+          </>
+        );
+
+      case 'recruitmentPipeline':
+        return (
+          <>
+            <div className="mb-4">
+              <label htmlFor="pipelineName" className="block text-sm font-medium text-gray-700">
+                Pipeline Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="pipelineName"
+                {...register('pipelineName', { 
+                  required: mode !== 'view' ? 'Pipeline name is required' : false,
+                  minLength: {
+                    value: 2,
+                    message: 'Pipeline name must be at least 2 characters'
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: 'Pipeline name must be 100 characters or less'
+                  }
+                })}
+                disabled={mode === 'view'}
+                placeholder="Enter pipeline stage name"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+              {errors.pipelineName && (
+                <p className="mt-1 text-sm text-red-600">{errors.pipelineName.message as string}</p>
+              )}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="stageOrder" className="block text-sm font-medium text-gray-700">
+                Stage Order
+              </label>
+              <input
+                type="number"
+                id="stageOrder"
+                min="0"
+                max="999"
+                {...register('stageOrder')}
+                disabled={mode === 'view'}
+                placeholder="Enter stage order (0-999)"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                id="description"
+                {...register('description')}
+                disabled={mode === 'view'}
+                rows={3}
+                placeholder="Optional description..."
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              ></textarea>
+            </div>
+          </>
+        );
+
+      case 'recruitmentPlatform':
+        return (
+          <>
+            <div className="mb-4">
+              <label htmlFor="platformName" className="block text-sm font-medium text-gray-700">
+                Platform Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="platformName"
+                {...register('platformName', { 
+                  required: mode !== 'view' ? 'Platform name is required' : false,
+                  minLength: {
+                    value: 2,
+                    message: 'Platform name must be at least 2 characters'
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: 'Platform name must be 100 characters or less'
+                  }
+                })}
+                disabled={mode === 'view'}
+                placeholder="Enter platform name"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+              {errors.platformName && (
+                <p className="mt-1 text-sm text-red-600">{errors.platformName.message as string}</p>
+              )}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                id="description"
+                {...register('description')}
+                disabled={mode === 'view'}
+                rows={3}
+                placeholder="Optional description..."
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              ></textarea>
             </div>
           </>
         );

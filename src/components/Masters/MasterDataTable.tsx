@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface MasterDataTableProps {
-  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role' | 'recruitmentSource' | 'recruitmentPipeline' | 'recruitmentPlatform';
   data: any[];
   loading: boolean;
   onEdit: (item: any) => void;
@@ -37,10 +37,26 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-4">
-            No {dataType === 'office' ? 'offices' : dataType === 'position' ? 'positions' : dataType === 'visaType' ? 'visa types' : dataType === 'platform' ? 'platforms' : dataType === 'role' ? 'roles' : 'loans'} found.
+            No {dataType === 'office' ? 'offices' : 
+                dataType === 'position' ? 'positions' : 
+                dataType === 'visaType' ? 'visa types' : 
+                dataType === 'platform' ? 'platforms' : 
+                dataType === 'role' ? 'roles' : 
+                dataType === 'recruitmentSource' ? 'recruitment sources' :
+                dataType === 'recruitmentPipeline' ? 'recruitment pipelines' :
+                dataType === 'recruitmentPlatform' ? 'recruitment platforms' :
+                'loans'} found.
           </div>
           <p className="text-gray-400">
-            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : dataType === 'position' ? 'position' : dataType === 'visaType' ? 'visa type' : dataType === 'platform' ? 'platform' : dataType === 'role' ? 'role' : 'loan'}.
+            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : 
+                dataType === 'position' ? 'position' : 
+                dataType === 'visaType' ? 'visa type' : 
+                dataType === 'platform' ? 'platform' : 
+                dataType === 'role' ? 'role' : 
+                dataType === 'recruitmentSource' ? 'recruitment source' :
+                dataType === 'recruitmentPipeline' ? 'recruitment pipeline' :
+                dataType === 'recruitmentPlatform' ? 'recruitment platform' :
+                'loan'}.
           </p>
         </div>
       </div>
@@ -103,6 +119,31 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
           { key: 'roleName', label: 'Role Name' },
           { key: 'created_at', label: 'Created' },
           { key: 'updated_at', label: 'Updated' }
+        ];
+      case 'recruitmentSource':
+        return [
+          { key: 'sourceId', label: 'Source ID' },
+          { key: 'sourceName', label: 'Source Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'isActive', label: 'Status' },
+          { key: 'created_at', label: 'Created' }
+        ];
+      case 'recruitmentPipeline':
+        return [
+          { key: 'pipelineId', label: 'Pipeline ID' },
+          { key: 'pipelineName', label: 'Pipeline Name' },
+          { key: 'stageOrder', label: 'Order' },
+          { key: 'description', label: 'Description' },
+          { key: 'isActive', label: 'Status' },
+          { key: 'created_at', label: 'Created' }
+        ];
+      case 'recruitmentPlatform':
+        return [
+          { key: 'platformId', label: 'Platform ID' },
+          { key: 'platformName', label: 'Platform Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'isActive', label: 'Status' },
+          { key: 'created_at', label: 'Created' }
         ];
       default:
         return [];
@@ -197,6 +238,45 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       }
     }
 
+    // Handle recruitment master data formatting
+    if (dataType === 'recruitmentSource' || dataType === 'recruitmentPipeline' || dataType === 'recruitmentPlatform') {
+      switch (column.key) {
+        case 'created_at':
+        case 'updated_at':
+          return formatDate(value);
+        case 'sourceName':
+        case 'pipelineName':
+        case 'platformName':
+          return (
+            <span className="font-medium text-gray-900">
+              {value || '-'}
+            </span>
+          );
+        case 'sourceId':
+        case 'pipelineId':
+        case 'platformId':
+          return (
+            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+              {value || '-'}
+            </span>
+          );
+        case 'stageOrder':
+          return (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {value || 0}
+            </span>
+          );
+        case 'isActive':
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {value ? 'Active' : 'Inactive'}
+            </span>
+          );
+      }
+    }
+
     // Handle other data types
     switch (column.key) {
       case 'duty_hours':
@@ -240,6 +320,9 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
                            dataType === 'position' ? item.position_id || item.id : 
                            dataType === 'platform' ? item.id :
                            dataType === 'role' ? item.roleId || item.id :
+                           dataType === 'recruitmentSource' ? item.sourceId || item.id :
+                           dataType === 'recruitmentPipeline' ? item.pipelineId || item.id :
+                           dataType === 'recruitmentPlatform' ? item.platformId || item.id :
                            item.id;
               
               // ✅ FIXED: Create unique keys for positions (which can have same position_id for different offices)

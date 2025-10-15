@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-type DataType = 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
+type DataType = 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role' | 'recruitmentSource' | 'recruitmentPipeline' | 'recruitmentPlatform';
 
 interface UseMasterDataReturn {
   data: any[];
@@ -22,8 +22,8 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = () => {
-    // For loan and role endpoints, we don't need auth headers since routes are open
-    if (dataType === 'loan' || dataType === 'role') {
+    // For loan, role, and recruitment master endpoints, we don't need auth headers since routes are open
+    if (dataType === 'loan' || dataType === 'role' || dataType === 'recruitmentSource' || dataType === 'recruitmentPipeline' || dataType === 'recruitmentPlatform') {
       return {
         'Content-Type': 'application/json'
       };
@@ -51,6 +51,12 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         return '/api/loans';
       case 'role':
         return '/api/roles';
+      case 'recruitmentSource':
+        return '/api/recruitment-sources';
+      case 'recruitmentPipeline':
+        return '/api/recruitment-pipelines';
+      case 'recruitmentPlatform':
+        return '/api/recruitment-platforms';
       default:
         return '';
     }
@@ -86,6 +92,15 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         if (dataType === 'role' && result.roles) {
           setData(result.roles);
           console.log(`✅ Successfully fetched ${result.roles.length} ${dataType} records`);
+        } else if (dataType === 'recruitmentSource' && result.sources) {
+          setData(result.sources);
+          console.log(`✅ Successfully fetched ${result.sources.length} ${dataType} records`);
+        } else if (dataType === 'recruitmentPipeline' && result.pipelines) {
+          setData(result.pipelines);
+          console.log(`✅ Successfully fetched ${result.pipelines.length} ${dataType} records`);
+        } else if (dataType === 'recruitmentPlatform' && result.platforms) {
+          setData(result.platforms);
+          console.log(`✅ Successfully fetched ${result.platforms.length} ${dataType} records`);
         } else {
           console.warn('⚠️ API returned non-array data:', result);
           setData([]); // Fallback to empty array
