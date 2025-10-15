@@ -31,7 +31,7 @@ export const recruitmentApi = {
     if (filters.search) params.append('search', filters.search);
     if (filters.source) params.append('source', filters.source);
     if (filters.pipeline) params.append('pipeline', filters.pipeline);
-    if (filters.nationality) params.append('nationality', filters.nationality);
+    if (filters.fullName) params.append('fullName', filters.fullName);
     if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
     if (filters.dateTo) params.append('dateTo', filters.dateTo);
     if (filters.orderBy) params.append('orderBy', filters.orderBy);
@@ -197,7 +197,7 @@ export const recruitmentApi = {
     if (filters.search) params.append('search', filters.search);
     if (filters.source) params.append('source', filters.source);
     if (filters.pipeline) params.append('pipeline', filters.pipeline);
-    if (filters.nationality) params.append('nationality', filters.nationality);
+    if (filters.fullName) params.append('fullName', filters.fullName);
     if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
     if (filters.dateTo) params.append('dateTo', filters.dateTo);
 

@@ -1,23 +1,34 @@
 /**
- * Role Routes - Defines API endpoints for user and role management
- * Handles user CRUD operations, role assignments, and office access control
+ * Role Routes - API endpoints for role master management
+ * Defines all HTTP routes for role CRUD operations
  */
+
 const express = require('express');
-const router = express.Router();
 const roleController = require('../controllers/roleController');
 
-// =================== MAIN USER DATA ROUTES ====================
-router.get('/', roleController.getUsers);
-router.get('/count', roleController.getUserCount);
-router.get('/statistics', roleController.getRoleStatistics);
+const router = express.Router();
 
-// =================== OFFICE OPTIONS ROUTES ====================
-router.get('/offices/options', roleController.getOfficeOptions);
+// === CRUD ROUTES ===
 
-// =================== CRUD ROUTES (Leave these after static routes) ========
-router.post('/', roleController.createUser);
-router.get('/:id', roleController.getUserById);
-router.put('/:id', roleController.updateUser);
-router.delete('/:id', roleController.deleteUser);
+// Create new role
+router.post('/', roleController.createRole);
+
+// Get all roles with optional filtering and pagination
+router.get('/', roleController.getAllRoles);
+
+// Get role names for dropdown (must be before /:id route)
+router.get('/names', roleController.getRoleNames);
+
+// Health check endpoint
+router.get('/health', roleController.healthCheck);
+
+// Get role by ID
+router.get('/:id', roleController.getRoleById);
+
+// Update role by ID
+router.put('/:id', roleController.updateRole);
+
+// Delete role by ID
+router.delete('/:id', roleController.deleteRole);
 
 module.exports = router;

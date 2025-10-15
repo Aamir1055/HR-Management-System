@@ -80,6 +80,7 @@ class RecruitmentService {
         search: options.search,
         recruitmentSource: options.recruitmentSource,
         recruitmentPipeline: options.recruitmentPipeline,
+        fullName: options.fullName,
         nationality: options.nationality,
         dateFrom: options.dateFrom,
         dateTo: options.dateTo,

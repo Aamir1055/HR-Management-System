@@ -100,6 +100,7 @@ const recruitmentController = {
         search: req.query.search,
         recruitmentSource: req.query.source,
         recruitmentPipeline: req.query.pipeline,
+        fullName: req.query.fullName,
         nationality: req.query.nationality,
         dateFrom: req.query.dateFrom,
         dateTo: req.query.dateTo,
@@ -291,8 +292,14 @@ const recruitmentController = {
    */
   async getRecruitmentSources(req, res) {
     try {
+      const service = initializeService(req.db);
+      const statistics = await service.getRecruitmentStatistics();
+      
+      // Extract unique sources from database
+      const sources = statistics.bySource.map(item => item.recruitmentSource).filter(Boolean);
+      
       res.json({
-        sources: RecruitmentSources.getAll()
+        sources: sources
       });
     } catch (error) {
       handleError(res, error, 'Failed to fetch recruitment sources');
@@ -305,8 +312,14 @@ const recruitmentController = {
    */
   async getRecruitmentPipelines(req, res) {
     try {
+      const service = initializeService(req.db);
+      const statistics = await service.getRecruitmentStatistics();
+      
+      // Extract unique pipelines from database
+      const pipelines = statistics.byPipeline.map(item => item.recruitmentPipeline).filter(Boolean);
+      
       res.json({
-        pipelines: RecruitmentPipelines.getAll()
+        pipelines: pipelines
       });
     } catch (error) {
       handleError(res, error, 'Failed to fetch recruitment pipelines');
@@ -333,10 +346,17 @@ const recruitmentController = {
    */
   async getReferenceData(req, res) {
     try {
+      const service = initializeService(req.db);
+      const statistics = await service.getRecruitmentStatistics();
+      
+      // Extract unique values from database
+      const sources = statistics.bySource.map(item => item.recruitmentSource).filter(Boolean);
+      const pipelines = statistics.byPipeline.map(item => item.recruitmentPipeline).filter(Boolean);
+      
       res.json({
-        sources: RecruitmentSources.getAll(),
-        pipelines: RecruitmentPipelines.getAll(),
-        nationalities: CommonNationalities
+        sources: sources,
+        pipelines: pipelines,
+        nationalities: CommonNationalities // Keep nationalities as predefined for now
       });
     } catch (error) {
       handleError(res, error, 'Failed to fetch reference data');
@@ -351,32 +371,34 @@ const recruitmentController = {
    */
   async exportRecruitments(req, res) {
     try {
+      console.log('🔍 EXPORT - Starting export process');
       const service = initializeService(req.db);
       const XLSX = require('xlsx');
       
       // Get all recruitment records
-      const recruitments = await service.getAllRecruitments({});
+      const response = await service.getAllRecruitments({});
+      console.log('🔍 EXPORT - Response:', { 
+        hasRecruitments: !!response.recruitments, 
+        count: response.recruitments?.length || 0 
+      });
       
-      if (!recruitments.results || recruitments.results.length === 0) {
+      if (!response.recruitments || response.recruitments.length === 0) {
+        console.log('🔍 EXPORT - No data found, returning 404');
         return res.status(404).json({ error: 'No recruitment data to export' });
       }
       
       // Transform data for Excel export
-      const exportData = recruitments.results.map(recruitment => ({
+      const exportData = response.recruitments.map(recruitment => ({
         'ID': recruitment.id,
-        'First Name': recruitment.firstName,
-        'Last Name': recruitment.lastName,
+        'Date': recruitment.date ? new Date(recruitment.date).toLocaleDateString('en-GB') : '',
+        'Full Name': recruitment.fullName,
+        'Mobile': recruitment.mobile,
+        'WhatsApp': recruitment.whatsapp,
         'Email': recruitment.email,
-        'Phone': recruitment.phone,
-        'Nationality': recruitment.nationality,
         'Recruitment Source': recruitment.recruitmentSource,
         'Recruitment Pipeline': recruitment.recruitmentPipeline,
         'Comments': recruitment.comments || '',
-        'Position Applied': recruitment.positionApplied,
-        'Expected Salary': recruitment.expectedSalary,
-        'Experience Years': recruitment.experienceYears,
         'CV Available': recruitment.cvFilePath ? 'Yes' : 'No',
-        'Notes': recruitment.notes || '',
         'Created Date': recruitment.createdAt ? new Date(recruitment.createdAt).toLocaleDateString('en-GB') : '',
         'Updated Date': recruitment.updatedAt ? new Date(recruitment.updatedAt).toLocaleDateString('en-GB') : ''
       }));

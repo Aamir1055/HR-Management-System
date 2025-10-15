@@ -17,9 +17,12 @@ class RecruitmentRepository {
    */
   async create(recruitmentData) {
     try {
-      const fields = Object.keys(recruitmentData).join(', ');
-      const placeholders = Object.keys(recruitmentData).map(() => '?').join(', ');
-      const values = Object.values(recruitmentData);
+      // Remove createdAt and updatedAt from the data - let MySQL handle these automatically
+      const { createdAt, updatedAt, ...dataToInsert } = recruitmentData;
+      
+      const fields = Object.keys(dataToInsert).join(', ');
+      const placeholders = Object.keys(dataToInsert).map(() => '?').join(', ');
+      const values = Object.values(dataToInsert);
 
       const query = `
         INSERT INTO ${RecruitmentTableName} (${fields})
@@ -52,10 +55,10 @@ class RecruitmentRepository {
         conditions.push(`
           (fullName LIKE ? OR email LIKE ? OR mobile LIKE ? OR 
            recruitmentSource LIKE ? OR recruitmentPipeline LIKE ? OR 
-           nationality LIKE ?)
+           platform LIKE ? OR role LIKE ? OR nationality LIKE ?)
         `);
         const searchTerm = `%${options.search}%`;
-        values.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        values.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
       if (options.recruitmentSource) {
@@ -66,6 +69,11 @@ class RecruitmentRepository {
       if (options.recruitmentPipeline) {
         conditions.push('recruitmentPipeline = ?');
         values.push(options.recruitmentPipeline);
+      }
+
+      if (options.fullName) {
+        conditions.push('fullName LIKE ?');
+        values.push(`%${options.fullName}%`);
       }
 
       if (options.nationality) {
@@ -147,8 +155,8 @@ class RecruitmentRepository {
    */
   async update(id, updateData) {
     try {
-      // Remove id from updateData if it exists
-      const { id: _, ...dataToUpdate } = updateData;
+      // Remove id, createdAt, and updatedAt from updateData if they exist
+      const { id: _, createdAt, updatedAt, ...dataToUpdate } = updateData;
       
       if (Object.keys(dataToUpdate).length === 0) {
         return await this.findById(id);
@@ -208,10 +216,10 @@ class RecruitmentRepository {
         conditions.push(`
           (fullName LIKE ? OR email LIKE ? OR mobile LIKE ? OR 
            recruitmentSource LIKE ? OR recruitmentPipeline LIKE ? OR 
-           nationality LIKE ?)
+           platform LIKE ? OR role LIKE ? OR nationality LIKE ?)
         `);
         const searchTerm = `%${options.search}%`;
-        values.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        values.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
       if (options.recruitmentSource) {
@@ -222,6 +230,11 @@ class RecruitmentRepository {
       if (options.recruitmentPipeline) {
         conditions.push('recruitmentPipeline = ?');
         values.push(options.recruitmentPipeline);
+      }
+
+      if (options.fullName) {
+        conditions.push('fullName LIKE ?');
+        values.push(`%${options.fullName}%`);
       }
 
       if (options.nationality) {

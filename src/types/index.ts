@@ -91,6 +91,30 @@ export interface Platform {
   employeeCount?: number;
 }
 
+export interface Role {
+  roleId: number;
+  roleName: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Recruitment dropdown value types
+export type RecruitmentSource = 
+  | 'Indeed'
+  | 'Candidate Reference'
+  | 'Employee Reference'
+  | 'Walk-In';
+
+export type RecruitmentPipeline = 
+  | 'HR Screening'
+  | 'Screening Reject'
+  | 'R1'
+  | 'R1 Reject'
+  | 'R2'
+  | 'R2 Reject'
+  | 'Offered'
+  | 'Onboarded';
+
 export interface User {
   id: number;
   username: string;
@@ -141,8 +165,10 @@ export interface Recruitment {
   mobile: string;
   whatsapp?: string;
   email: string;
-  recruitmentSource: string;
-  recruitmentPipeline: string;
+  recruitmentSource: RecruitmentSource;
+  recruitmentPipeline: RecruitmentPipeline;
+  platform?: string; // New platform field
+  role?: string; // New role field
   nationality?: string; // Optional for backward compatibility with existing records
   comments?: string; // Optional comments field
   cvFilePath?: string;
@@ -154,14 +180,26 @@ export interface Recruitment {
   updatedAt?: string;
 }
 
-export interface RecruitmentFormData extends Recruitment {
+export interface RecruitmentFormData {
+  id?: number;
+  date: string; // dd/mm/yyyy format
+  fullName: string;
+  mobile: string;
+  whatsapp?: string;
+  email: string;
+  recruitmentSource: RecruitmentSource;
+  recruitmentPipeline: RecruitmentPipeline;
+  platform?: string; // New platform field
+  role?: string; // New role field
+  comments?: string; // Optional comments field
   cvFile?: File; // For form handling
 }
 
 export interface RecruitmentSearchFilters {
   search?: string;
-  source?: string;
-  pipeline?: string;
+  source?: RecruitmentSource;
+  pipeline?: RecruitmentPipeline;
+  fullName?: string;
   nationality?: string; // Keep for backward compatibility with existing records
   dateFrom?: string;
   dateTo?: string;
@@ -173,17 +211,17 @@ export interface RecruitmentSearchFilters {
 
 export interface RecruitmentStatistics {
   total: number;
-  bySource: Array<{ recruitmentSource: string; count: number }>;
-  byPipeline: Array<{ recruitmentPipeline: string; count: number }>;
+  bySource: Array<{ recruitmentSource: RecruitmentSource; count: number }>;
+  byPipeline: Array<{ recruitmentPipeline: RecruitmentPipeline; count: number }>;
   byNationality?: Array<{ nationality: string; count: number }>; // Optional for backward compatibility
   recentApplications: number;
   thisMonth: number;
 }
 
 export interface RecruitmentReferenceData {
-  sources: string[];
-  pipelines: string[];
-  nationalities: string[];
+  sources: RecruitmentSource[];
+  pipelines: RecruitmentPipeline[];
+  nationalities: string[]; // Keep for backward compatibility
 }
 
 // Petty Cash Management interfaces

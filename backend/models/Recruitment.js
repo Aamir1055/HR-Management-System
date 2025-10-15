@@ -13,6 +13,8 @@ const RecruitmentSchema = {
   email: { type: 'string', required: true, unique: true, maxLength: 255 },
   recruitmentSource: { type: 'string', required: true, maxLength: 100 },
   recruitmentPipeline: { type: 'string', required: true, maxLength: 100 },
+  platform: { type: 'string', required: false, maxLength: 100 }, // New platform field
+  role: { type: 'string', required: false, maxLength: 100 }, // New role field
   nationality: { type: 'string', required: false, maxLength: 100 }, // Made optional for backward compatibility
   comments: { type: 'text', required: false }, // New comments field
   cvFilePath: { type: 'string', required: false, maxLength: 500 },
@@ -85,7 +87,14 @@ class Recruitment {
   constructor(data = {}) {
     Object.keys(RecruitmentSchema).forEach(field => {
       const schema = RecruitmentSchema[field];
-      this[field] = data[field] !== undefined ? data[field] : schema.default;
+      // Don't set default values for timestamps - let MySQL handle them
+      if (field === 'createdAt' || field === 'updatedAt') {
+        if (data[field] !== undefined) {
+          this[field] = data[field];
+        }
+      } else {
+        this[field] = data[field] !== undefined ? data[field] : schema.default;
+      }
     });
   }
 

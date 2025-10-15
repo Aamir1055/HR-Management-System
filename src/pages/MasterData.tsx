@@ -17,7 +17,8 @@ import {
   AlertCircle,
   CheckCircle,
   Calendar,
-  Activity
+  Activity,
+  UserCheck
 } from 'lucide-react';
 import { useMasterData } from '../hooks/useMasterData';
 import MasterDataTable from '../components/Masters/MasterDataTable';
@@ -25,7 +26,7 @@ import MasterDataForm from '../components/Masters/MasterDataForm';
 import MasterDataStats from '../components/Masters/MasterDataStats';
 
 const MasterData = () => {
-  const [activeTab, setActiveTab] = useState<'office' | 'position' | 'visaType' | 'platform'>('office');
+  const [activeTab, setActiveTab] = useState<'office' | 'position' | 'visaType' | 'platform' | 'role'>('office');
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [viewingItem, setViewingItem] = useState<any>(null);
@@ -77,6 +78,7 @@ const MasterData = () => {
         const itemId = activeTab === 'office' ? editingItem.office_id || editingItem.id :
                       activeTab === 'position' ? editingItem.position_id || editingItem.id :
                       activeTab === 'platform' ? editingItem.id :
+                      activeTab === 'role' ? editingItem.roleId || editingItem.id :
                       editingItem.id;
         await updateItem(itemId, formData);
       } else {
@@ -112,6 +114,10 @@ const MasterData = () => {
         return (
           item.platform_name?.toLowerCase().includes(searchTermLower)
         );
+      case 'role':
+        return (
+          item.roleName?.toLowerCase().includes(searchTermLower)
+        );
       default:
         return false;
     }
@@ -124,6 +130,7 @@ const MasterData = () => {
       case 'position': return Briefcase;
       case 'visaType': return FileText;
       case 'platform': return Monitor;
+      case 'role': return UserCheck;
       default: return Building;
     }
   };
@@ -133,7 +140,8 @@ const MasterData = () => {
       office: { name: 'Offices', color: 'blue', bg: 'bg-blue-50', icon: Building },
       position: { name: 'Positions', color: 'green', bg: 'bg-green-50', icon: Briefcase },
       visaType: { name: 'Visa Types', color: 'purple', bg: 'bg-purple-50', icon: FileText },
-      platform: { name: 'Platforms', color: 'orange', bg: 'bg-orange-50', icon: Monitor }
+      platform: { name: 'Platforms', color: 'orange', bg: 'bg-orange-50', icon: Monitor },
+      role: { name: 'Roles', color: 'indigo', bg: 'bg-indigo-50', icon: UserCheck }
     };
     return configs[tab as keyof typeof configs] || configs.office;
   };
@@ -160,8 +168,9 @@ const MasterData = () => {
                       Comprehensive management hub for your organization's core data including {' '}
                       <span className="font-semibold text-gray-800">offices</span>, {' '}
                       <span className="font-semibold text-gray-800">positions</span>, {' '}
-                      <span className="font-semibold text-gray-800">visa types</span>, and {' '}
-                      <span className="font-semibold text-gray-800">platforms</span>.
+                      <span className="font-semibold text-gray-800">visa types</span>, {' '}
+                      <span className="font-semibold text-gray-800">platforms</span>, and {' '}
+                      <span className="font-semibold text-gray-800">roles</span>.
                     </p>
                     <div className="mt-4 flex items-center space-x-4">
                       <div className="flex items-center text-sm text-gray-500">
@@ -209,7 +218,8 @@ const MasterData = () => {
                 { key: 'office', icon: Building, label: 'Offices', color: 'blue' },
                 { key: 'position', icon: Briefcase, label: 'Positions', color: 'green' },
                 { key: 'visaType', icon: FileText, label: 'Visa Types', color: 'purple' },
-                { key: 'platform', icon: Monitor, label: 'Platforms', color: 'orange' }
+                { key: 'platform', icon: Monitor, label: 'Platforms', color: 'orange' },
+                { key: 'role', icon: UserCheck, label: 'Roles', color: 'indigo' }
               ].map(({ key, icon: Icon, label, color }) => {
                 const isActive = activeTab === key;
                 const recordCount = key === activeTab ? filteredData.length : data.length;
@@ -251,7 +261,8 @@ const MasterData = () => {
                 office: 'Manage office locations and their details across your organization.',
                 position: 'Define job positions, roles, and their associated office locations.',
                 visaType: 'Configure different visa types and their descriptions for employees.',
-                platform: 'Set up and manage different platforms used within your organization.'
+                platform: 'Set up and manage different platforms used within your organization.',
+                role: 'Define and manage job roles and positions available in your organization.'
               }[activeTab]}
             </p>
           </div>
@@ -299,7 +310,8 @@ const MasterData = () => {
                   office: 'name, location',
                   position: 'title, office',
                   visaType: 'type, description',
-                  platform: 'name'
+                  platform: 'name',
+                  role: 'name'
                 }[activeTab]}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

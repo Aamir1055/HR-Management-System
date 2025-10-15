@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { X, Calendar, Upload, FileText, Download, Trash2 } from 'lucide-react';
 import { Recruitment, RecruitmentFormData } from '../../types';
 import recruitmentApi from '../../services/recruitmentApi';
+import roleApi from '../../services/roleApi';
 import { useToast } from '../UI/ToastContainer';
 
 interface RecruitmentFormProps {
@@ -28,6 +29,7 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
   } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [roleNames, setRoleNames] = useState<string[]>([]);
   
   const { showSuccess, showError } = useToast();
 
@@ -49,10 +51,14 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
     },
   });
 
-  // Load recruitment data on mount
+  // Load recruitment data and role names on mount
   useEffect(() => {
-    const loadRecruitmentData = () => {
+    const loadData = async () => {
       try {
+        // Load role names for dropdown
+        const roles = await roleApi.getRoleNames();
+        setRoleNames(roles);
+
         if (recruitment) {
           // Format date for input
           const formattedDate = recruitment.formattedDate || recruitment.date;
@@ -71,14 +77,14 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error loading recruitment data:', error);
+        console.error('Error loading form data:', error);
         showError('Error', 'Failed to load form data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadRecruitmentData();
+    loadData();
   }, [recruitment, reset, showError]);
 
   // Handle file validation and processing
@@ -392,6 +398,43 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({
           {errors.recruitmentPipeline && (
             <p className="mt-1 text-sm text-red-600">{errors.recruitmentPipeline.message}</p>
           )}
+        </div>
+      </div>
+
+      {/* Platform & Role */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Platform
+          </label>
+          <div className="dropdown-container">
+            <select
+              {...register('platform')}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select platform</option>
+              <option value="National Stock Exchange">National Stock Exchange</option>
+              <option value="Forex">Forex</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Role
+          </label>
+          <div className="dropdown-container">
+            <select
+              {...register('role')}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select role</option>
+              {roleNames.map((roleName) => (
+                <option key={roleName} value={roleName}>
+                  {roleName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

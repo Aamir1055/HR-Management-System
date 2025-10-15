@@ -11,7 +11,8 @@
 
 
 
-- [ ] 2. Update frontend recruitment form component
+- [x] 2. Update frontend recruitment form component
+
   - Remove nationality field from RecruitmentForm.tsx component including input field, label, validation, and form registration
   - Convert recruitmentSource text input to dropdown select element with the four predefined options
   - Convert recruitmentPipeline text input to dropdown select element with the eight predefined pipeline stages
@@ -22,7 +23,10 @@
   - Maintain existing form styling and layout for the dropdown elements
   - _Requirements: 1.1, 1.2, 1.4, 2.1, 2.3, 2.4, 3.1, 3.3, 3.4, 3.6_
 
-- [ ] 3. Update TypeScript interfaces and types
+
+
+
+- [x] 3. Update TypeScript interfaces and types
   - Remove nationality field from RecruitmentFormData interface in types file
   - Update any other TypeScript interfaces that reference nationality field for recruitment forms
   - Ensure recruitmentSource and recruitmentPipeline types are properly defined for dropdown values

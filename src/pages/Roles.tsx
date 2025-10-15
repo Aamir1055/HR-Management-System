@@ -1,79 +1,37 @@
-// Recruitments page - main page for recruitment management with comprehensive CRUD operations
-// Matches the structure and functionality of the Employees page
+// Roles page - main page for role master management with comprehensive CRUD operations
 import React, { useState, useEffect, useCallback } from 'react';
-import { Recruitment } from '../types';
+import { Role } from '../types';
 import { MainLayout } from '../components/Layout/MainLayout';
-import { RecruitmentTable } from '../components/Recruitments/RecruitmentTable';
-import RecruitmentForm from '../components/Recruitments/RecruitmentForm';
-import { useRecruitments } from '../hooks/useRecruitments';
+import { RoleTable } from '../components/Roles/RoleTable';
+import RoleForm from '../components/Roles/RoleForm';
+import { useRoles } from '../hooks/useRoles';
 import { useToast } from '../components/UI/ToastContainer';
-import recruitmentApi from '../services/recruitmentApi';
-import { Plus, Search, X, Filter, FileDown } from 'lucide-react';
+import { Plus, Search, X, Filter } from 'lucide-react';
 
-export const Recruitments: React.FC = () => {
+export const Roles: React.FC = () => {
   const {
-    recruitments,
+    roles,
     loading,
     error,
     pagination,
-    refreshRecruitments,
-    createRecruitment,
-    updateRecruitment,
-    deleteRecruitment,
-    downloadCV,
-    exportToExcel,
-  } = useRecruitments();
+    refreshRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+  } = useRoles();
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedSource, setSelectedSource] = useState('');
-  const [selectedPipeline, setSelectedPipeline] = useState('');
-  const [selectedFullName, setSelectedFullName] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Dropdown options - start empty, load from database only
-  const [sources, setSources] = useState<string[]>([]);
-  const [pipelines, setPipelines] = useState<string[]>([]);
-
   // Form state
   const [showForm, setShowForm] = useState(false);
-  const [editingRecruitment, setEditingRecruitment] = useState<Recruitment | undefined>();
+  const [editingRole, setEditingRole] = useState<Role | undefined>();
 
   const { showSuccess, showError } = useToast();
-
-  // Load dropdown options from API
-  const loadDropdownOptions = useCallback(async () => {
-    try {
-      // Get all available sources and pipelines from the API
-      const [sourcesData, pipelinesData] = await Promise.all([
-        recruitmentApi.getSources(),
-        recruitmentApi.getPipelines()
-      ]);
-
-      // Use only database values, no defaults
-      setSources(sourcesData);
-      setPipelines(pipelinesData);
-    } catch (error) {
-      console.error('Error loading dropdown options from API:', error);
-      // Fallback: extract from current recruitment data
-      if (recruitments.length > 0) {
-        const uniqueSources = [...new Set(recruitments.map(r => r.recruitmentSource).filter(Boolean))];
-        const uniquePipelines = [...new Set(recruitments.map(r => r.recruitmentPipeline).filter(Boolean))];
-        setSources(uniqueSources);
-        setPipelines(uniquePipelines);
-      }
-    }
-  }, [recruitments]);
-
-  // Load dropdown options on mount and when data changes
-  useEffect(() => {
-    loadDropdownOptions();
-  }, [loadDropdownOptions]);
-
-
 
   // Debounce search query
   useEffect(() => {
@@ -88,17 +46,14 @@ export const Recruitments: React.FC = () => {
   useEffect(() => {
     const filters = {
       search: debouncedQuery || undefined,
-      source: selectedSource || undefined,
-      pipeline: selectedPipeline || undefined,
-      fullName: selectedFullName || undefined,
       limit: itemsPerPage,
       offset: (currentPage - 1) * itemsPerPage,
-      orderBy: 'createdAt',
-      orderDirection: 'DESC' as const,
+      orderBy: 'roleName',
+      orderDirection: 'ASC' as const,
     };
 
-    refreshRecruitments(filters);
-  }, [debouncedQuery, selectedSource, selectedPipeline, selectedFullName, currentPage, itemsPerPage, refreshRecruitments]);
+    refreshRoles(filters);
+  }, [debouncedQuery, currentPage, itemsPerPage, refreshRoles]);
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
@@ -114,26 +69,26 @@ export const Recruitments: React.FC = () => {
 
   // Handle form actions
   const handleCreate = () => {
-    setEditingRecruitment(undefined);
+    setEditingRole(undefined);
     setShowForm(true);
   };
 
-  const handleEdit = (recruitment: Recruitment) => {
-    setEditingRecruitment(recruitment);
+  const handleEdit = (role: Role) => {
+    setEditingRole(role);
     setShowForm(true);
   };
 
   const handleFormClose = () => {
     setShowForm(false);
-    setEditingRecruitment(undefined);
+    setEditingRole(undefined);
   };
 
   const handleFormSubmit = async (data: any) => {
     try {
-      if (editingRecruitment) {
-        await updateRecruitment(editingRecruitment.id!, data);
+      if (editingRole) {
+        await updateRole(editingRole.roleId!, data);
       } else {
-        await createRecruitment(data);
+        await createRole(data);
       }
       handleFormClose();
     } catch (error) {
@@ -142,9 +97,9 @@ export const Recruitments: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this recruitment record?')) {
+    if (window.confirm('Are you sure you want to delete this role?')) {
       try {
-        await deleteRecruitment(id);
+        await deleteRole(id);
       } catch (error) {
         // Error is already handled by the hook
       }
@@ -154,22 +109,7 @@ export const Recruitments: React.FC = () => {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedSource('');
-    setSelectedPipeline('');
-    setSelectedFullName('');
     setCurrentPage(1);
-  };
-
-  // Handle export
-  const handleExport = async () => {
-    const filters = {
-      search: debouncedQuery || undefined,
-      source: selectedSource || undefined,
-      pipeline: selectedPipeline || undefined,
-      fullName: selectedFullName || undefined,
-    };
-
-    await exportToExcel(filters);
   };
 
   return (
@@ -178,28 +118,19 @@ export const Recruitments: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Recruitment Panel</h1>
-            <p className="text-gray-600">Manage recruitment records and candidate pipeline</p>
+            <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
+            <p className="text-gray-600">Manage role master data</p>
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={handleExport}
-              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              disabled={loading}
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Export
-            </button>
             <button
               onClick={handleCreate}
               className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Candidate
+              Add Role
             </button>
           </div>
         </div>
-
 
         {/* Search and Filters */}
         <div className="bg-white shadow rounded-lg p-6">
@@ -213,7 +144,7 @@ export const Recruitments: React.FC = () => {
                 <input
                   type="text"
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Search by name, email, or other details..."
+                  placeholder="Search roles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -240,57 +171,8 @@ export const Recruitments: React.FC = () => {
 
             {/* Filters */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Recruitment Source
-                  </label>
-                  <select
-                    value={selectedSource}
-                    onChange={(e) => setSelectedSource(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Sources</option>
-                    {sources.map((source) => (
-                      <option key={source} value={source}>
-                        {source}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pipeline Stage
-                  </label>
-                  <select
-                    value={selectedPipeline}
-                    onChange={(e) => setSelectedPipeline(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Stages</option>
-                    {pipelines.map((pipeline) => (
-                      <option key={pipeline} value={pipeline}>
-                        {pipeline}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Filter by full name"
-                    value={selectedFullName}
-                    onChange={(e) => setSelectedFullName(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="md:col-span-3 flex items-center justify-between">
+              <div className="grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
                   <button
                     onClick={clearFilters}
                     className="text-sm text-gray-600 hover:text-gray-800"
@@ -298,8 +180,8 @@ export const Recruitments: React.FC = () => {
                     Clear all filters
                   </button>
                   <div className="text-sm text-gray-500">
-                    {(selectedSource || selectedPipeline || selectedFullName || debouncedQuery) && (
-                      `Showing ${recruitments.length} of ${pagination.total} results`
+                    {debouncedQuery && (
+                      `Showing ${roles.length} of ${pagination.total} results`
                     )}
                   </div>
                 </div>
@@ -318,16 +200,15 @@ export const Recruitments: React.FC = () => {
             <div className="text-red-800">{error}</div>
           </div>
         ) : (
-          <RecruitmentTable
-            recruitments={recruitments}
+          <RoleTable
+            roles={roles}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onDownloadCV={downloadCV}
           />
         )}
 
         {/* Pagination */}
-        {!loading && !error && recruitments.length > 0 && (
+        {!loading && !error && roles.length > 0 && (
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
@@ -426,8 +307,8 @@ export const Recruitments: React.FC = () => {
 
         {/* Form Modal */}
         {showForm && (
-          <RecruitmentForm
-            recruitment={editingRecruitment}
+          <RoleForm
+            role={editingRole}
             onSubmit={handleFormSubmit}
             onClose={handleFormClose}
           />

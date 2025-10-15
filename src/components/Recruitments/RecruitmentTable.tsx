@@ -182,22 +182,24 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('recruitmentSource')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Source</span>
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('recruitmentPipeline')}
               >
                 <div className="flex items-center space-x-1">
                   <span>Pipeline</span>
                   <ArrowUpDown className="w-4 h-4" />
                 </div>
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Platform
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Role
               </th>
               <th
                 scope="col"
@@ -226,14 +228,11 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    <div>📱 {recruitment.mobile}</div>
+                    <div>{recruitment.mobile}</div>
                     {recruitment.whatsapp && (
-                      <div className="text-xs text-gray-500">💬 {recruitment.whatsapp}</div>
+                      <div className="text-xs text-gray-500">{recruitment.whatsapp}</div>
                     )}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{recruitment.recruitmentSource}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -243,6 +242,12 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
                   >
                     {recruitment.recruitmentPipeline}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{recruitment.platform || '-'}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{recruitment.role || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {recruitment.cvOriginalName ? (

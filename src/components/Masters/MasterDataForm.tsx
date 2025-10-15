@@ -8,7 +8,7 @@ import PositionOfficeSelection from './PositionOfficeSelection';
 interface MasterDataFormProps {
   isOpen: boolean;
   mode: 'add' | 'edit' | 'view';
-  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
   data: any;
   onSubmit: (data: any) => void;
   onClose: () => void;
@@ -81,7 +81,8 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
     position: 'Position',
     visaType: 'Visa Type',
     platform: 'Platform',
-    loan: 'Employee Loan'
+    loan: 'Employee Loan',
+    role: 'Role'
   };
 
   // ✅ SIMPLIFIED: Basic form submission without auto-deduction processing
@@ -412,6 +413,42 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
               ></textarea>
             </div>
 
+          </>
+        );
+
+      case 'role':
+        return (
+          <>
+            <div className="mb-4">
+              <label htmlFor="roleName" className="block text-sm font-medium text-gray-700">
+                Role Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="roleName"
+                {...register('roleName', { 
+                  required: mode !== 'view' ? 'Role name is required' : false,
+                  minLength: {
+                    value: 2,
+                    message: 'Role name must be at least 2 characters'
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: 'Role name must be 100 characters or less'
+                  },
+                  pattern: {
+                    value: /^[a-zA-Z0-9\s\-&().,]+$/,
+                    message: 'Role name contains invalid characters'
+                  }
+                })}
+                disabled={mode === 'view'}
+                placeholder="Enter role name"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100"
+              />
+              {errors.roleName && (
+                <p className="mt-1 text-sm text-red-600">{errors.roleName.message as string}</p>
+              )}
+            </div>
           </>
         );
 

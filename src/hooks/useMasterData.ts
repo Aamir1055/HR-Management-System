@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-type DataType = 'office' | 'position' | 'visaType' | 'platform' | 'loan';
+type DataType = 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
 
 interface UseMasterDataReturn {
   data: any[];
@@ -22,8 +22,8 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = () => {
-    // For loan endpoints, we don't need auth headers since routes are open
-    if (dataType === 'loan') {
+    // For loan and role endpoints, we don't need auth headers since routes are open
+    if (dataType === 'loan' || dataType === 'role') {
       return {
         'Content-Type': 'application/json'
       };
@@ -49,6 +49,8 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         return '/api/masters/platforms';
       case 'loan':
         return '/api/loans';
+      case 'role':
+        return '/api/roles';
       default:
         return '';
     }
@@ -66,7 +68,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
       });
       
       if (!response.ok) {
-        if (response.status === 401 && dataType !== 'loan') {
+        if (response.status === 401 && dataType !== 'loan' && dataType !== 'role') {
           setError('Authentication failed. Please log in again.');
           return;
         }
@@ -79,6 +81,15 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
       if (Array.isArray(result)) {
         setData(result);
         console.log(`✅ Successfully fetched ${result.length} ${dataType} records`);
+      } else if (result && typeof result === 'object') {
+        // Handle different response formats
+        if (dataType === 'role' && result.roles) {
+          setData(result.roles);
+          console.log(`✅ Successfully fetched ${result.roles.length} ${dataType} records`);
+        } else {
+          console.warn('⚠️ API returned non-array data:', result);
+          setData([]); // Fallback to empty array
+        }
       } else {
         console.warn('⚠️ API returned non-array data:', result);
         setData([]); // Fallback to empty array

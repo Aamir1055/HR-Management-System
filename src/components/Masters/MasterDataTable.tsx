@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit, Trash2, Eye, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface MasterDataTableProps {
-  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan';
+  dataType: 'office' | 'position' | 'visaType' | 'platform' | 'loan' | 'role';
   data: any[];
   loading: boolean;
   onEdit: (item: any) => void;
@@ -37,10 +37,10 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-4">
-            No {dataType === 'office' ? 'offices' : dataType === 'position' ? 'positions' : dataType === 'visaType' ? 'visa types' : dataType === 'platform' ? 'platforms' : 'loans'} found.
+            No {dataType === 'office' ? 'offices' : dataType === 'position' ? 'positions' : dataType === 'visaType' ? 'visa types' : dataType === 'platform' ? 'platforms' : dataType === 'role' ? 'roles' : 'loans'} found.
           </div>
           <p className="text-gray-400">
-            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : dataType === 'position' ? 'position' : dataType === 'visaType' ? 'visa type' : dataType === 'platform' ? 'platform' : 'loan'}.
+            Click the "Add New" button to create your first {dataType === 'office' ? 'office' : dataType === 'position' ? 'position' : dataType === 'visaType' ? 'visa type' : dataType === 'platform' ? 'platform' : dataType === 'role' ? 'role' : 'loan'}.
           </p>
         </div>
       </div>
@@ -96,6 +96,13 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
           { key: 'status', label: 'Status' }, // ✅ Added status column
           { key: 'start_date', label: 'Start Date' }
           // ✅ Total Paid column remains removed as requested
+        ];
+      case 'role':
+        return [
+          { key: 'roleId', label: 'Role ID' },
+          { key: 'roleName', label: 'Role Name' },
+          { key: 'created_at', label: 'Created' },
+          { key: 'updated_at', label: 'Updated' }
         ];
       default:
         return [];
@@ -169,6 +176,27 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       }
     }
 
+    // Handle role-specific formatting
+    if (dataType === 'role') {
+      switch (column.key) {
+        case 'created_at':
+        case 'updated_at':
+          return formatDate(value);
+        case 'roleName':
+          return (
+            <span className="font-medium text-gray-900">
+              {value || '-'}
+            </span>
+          );
+        case 'roleId':
+          return (
+            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+              {value || '-'}
+            </span>
+          );
+      }
+    }
+
     // Handle other data types
     switch (column.key) {
       case 'duty_hours':
@@ -211,6 +239,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
               const itemId = dataType === 'office' ? item.office_id || item.id : 
                            dataType === 'position' ? item.position_id || item.id : 
                            dataType === 'platform' ? item.id :
+                           dataType === 'role' ? item.roleId || item.id :
                            item.id;
               
               // ✅ FIXED: Create unique keys for positions (which can have same position_id for different offices)

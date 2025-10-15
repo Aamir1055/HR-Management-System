@@ -24,8 +24,11 @@ export const useUsers = (): UseUsersReturn => {
       setError(null);
       const response = await api.get('/roles');
       
+      // Handle the roles API response format: { roles: [...] }
+      const rolesData = response.data?.roles || response.data || [];
+      
       // Transform backend response to match frontend expectations
-      const transformedUsers = (response.data || []).map((user: any) => ({
+      const transformedUsers = (Array.isArray(rolesData) ? rolesData : []).map((user: any) => ({
         ...user,
         // Convert assigned_offices to offices for frontend compatibility
         offices: user.assigned_offices || []
