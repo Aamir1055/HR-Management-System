@@ -145,69 +145,69 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('date')}
               >
                 <div className="flex items-center space-x-1">
                   <span>Date</span>
-                  <ArrowUpDown className="w-4 h-4" />
+                  <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('fullName')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>Full Name</span>
-                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Name</span>
+                  <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 hidden lg:table-cell"
                 onClick={() => handleSort('email')}
               >
                 <div className="flex items-center space-x-1">
                   <span>Email</span>
-                  <ArrowUpDown className="w-4 h-4" />
+                  <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell"
               >
                 Contact
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('recruitmentPipeline')}
               >
                 <div className="flex items-center space-x-1">
                   <span>Pipeline</span>
-                  <ArrowUpDown className="w-4 h-4" />
+                  <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell"
               >
                 Platform
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell"
               >
                 Role
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 CV
               </th>
-              <th scope="col" className="relative px-6 py-3">
+              <th scope="col" className="relative px-3 py-2">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -215,18 +215,22 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedRecruitments.map((recruitment) => (
               <tr key={recruitment.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   {recruitment.formattedDate || recruitment.date}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
                     {recruitment.fullName}
                   </div>
+                  {/* Show email on mobile when email column is hidden */}
+                  <div className="text-xs text-gray-500 lg:hidden">
+                    {recruitment.email}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap hidden lg:table-cell">
                   <div className="text-sm text-gray-900">{recruitment.email}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap hidden md:table-cell">
                   <div className="text-sm text-gray-900">
                     <div>{recruitment.mobile}</div>
                     {recruitment.whatsapp && (
@@ -234,7 +238,7 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <span
                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPipelineStatusColor(
                       recruitment.recruitmentPipeline
@@ -242,29 +246,37 @@ export const RecruitmentTable: React.FC<RecruitmentTableProps> = ({
                   >
                     {recruitment.recruitmentPipeline}
                   </span>
+                  {/* Show platform and role on mobile when those columns are hidden */}
+                  <div className="xl:hidden mt-1">
+                    {recruitment.platform && (
+                      <div className="text-xs text-gray-500">📊 {recruitment.platform}</div>
+                    )}
+                    {recruitment.role && (
+                      <div className="text-xs text-gray-500 lg:hidden">👤 {recruitment.role}</div>
+                    )}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap hidden xl:table-cell">
                   <div className="text-sm text-gray-900">{recruitment.platform || '-'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap hidden lg:table-cell">
                   <div className="text-sm text-gray-900">{recruitment.role || '-'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   {recruitment.cvOriginalName ? (
                     <button
                       onClick={() => handleDownloadCV(recruitment)}
                       className="flex items-center text-blue-600 hover:text-blue-800"
                       title="Download CV"
                     >
-                      <FileText className="w-4 h-4 mr-1" />
-                      <span className="text-xs">Download</span>
+                      <FileText className="w-4 h-4" />
                     </button>
                   ) : (
-                    <span className="text-gray-400 text-xs">No CV</span>
+                    <span className="text-gray-400 text-xs">-</span>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex items-center space-x-1">
                     <button
                       onClick={() => onEdit(recruitment)}
                       className="text-blue-600 hover:text-blue-800"

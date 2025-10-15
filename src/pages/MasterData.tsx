@@ -179,25 +179,20 @@ const MasterData = () => {
                     <currentTabConfig.icon className={`w-8 h-8 text-${currentTabConfig.color}-600`} />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                       Master Data Management
                     </h1>
-                    <p className="mt-3 text-lg text-gray-600 max-w-2xl">
-                      Comprehensive management hub for your organization's core data including {' '}
-                      <span className="font-semibold text-gray-800">offices</span>, {' '}
-                      <span className="font-semibold text-gray-800">positions</span>, {' '}
-                      <span className="font-semibold text-gray-800">visa types</span>, {' '}
-                      <span className="font-semibold text-gray-800">platforms</span>, and {' '}
-                      <span className="font-semibold text-gray-800">roles</span>.
+                    <p className="mt-2 text-base text-gray-600 max-w-2xl">
+                      Manage your organization's core data including offices, positions, visa types, platforms, and recruitment data.
                     </p>
-                    <div className="mt-4 flex items-center space-x-4">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Activity className="w-4 h-4 mr-2" />
-                        Currently viewing: <span className="font-medium text-gray-700 ml-1">{currentTabConfig.name}</span>
+                    <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <Activity className="w-4 h-4 mr-1" />
+                        {currentTabConfig.name}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                        {filteredData.length} {filteredData.length === 1 ? 'record' : 'records'} found
+                      <div className="flex items-center">
+                        <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
+                        {filteredData.length} records
                       </div>
                     </div>
                   </div>
@@ -237,17 +232,17 @@ const MasterData = () => {
         {/* Enhanced Tabs with modern styling */}
         <div className="mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
-            <nav className="flex flex-wrap gap-2" aria-label="Tabs">
+            <nav className="grid grid-cols-4 lg:grid-cols-8 gap-1" aria-label="Tabs">
               {[
-                { key: 'office', icon: Building, label: 'Offices', color: 'blue' },
-                { key: 'position', icon: Briefcase, label: 'Positions', color: 'green' },
-                { key: 'visaType', icon: FileText, label: 'Visa Types', color: 'purple' },
-                { key: 'platform', icon: Monitor, label: 'Employee Platforms', color: 'orange' },
-                { key: 'role', icon: UserCheck, label: 'Roles', color: 'indigo' },
-                { key: 'recruitmentSource', icon: Users, label: 'Recruitment Sources', color: 'red' },
-                { key: 'recruitmentPipeline', icon: Activity, label: 'Recruitment Pipeline', color: 'rose' },
-                { key: 'recruitmentPlatform', icon: TrendingUp, label: 'Recruitment Platforms', color: 'emerald' }
-              ].map(({ key, icon: Icon, label, color }) => {
+                { key: 'office', icon: Building, label: 'Offices', shortLabel: 'Offices', color: 'blue' },
+                { key: 'position', icon: Briefcase, label: 'Positions', shortLabel: 'Positions', color: 'green' },
+                { key: 'visaType', icon: FileText, label: 'Visa Types', shortLabel: 'Visas', color: 'purple' },
+                { key: 'platform', icon: Monitor, label: 'Employee Platforms', shortLabel: 'Emp. Platforms', color: 'orange' },
+                { key: 'role', icon: UserCheck, label: 'Roles', shortLabel: 'Roles', color: 'indigo' },
+                { key: 'recruitmentSource', icon: Users, label: 'Recruitment Sources', shortLabel: 'R. Sources', color: 'red' },
+                { key: 'recruitmentPipeline', icon: Activity, label: 'Recruitment Pipeline', shortLabel: 'R. Pipeline', color: 'rose' },
+                { key: 'recruitmentPlatform', icon: TrendingUp, label: 'Recruitment Platforms', shortLabel: 'R. Platforms', color: 'emerald' }
+              ].map(({ key, icon: Icon, label, shortLabel, color }) => {
                 const isActive = activeTab === key;
                 const recordCount = key === activeTab ? filteredData.length : data.length;
                 
@@ -259,15 +254,17 @@ const MasterData = () => {
                   <button
                     key={key}
                     onClick={() => setActiveTab(key as any)}
-                    className={`flex items-center px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${activeStyles}`}
+                    className={`flex flex-col items-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 ${activeStyles} min-w-0`}
+                    title={label}
                   >
-                    <Icon className={`w-5 h-5 mr-2 ${
+                    <Icon className={`w-4 h-4 mb-1 ${
                       isActive ? 'text-white' : `text-${color}-500`
                     }`} />
-                    <span className="hidden sm:inline">{label}</span>
-                    <span className="sm:hidden">{label.split(' ')[0]}</span>
+                    <span className="truncate w-full text-center leading-tight">
+                      {shortLabel}
+                    </span>
                     {isActive && (
-                      <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold bg-white/20">
+                      <span className="mt-1 px-1 py-0.5 rounded text-xs font-bold bg-white/20 leading-none">
                         {recordCount}
                       </span>
                     )}
@@ -277,24 +274,26 @@ const MasterData = () => {
             </nav>
           </div>
           
-          {/* Tab Description */}
-          <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center space-x-2">
-              <currentTabConfig.icon className={`w-5 h-5 text-${currentTabConfig.color}-600`} />
-              <h3 className="font-semibold text-gray-900">{currentTabConfig.name} Management</h3>
+          {/* Tab Description - Compact */}
+          <div className="mt-3 bg-white rounded-lg border border-gray-200 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <currentTabConfig.icon className={`w-4 h-4 text-${currentTabConfig.color}-600`} />
+                <h3 className="font-medium text-gray-900">{currentTabConfig.name}</h3>
+              </div>
+              <span className="text-xs text-gray-500">
+                {{
+                  office: 'Office locations & details',
+                  position: 'Job positions & office assignments',
+                  visaType: 'Visa types & descriptions',
+                  platform: 'Employee platforms',
+                  role: 'Job roles & positions',
+                  recruitmentSource: 'Indeed, References, Walk-In',
+                  recruitmentPipeline: 'Screening → Onboarding stages',
+                  recruitmentPlatform: 'NSE, Forex, Trading platforms'
+                }[activeTab]}
+              </span>
             </div>
-            <p className="mt-2 text-sm text-gray-600">
-              {{
-                office: 'Manage office locations and their details across your organization.',
-                position: 'Define job positions, roles, and their associated office locations.',
-                visaType: 'Configure different visa types and their descriptions for employees.',
-                platform: 'Set up and manage employee platforms used within your organization.',
-                role: 'Define and manage job roles and positions available in your organization.',
-                recruitmentSource: 'Manage recruitment sources like Indeed, Employee Reference, Walk-In, etc.',
-                recruitmentPipeline: 'Configure recruitment pipeline stages from screening to onboarding.',
-                recruitmentPlatform: 'Manage recruitment platforms like National Stock Exchange, Forex, and other trading platforms.'
-              }[activeTab]}
-            </p>
           </div>
         </div>
 
