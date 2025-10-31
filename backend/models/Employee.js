@@ -132,8 +132,8 @@ const EmployeeFieldMappings = {
     'Emirates ID': 'emirates_id',
     'emirates_id': 'emirates_id',
     'Emergency Contact': 'emergency_contact',
-    'Emergency Contact Details': 'emergency_contact',
     'emergency_contact': 'emergency_contact',
+    'Emergency Contact Details': 'emergency_contact_relation',
     'Emergency Contact Relation': 'emergency_contact_relation',
     'emergency_contact_relation': 'emergency_contact_relation'
   }
