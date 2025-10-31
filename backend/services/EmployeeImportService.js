@@ -318,8 +318,7 @@ class EmployeeImportService {
       // Format data for export
       const exportData = employees.map(emp => ({
         'Employee ID': emp.employeeId,
-        'First Name': emp.first_name || '',
-        'Last Name': emp.last_name || '',
+        'Full Name': emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
         'Date of Birth': emp.dob,
         'Date of Joining': emp.joiningDate,
         'Nationality': emp.nationality || '',
