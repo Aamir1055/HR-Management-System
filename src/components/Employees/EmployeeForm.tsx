@@ -62,9 +62,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     defaultValues: {
       id: undefined,
       employeeId: '',
-      name: '',
-      first_name: '',
-      last_name: '',
+  name: '',
       nationality: '',
       email: '',
       office_id: 0,
@@ -99,8 +97,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     },
   });
 
-  const watchedFirstName = watch('first_name');
-  const watchedLastName = watch('last_name');
+  const watchedName = watch('name');
   const statusValue = watch('status');
   const officeId = watch('office_id');
   const positionId = watch('position_id');
@@ -113,13 +110,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     register('visa_expiry');
   }, [register]);
 
-  // Automatically update the `name` field when first_name or last_name changes
-  useEffect(() => {
-    const firstName = watchedFirstName || '';
-    const lastName = watchedLastName || '';
-    const fullName = `${firstName} ${lastName}`.trim();
-    setValue('name', fullName);
-  }, [watchedFirstName, watchedLastName, setValue]);
+  // No need to auto-update name from first/last; use single name field
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -230,8 +221,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             emergency_contact: employee.emergency_contact || '',
             emergency_contact_relation: employee.emergency_contact_relation || '',
             nationality: employee.nationality || '',
-            first_name: firstName,
-            last_name: lastName,
+            name: employee.name || '',
             shift_timings: employee.shift_timings || '9:00 AM - 6:00 PM',
           });
 
@@ -341,12 +331,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       const visaType = visaTypes.find(v => String(v.id) === String(formData.visa_type_id));
       const platform = platforms.find(p => String(p.id) === String(formData.platform_id));
       const completeEmployeeData: any = {
-        // Add ID for existing employees
         ...(employee?.id && { id: employee.id }),
         employeeId: formData.employeeId,
-        name: formData.name, // This will be the concatenated name from first_name + last_name
-        first_name: formData.first_name || '',
-        last_name: formData.last_name || '',
+        name: formData.name,
         nationality: formData.nationality || '',
         email: formData.email,
         office_name: office?.name || '',
@@ -431,26 +418,15 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
       </div>
 
-      {/* First Name */}
+      {/* Full Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-600">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-600">*</span></label>
         <input
-          {...register('first_name', { required: 'First name is required' })}
+          {...register('name', { required: 'Full Name is required' })}
           disabled={viewOnly}
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
         />
-        {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
-      </div>
-
-      {/* Last Name */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-600">*</span></label>
-        <input
-          {...register('last_name', { required: 'Last name is required' })}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-        />
-        {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
+        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
       </div>
 
       {/* Email */}

@@ -15,19 +15,30 @@ const { excelDateToYYYYMMDD, dateToExcelSerial, formatDateForTemplate } = requir
  */
 function mapExcelColumns(availableColumns, mappings = EmployeeFieldMappings.excelToModel) {
   const columnMapping = {};
-  
+
+  // Normalize function: lower-case and remove spaces/underscores for robust matching
+  const normalize = (s) => String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '');
+
+  // Build a lookup from normalized available column -> actual column name
+  const availableLookup = {};
+  for (const col of availableColumns) {
+    availableLookup[normalize(col)] = col;
+  }
+
   // The mappings object has structure: { "Excel Column": "modelField" }
-  // We need to reverse this to find which Excel columns exist and map them to model fields
+  // Reverse using normalized keys to find which Excel columns exist and map them to model fields
   for (const [excelColumnName, modelFieldName] of Object.entries(mappings)) {
-    // Check if this Excel column name exists in the available columns
-    if (availableColumns.includes(excelColumnName)) {
-      // Only map if we haven't already mapped this model field
+    const norm = normalize(excelColumnName);
+    if (norm in availableLookup) {
       if (!columnMapping[modelFieldName]) {
-        columnMapping[modelFieldName] = excelColumnName;
+        columnMapping[modelFieldName] = availableLookup[norm];
       }
     }
   }
-  
+
   return columnMapping;
 }
 
@@ -43,6 +54,13 @@ function validateRequiredColumns(availableColumns, requiredColumns, columnMappin
   
   requiredColumns.forEach(standardName => {
     if (!columnMapping[standardName]) {
+      // Flexible handling for name vs first/last name combinations
+      if (standardName === 'name') {
+        const hasFirstLast = !!(columnMapping['first_name'] && columnMapping['last_name']);
+        if (hasFirstLast) {
+          return; // treat as satisfied if both first and last name columns exist
+        }
+      }
       missingColumns.push(standardName);
     }
   });

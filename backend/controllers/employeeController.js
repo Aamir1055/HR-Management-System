@@ -9,6 +9,7 @@ const EmployeeRepository = require('../repositories/EmployeeRepository');
 const EmployeeService = require('../services/EmployeeService');
 const EmployeeValidationService = require('../services/EmployeeValidationService');
 const EmployeeImportService = require('../services/EmployeeImportService');
+const ImprovedEmployeeImportService = require('../services/ImprovedEmployeeImportService');
 
 // Service instances cache (to avoid recreating on each request)
 let serviceInstances = null;
@@ -24,12 +25,14 @@ function initializeServices(db) {
     const validationService = new EmployeeValidationService(employeeRepository);
     const employeeService = new EmployeeService(employeeRepository, validationService);
     const importService = new EmployeeImportService(employeeRepository, validationService, employeeService);
+    const improvedImportService = new ImprovedEmployeeImportService(employeeRepository, validationService, employeeService);
 
     serviceInstances = {
       employeeRepository,
       validationService,
       employeeService,
-      importService
+      importService,
+      improvedImportService
     };
   }
   
@@ -194,7 +197,7 @@ const employeeController = {
   // === IMPORT/EXPORT OPERATIONS ===
   
   /**
-   * Import employees from Excel
+   * Import employees from Excel (with improved flexibility)
    */
   async importEmployees(req, res) {
     if (!req.file) {
@@ -205,21 +208,37 @@ const employeeController = {
       const services = initializeServices(req.db);
       const context = buildRequestContext(req);
       
-      const result = await services.importService.importEmployees(req.file.path, context);
+      console.log('[CONTROLLER] Using improved import service for better compatibility');
+      
+      // Try improved import first (more flexible)
+      const result = await services.improvedImportService.importEmployeesImproved(req.file.path, context);
       
       if (result.success) {
         res.json({
           message: result.message,
           imported: result.imported,
           errors: result.errors,
-          warnings: result.warnings
+          warnings: result.warnings || []
         });
       } else {
-        res.status(400).json({
-          error: result.message,
-          errors: result.errors,
-          imported: result.imported
-        });
+        // If improved import fails, try fallback to original
+        console.log('[CONTROLLER] Improved import failed, trying original import...');
+        const fallbackResult = await services.importService.importEmployees(req.file.path, context);
+        
+        if (fallbackResult.success) {
+          res.json({
+            message: `${fallbackResult.message} (using fallback import)`,
+            imported: fallbackResult.imported,
+            errors: fallbackResult.errors,
+            warnings: fallbackResult.warnings || []
+          });
+        } else {
+          res.status(400).json({
+            error: `Both import methods failed. Improved: ${result.message}. Original: ${fallbackResult.message}`,
+            errors: [...(result.errors || []), ...(fallbackResult.errors || [])],
+            imported: Math.max(result.imported || 0, fallbackResult.imported || 0)
+          });
+        }
       }
     } catch (error) {
       handleError(res, error, 'Import failed');

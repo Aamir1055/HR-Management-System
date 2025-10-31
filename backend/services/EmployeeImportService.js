@@ -61,11 +61,21 @@ class EmployeeImportService {
           // Process row using column mappings
           const processedRow = processExcelRow(row, structureValidation.columnMapping);
           
+          // Debug: Log shift timings from Excel
+          if (i < 3 && processedRow.shift_timings) {
+            console.log(`[IMPORT DEBUG] Row ${i + 1} - Excel shift_timings: "${processedRow.shift_timings}"`);
+          }
+          
           // Process date fields
           const withDates = processDateFields(processedRow);
           
           // Convert to employee format
           const employeeData = await this.convertExcelRowToEmployee(withDates, context);
+          
+          // Debug: Log shift timings after conversion
+          if (i < 3) {
+            console.log(`[IMPORT DEBUG] Row ${i + 1} - After conversion shift_timings: "${employeeData.shift_timings}"`);
+          }
           
           // Validate employee data
           const validation = this.validationService.validateForImport(employeeData, i);
@@ -74,7 +84,14 @@ class EmployeeImportService {
             continue;
           }
 
-          processedEmployees.push(this.formatEmployeeForInsert(employeeData));
+          const formattedData = this.formatEmployeeForInsert(employeeData);
+          
+          // Debug: Log shift timings in formatted array
+          if (i < 3) {
+            console.log(`[IMPORT DEBUG] Row ${i + 1} - Formatted array shift_timings (index 30): "${formattedData[30]}"`);
+          }
+          
+          processedEmployees.push(formattedData);
           
         } catch (error) {
           console.error(`[IMPORT] Error processing row ${i + 1}:`, error);
@@ -241,6 +258,7 @@ class EmployeeImportService {
         'Office ID': 19,
         'Position ID': 21,
         'Salary': 4000,
+        'Shift Time': '07:30 - 18:30',
         'Joining Date': formatDateForTemplate('2023-01-01'),
         'Status': 'active',
         
@@ -313,6 +331,7 @@ class EmployeeImportService {
         'Platform': emp.platform || '',
         'Position': emp.position_title || '',
         'Monthly Salary': emp.monthlySalary || 0,
+        'Shift Time': emp.shift_timings || '',
         'Email': emp.email || '',
         'Phone': emp.phone || '',
         'WhatsApp': emp.whatsapp || '',
@@ -359,15 +378,23 @@ class EmployeeImportService {
         position_id = await this.resolvePositionNameToId(row.position_name, context.db);
       }
 
-      // Convert status
-      const status = typeof row.status === 'string' ? 
-        (row.status.toLowerCase() === 'active' ? 1 : 0) : 
-        row.status;
+      // Convert status with better handling
+      let status = 1; // Default to active
+      if (row.status !== undefined && row.status !== null) {
+        if (typeof row.status === 'string') {
+          const statusLower = row.status.trim().toLowerCase();
+          status = statusLower === 'active' ? 1 : 0;
+          console.log(`[STATUS DEBUG] Excel status: "${row.status}" → Database: ${status}`);
+        } else {
+          status = row.status ? 1 : 0;
+        }
+      }
 
       // Build employee data
       const employeeData = {
         employeeId: row.employeeId,
-        name: `${row.first_name || ''} ${row.last_name || ''}`.trim() || null,
+        // Prefer a provided full name; otherwise, build from first/last
+        name: (row.name && String(row.name).trim()) || `${row.first_name || ''} ${row.last_name || ''}`.trim() || null,
         first_name: row.first_name || null,
         last_name: row.last_name || null,
         nationality: row.nationality || null,
@@ -398,7 +425,7 @@ class EmployeeImportService {
         emirates_id: row.emirates_id || null,
         emergency_contact: row.emergency_contact || null,
         emergency_contact_relation: row.emergency_contact_relation || null,
-        shift_timings: null // Will be computed automatically
+        shift_timings: row.shift_timings || null
       };
 
       return employeeData;

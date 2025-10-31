@@ -57,6 +57,10 @@ const EmployeeFieldMappings = {
     'Employee ID': 'employeeId',
     'employee_id': 'employeeId',
     'employeeId': 'employeeId',
+    'Full Name': 'name',
+  'Full name': 'name',
+    'full_name': 'name',
+    'Name': 'name',
     'First Name': 'first_name',
     'first_name': 'first_name',
     'firstName': 'first_name',
@@ -118,9 +122,17 @@ const EmployeeFieldMappings = {
     'current_address': 'current_address',
     'Address': 'address',
     'address': 'address',
+    'Shift Timings': 'shift_timings',
+    'Shift Time': 'shift_timings',
+    'shift_timings': 'shift_timings',
+    'shift_time': 'shift_timings',
+    'shiftTimings': 'shift_timings',
+    'shiftTime': 'shift_timings',
+    'Shift': 'shift_timings',
     'Emirates ID': 'emirates_id',
     'emirates_id': 'emirates_id',
     'Emergency Contact': 'emergency_contact',
+    'Emergency Contact Details': 'emergency_contact',
     'emergency_contact': 'emergency_contact',
     'Emergency Contact Relation': 'emergency_contact_relation',
     'emergency_contact_relation': 'emergency_contact_relation'
@@ -155,7 +167,9 @@ const EmployeeStatus = {
 const RequiredFields = {
   create: ['employeeId', 'name', 'email', 'office_id', 'position_id', 'monthlySalary', 'joiningDate'],
   update: ['employeeId'], // Only employeeId required for updates
-  import: ['employeeId', 'first_name', 'last_name', 'email', 'office_name', 'position_name', 'monthlySalary', 'joiningDate', 'status']
+  // Import now supports either a single Full Name or First/Last Name.
+  // We require 'name' (mapped from "Full Name"/"Name") instead of first/last for broader compatibility.
+  import: ['employeeId', 'name', 'email', 'office_name', 'position_name', 'monthlySalary', 'joiningDate', 'status']
 };
 
 class Employee {

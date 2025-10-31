@@ -101,21 +101,113 @@ exports.upload = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     console.log('[Attendance] Sheet name:', sheetName);
 
-    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    // Read with header detection - search for the actual header row
+    let data = [];
+    
+    // First, try standard reading
+    data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
       raw: false,       
-      dateNF: 'yyyy-mm-dd'
+      dateNF: 'yyyy-mm-dd',
+      defval: ''
     });
-    console.log('[Attendance] First row of data:', data[0]);
-
-    const requiredColumns = ['EmployeeID', 'Date', 'Punch In', 'Punch Out'];
-    if (data[0]) {
-      console.log('[Attendance] Checking for required columns:', requiredColumns);
-      for (const col of requiredColumns) {
-        if (!(col in data[0])) {
-          console.error(`[Attendance] Missing required column: ${col}`);
-          throw new Error(`Required column \"${col}\" not found in Excel file`);
+    
+    console.log('[Attendance] First row columns:', data[0] ? Object.keys(data[0]) : 'No data');
+    
+    // Check if we got __EMPTY columns (means no proper headers)
+    if (data[0] && Object.keys(data[0]).some(key => key.includes('__EMPTY'))) {
+      console.log('[Attendance] Detected __EMPTY columns, searching for header row...');
+      
+      // Convert to raw array format to find headers
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { 
+        header: 1, 
+        defval: '',
+        raw: false 
+      });
+      
+      console.log('[Attendance] Raw data first 5 rows:', rawData.slice(0, 5));
+      
+      // Search for the header row (look for keywords like "Employee", "Date", "Punch")
+      let headerRowIndex = -1;
+      for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+        const row = rawData[i];
+        if (row && row.some(cell => 
+          cell && typeof cell === 'string' && 
+          (cell.toLowerCase().includes('employee') || 
+           cell.toLowerCase().includes('date') ||
+           cell.toLowerCase().includes('punch'))
+        )) {
+          headerRowIndex = i;
+          console.log(`[Attendance] Found header row at index ${i}:`, row);
+          break;
         }
       }
+      
+      if (headerRowIndex === -1) {
+        throw new Error('Could not find header row in Excel file. Please ensure your Excel file has a header row with columns like "Employee ID", "Date", "Punch In", "Punch Out"');
+      }
+      
+      // Reconstruct data using the found header row
+      const headerRow = rawData[headerRowIndex];
+      const dataRows = rawData.slice(headerRowIndex + 1);
+      
+      data = dataRows.map(row => {
+        const obj = {};
+        headerRow.forEach((header, index) => {
+          if (header && header.trim()) {
+            obj[header.trim()] = row[index] || '';
+          }
+        });
+        return obj;
+      }).filter(row => Object.keys(row).length > 0);
+      
+      console.log('[Attendance] Reconstructed data with proper headers. Sample:', data[0]);
+    }
+    
+    console.log('[Attendance] Total rows:', data.length);
+    console.log('[Attendance] First row of data:', data[0]);
+
+    // Flexible column mapping to handle variations
+    const columnMapping = {
+      employeeId: null,
+      date: null,
+      punchIn: null,
+      punchOut: null
+    };
+
+    if (data[0]) {
+      const firstRow = data[0];
+      const columns = Object.keys(firstRow);
+      console.log('[Attendance] Available columns:', columns);
+
+      // Map Employee ID variations
+      const employeeIdVariations = ['EmployeeID', 'Employee ID', 'employee_id', 'employeeId', 'Emp ID', 'EmpID'];
+      columnMapping.employeeId = employeeIdVariations.find(col => col in firstRow);
+
+      // Map Date variations
+      const dateVariations = ['Date', 'date', 'DATE', 'Attendance Date'];
+      columnMapping.date = dateVariations.find(col => col in firstRow);
+
+      // Map Punch In variations
+      const punchInVariations = ['Punch In', 'PunchIn', 'punch_in', 'punchIn', 'Check In', 'CheckIn', 'Time In'];
+      columnMapping.punchIn = punchInVariations.find(col => col in firstRow);
+
+      // Map Punch Out variations
+      const punchOutVariations = ['Punch Out', 'PunchOut', 'punch_out', 'punchOut', 'Check Out', 'CheckOut', 'Time Out'];
+      columnMapping.punchOut = punchOutVariations.find(col => col in firstRow);
+
+      // Check if all required columns are found
+      const missingColumns = [];
+      if (!columnMapping.employeeId) missingColumns.push('Employee ID');
+      if (!columnMapping.date) missingColumns.push('Date');
+      if (!columnMapping.punchIn) missingColumns.push('Punch In');
+      if (!columnMapping.punchOut) missingColumns.push('Punch Out');
+
+      if (missingColumns.length > 0) {
+        console.error(`[Attendance] Missing required columns: ${missingColumns.join(', ')}`);
+        throw new Error(`Required columns not found: ${missingColumns.join(', ')}. Available columns: ${columns.join(', ')}`);
+      }
+
+      console.log('[Attendance] Column mapping:', columnMapping);
     } else {
       console.error('[Attendance] Excel file has no data rows');
       throw new Error('Excel file has no data');
@@ -139,7 +231,12 @@ exports.upload = async (req, res) => {
     const nonWorkingDayRecords = [];
 
     for (const row of data) {
-      const employeeId = row['EmployeeID'];
+      const employeeId = row[columnMapping.employeeId];
+      const date = row[columnMapping.date];
+      const punchIn = row[columnMapping.punchIn];
+      const punchOut = row[columnMapping.punchOut];
+
+      console.log(`[Attendance] Processing row - Employee: ${employeeId}, Date: ${date}, In: ${punchIn}, Out: ${punchOut}`);
 
       if (!accessibleEmployeeMap.has(employeeId)) {
         if (!invalidEmployeeIds.has(employeeId)) {
@@ -148,9 +245,9 @@ exports.upload = async (req, res) => {
         continue;
       }
 
-      const dateStr = formatDateForDB(row.Date);
+      const dateStr = formatDateForDB(date);
       if (!dateStr || dateStr === '1970-01-01' || dateStr === '0000-00-00') {
-        console.log(`[Attendance] Skipping row: Invalid date for employee ${employeeId}`, row.Date);
+        console.log(`[Attendance] Skipping row: Invalid date for employee ${employeeId}`, date);
         continue;
       }
 
@@ -174,8 +271,8 @@ exports.upload = async (req, res) => {
       validRecords.push({
         employee_id: employeeId,
         date: dateStr,
-        punch_in: row['Punch In'] || null,
-        punch_out: row['Punch Out'] || null,
+        punch_in: punchIn || null,
+        punch_out: punchOut || null,
       });
     }
 

@@ -1,9 +1,9 @@
 /**
  * Role Service - Business Logic Layer
- * Handles business logic and validation for role master data
+ * Handles business logic and validation for user role data
  */
 
-const { Role } = require('../models/Role');
+const { UserRole } = require('../models/UserRole');
 
 class RoleService {
   constructor(roleRepository) {
@@ -18,7 +18,7 @@ class RoleService {
   async createRole(roleData) {
     try {
       // Create role instance for validation
-      const role = new Role(roleData);
+      const role = new UserRole(roleData);
       
       // Validate the data
       const validation = role.validate('create');
@@ -30,9 +30,9 @@ class RoleService {
       }
 
       // Check if role name already exists
-      const existingRole = await this.roleRepository.findByName(role.roleName);
+      const existingRole = await this.roleRepository.findByName(role.name);
       if (existingRole) {
-        throw new Error(`Role name '${role.roleName}' already exists`);
+        throw new Error(`Role name '${role.name}' already exists`);
       }
 
       // Convert to database format
@@ -41,7 +41,7 @@ class RoleService {
       // Save to database
       const savedRole = await this.roleRepository.create(dbData);
       
-      return Role.fromDbFormat(savedRole);
+      return UserRole.fromDbFormat(savedRole);
     } catch (error) {
       console.error('RoleService.createRole error:', error);
       throw error;
@@ -58,7 +58,7 @@ class RoleService {
       // Build query options
       const queryOptions = {
         search: options.search,
-        orderBy: options.orderBy || 'roleName',
+        orderBy: options.orderBy || 'name',
         orderDirection: options.orderDirection || 'ASC',
         limit: options.limit ? parseInt(options.limit) : null,
         offset: options.offset ? parseInt(options.offset) : 0
@@ -71,7 +71,7 @@ class RoleService {
       ]);
 
       // Convert to model format
-      const formattedRoles = roles.map(role => Role.fromDbFormat(role));
+      const formattedRoles = roles.map(role => UserRole.fromDbFormat(role));
 
       return {
         roles: formattedRoles,
@@ -100,7 +100,7 @@ class RoleService {
         return null;
       }
       
-      return Role.fromDbFormat(role);
+      return UserRole.fromDbFormat(role);
     } catch (error) {
       console.error('RoleService.getRoleById error:', error);
       throw error;
@@ -122,8 +122,8 @@ class RoleService {
       }
 
       // Create role instance with updated data
-      const roleData = { ...existingRole, ...updateData, roleId: id };
-      const role = new Role(roleData);
+      const roleData = { ...existingRole, ...updateData, id: id };
+      const role = new UserRole(roleData);
       
       // Validate the data
       const validation = role.validate('update');
@@ -135,20 +135,20 @@ class RoleService {
       }
 
       // Check role name uniqueness if role name is being updated
-      if (updateData.roleName && updateData.roleName !== existingRole.roleName) {
-        const nameExists = await this.roleRepository.roleNameExists(updateData.roleName, id);
+      if (updateData.name && updateData.name !== existingRole.name) {
+        const nameExists = await this.roleRepository.roleNameExists(updateData.name, id);
         if (nameExists) {
-          throw new Error(`Role name '${updateData.roleName}' already exists`);
+          throw new Error(`Role name '${updateData.name}' already exists`);
         }
       }
 
       // Convert to database format
-      const dbData = new Role(updateData).toDbFormat();
+      const dbData = new UserRole(updateData).toDbFormat();
 
       // Update in database
       const updatedRole = await this.roleRepository.update(id, dbData);
       
-      return Role.fromDbFormat(updatedRole);
+      return UserRole.fromDbFormat(updatedRole);
     } catch (error) {
       console.error('RoleService.updateRole error:', error);
       throw error;
@@ -183,8 +183,8 @@ class RoleService {
    */
   async getRoleNames() {
     try {
-      const result = await this.getAllRoles({ orderBy: 'roleName', orderDirection: 'ASC' });
-      return result.roles.map(role => role.roleName);
+      const result = await this.getAllRoles({ orderBy: 'name', orderDirection: 'ASC' });
+      return result.roles.map(role => role.name);
     } catch (error) {
       console.error('RoleService.getRoleNames error:', error);
       throw error;

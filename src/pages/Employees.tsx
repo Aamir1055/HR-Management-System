@@ -56,21 +56,39 @@ export const Employees: React.FC = () => {
           'Authorization': token ? `Bearer ${token}` : ''
         };
 
-        // Fetch offices
-        const officesResponse = await fetch('/api/masters/offices', { headers });
-        if (officesResponse.ok) {
-          const officesData = await officesResponse.json();
-          setOffices(officesData);
+        // Fetch offices with error handling
+        try {
+          const officesResponse = await fetch('/api/masters/offices', { headers });
+          if (officesResponse.ok) {
+            const officesData = await officesResponse.json();
+            setOffices(Array.isArray(officesData) ? officesData : []);
+          } else {
+            console.warn('Failed to fetch offices:', officesResponse.status);
+            setOffices([]);
+          }
+        } catch (officeError) {
+          console.warn('Error fetching offices:', officeError);
+          setOffices([]);
         }
 
-        // Fetch positions
-        const positionsResponse = await fetch('/api/masters/positions', { headers });
-        if (positionsResponse.ok) {
-          const positionsData = await positionsResponse.json();
-          setPositions(positionsData);
+        // Fetch positions with error handling
+        try {
+          const positionsResponse = await fetch('/api/masters/positions', { headers });
+          if (positionsResponse.ok) {
+            const positionsData = await positionsResponse.json();
+            setPositions(Array.isArray(positionsData) ? positionsData : []);
+          } else {
+            console.warn('Failed to fetch positions:', positionsResponse.status);
+            setPositions([]);
+          }
+        } catch (positionError) {
+          console.warn('Error fetching positions:', positionError);
+          setPositions([]);
         }
       } catch (error) {
         console.error('Error fetching filter data:', error);
+        setOffices([]);
+        setPositions([]);
       }
     };
 
@@ -412,8 +430,22 @@ placeholder="Search by name, employee ID, office, position, or platform"
               <option value="">All Positions</option>
               {Array.from(new Set(
                 normalizedEmployees
-                  .filter(emp => !selectedOffice || getDisplayName(emp.office_name, 'name', 'office_name') === selectedOffice)
-                  .map(emp => emp.position_title || emp.position_name)
+                  .filter(emp => {
+                    try {
+                      return !selectedOffice || getDisplayName(emp.office_name, 'name', 'office_name') === selectedOffice;
+                    } catch (error) {
+                      console.warn('Error filtering employee by office:', error);
+                      return true;
+                    }
+                  })
+                  .map(emp => {
+                    try {
+                      return emp.position_title || emp.position_name || '';
+                    } catch (error) {
+                      console.warn('Error getting position name:', error);
+                      return '';
+                    }
+                  })
                   .filter(position => position && position.trim() !== '')
               ))
                 .sort()

@@ -11,7 +11,8 @@ interface UserTableProps {
 
 export default function UserTable({ users, onEdit, onDelete, onView }: UserTableProps) {
   const getRoleBadgeColor = (role: string) => {
-    switch (role.toLowerCase()) {
+    const safeRole = (role || '').toLowerCase();
+    switch (safeRole) {
       case 'super admin':
         return 'bg-purple-100 text-purple-800';
       case 'admin':
@@ -22,6 +23,8 @@ export default function UserTable({ users, onEdit, onDelete, onView }: UserTable
         return 'bg-green-100 text-green-800';
       case 'employee':
         return 'bg-gray-100 text-gray-800';
+      case 'floor_manager':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -79,8 +82,8 @@ export default function UserTable({ users, onEdit, onDelete, onView }: UserTable
                 <div className="text-sm text-gray-900">
                   {((user.offices && user.offices.length > 0) || (user.assigned_offices && user.assigned_offices.length > 0)) ? (
                     <div className="space-y-1">
-                      {(user.offices || user.assigned_offices || []).slice(0, 2).map((office: any) => (
-                        <div key={office.id} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                      {(user.offices || user.assigned_offices || []).slice(0, 2).map((office: any, index: number) => (
+                        <div key={`${user.id}-office-${office.id || index}`} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
                           {office.name}
                         </div>
                       ))}

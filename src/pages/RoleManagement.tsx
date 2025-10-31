@@ -179,9 +179,13 @@ export const RoleManagement: React.FC = () => {
 
   // Filter users based on search term and role
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
+    const username = user.username || '';
+    const role = user.role || '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = username.toLowerCase().includes(searchLower) ||
+                         role.toLowerCase().includes(searchLower);
+    const matchesRole = selectedRole === 'all' || role === selectedRole;
     return matchesSearch && matchesRole;
   });
 

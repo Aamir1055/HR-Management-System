@@ -1,9 +1,9 @@
 /**
  * Role Repository - Data Access Layer
- * Handles all database operations for role master data
+ * Handles all database operations for user role data
  */
 
-const { RoleTableName } = require('../models/Role');
+const { UserRoleTableName } = require('../models/UserRole');
 
 class RoleRepository {
   constructor(db) {
@@ -22,7 +22,7 @@ class RoleRepository {
       const values = Object.values(roleData);
 
       const query = `
-        INSERT INTO ${RoleTableName} (${fields})
+        INSERT INTO ${UserRoleTableName} (${fields})
         VALUES (${placeholders})
       `;
 
@@ -43,13 +43,13 @@ class RoleRepository {
    */
   async findAll(options = {}) {
     try {
-      let query = `SELECT * FROM ${RoleTableName}`;
+      let query = `SELECT * FROM ${UserRoleTableName}`;
       const conditions = [];
       const values = [];
 
       // Build WHERE conditions
       if (options.search) {
-        conditions.push('roleName LIKE ?');
+        conditions.push('name LIKE ?');
         values.push(`%${options.search}%`);
       }
 
@@ -59,7 +59,7 @@ class RoleRepository {
       }
 
       // Add ORDER BY
-      const orderBy = options.orderBy || 'roleName';
+      const orderBy = options.orderBy || 'name';
       const orderDirection = options.orderDirection || 'ASC';
       query += ` ORDER BY ${orderBy} ${orderDirection}`;
 
@@ -84,7 +84,7 @@ class RoleRepository {
    */
   async findById(id) {
     try {
-      const query = `SELECT * FROM ${RoleTableName} WHERE roleId = ?`;
+      const query = `SELECT * FROM ${UserRoleTableName} WHERE id = ?`;
       const [rows] = await this.db.execute(query, [id]);
       return rows[0] || null;
     } catch (error) {
@@ -100,7 +100,7 @@ class RoleRepository {
    */
   async findByName(roleName) {
     try {
-      const query = `SELECT * FROM ${RoleTableName} WHERE roleName = ?`;
+      const query = `SELECT * FROM ${UserRoleTableName} WHERE name = ?`;
       const [rows] = await this.db.execute(query, [roleName]);
       return rows[0] || null;
     } catch (error) {
@@ -118,7 +118,7 @@ class RoleRepository {
   async update(id, updateData) {
     try {
       // Remove id from updateData if it exists
-      const { roleId: _, ...dataToUpdate } = updateData;
+      const { id: _, ...dataToUpdate } = updateData;
       
       if (Object.keys(dataToUpdate).length === 0) {
         return await this.findById(id);
@@ -128,9 +128,9 @@ class RoleRepository {
       const values = [...Object.values(dataToUpdate), id];
 
       const query = `
-        UPDATE ${RoleTableName} 
+        UPDATE ${UserRoleTableName} 
         SET ${fields}, updated_at = CURRENT_TIMESTAMP 
-        WHERE roleId = ?
+        WHERE id = ?
       `;
 
       const [result] = await this.db.execute(query, values);
@@ -153,7 +153,7 @@ class RoleRepository {
    */
   async delete(id) {
     try {
-      const query = `DELETE FROM ${RoleTableName} WHERE roleId = ?`;
+      const query = `DELETE FROM ${UserRoleTableName} WHERE id = ?`;
       const [result] = await this.db.execute(query, [id]);
       return result.affectedRows > 0;
     } catch (error) {
@@ -169,13 +169,13 @@ class RoleRepository {
    */
   async count(options = {}) {
     try {
-      let query = `SELECT COUNT(*) as total FROM ${RoleTableName}`;
+      let query = `SELECT COUNT(*) as total FROM ${UserRoleTableName}`;
       const conditions = [];
       const values = [];
 
       // Build WHERE conditions (same as findAll)
       if (options.search) {
-        conditions.push('roleName LIKE ?');
+        conditions.push('name LIKE ?');
         values.push(`%${options.search}%`);
       }
 
@@ -200,11 +200,11 @@ class RoleRepository {
    */
   async roleNameExists(roleName, excludeId = null) {
     try {
-      let query = `SELECT COUNT(*) as count FROM ${RoleTableName} WHERE roleName = ?`;
+      let query = `SELECT COUNT(*) as count FROM ${UserRoleTableName} WHERE name = ?`;
       const values = [roleName];
 
       if (excludeId) {
-        query += ' AND roleId != ?';
+        query += ' AND id != ?';
         values.push(excludeId);
       }
 
