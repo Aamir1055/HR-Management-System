@@ -5,16 +5,23 @@ build/
 .cache/
 
 # Environment-specific files (DO NOT COMMIT to avoid server conflicts)
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-backend/.env.local
-backend/.env.development.local
-backend/.env.production.local
+# CRITICAL: These contain sensitive credentials and server-specific config
+.env
+.env.*
+!.env.example
+!.env.template
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.template
 backend/node_modules/
 backend/uploads/
 backend/logs/
+
+# Backup files
+*.backup
+.env.backup
+backend/.env.backup
 
 # Logs
 *.log
