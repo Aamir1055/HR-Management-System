@@ -244,23 +244,29 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   }, [employee?.id, viewOnly]); // Only reset when employee ID changes, not on every employee object change
 
   useEffect(() => {
-    // For new employees, show all positions regardless of office
-    // For existing employees, show office-specific positions only when editing
-    if (employee && officeId && officeId !== 0) {
-      // This is an existing employee being edited - show office-specific positions
+    // When office is selected (both for new and existing employees), fetch office-specific positions
+    if (officeId && officeId !== 0) {
+      // Fetch positions available for the selected office
       fetchPositionsForOffice(officeId);
-      if (employee.office_id !== officeId) {
+      
+      // Reset position selection when office changes
+      if (employee) {
+        // For existing employee: only reset if office actually changed
+        if (employee.office_id !== officeId) {
+          setValue('position_id', 0);
+          setReportingTime('Select position');
+          setDutyHours('Select position');
+        }
+      } else {
+        // For new employee: always reset position when office changes
         setValue('position_id', 0);
         setReportingTime('Select position');
         setDutyHours('Select position');
       }
     } else {
-      // This is a new employee - show all available positions
+      // No office selected: show all positions and reset selection
       setFilteredPositions(allPositions);
-      if (officeId && officeId !== 0 && !employee) {
-        // Reset position selection when office changes for new employee
-        setValue('position_id', 0);
-      }
+      setValue('position_id', 0);
       setReportingTime('Select office and position');
       setDutyHours('Select office and position');
     }
