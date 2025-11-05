@@ -49,6 +49,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const [reportingTime, setReportingTime] = useState<string>('Select office and position');
   const [dutyHours, setDutyHours] = useState<string>('Select office and position');
   const [message, setMessage] = useState<string>('');
+  
+  // Ref to track previous office ID to prevent unnecessary resets
+  const prevOfficeIdRef = useRef<number | null>(null);
 
   const {
     register,
@@ -246,32 +249,31 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   useEffect(() => {
     // When office is selected (both for new and existing employees), fetch office-specific positions
     if (officeId && officeId !== 0) {
+      // Only reset position if office actually changed (not just re-render)
+      const hasOfficeChanged = prevOfficeIdRef.current !== null && prevOfficeIdRef.current !== officeId;
+      
       // Fetch positions available for the selected office
       fetchPositionsForOffice(officeId);
       
-      // Reset position selection when office changes
-      if (employee) {
-        // For existing employee: only reset if office actually changed
-        if (employee.office_id !== officeId) {
-          setValue('position_id', 0);
-          setReportingTime('Select position');
-          setDutyHours('Select position');
-        }
-      } else {
-        // For new employee: always reset position when office changes
+      // Reset position selection ONLY when office actually changes
+      if (hasOfficeChanged) {
         setValue('position_id', 0);
         setReportingTime('Select position');
         setDutyHours('Select position');
       }
+      
+      // Update the ref with current office ID
+      prevOfficeIdRef.current = officeId;
     } else {
       // No office selected: show all positions and reset selection
       setFilteredPositions(allPositions);
       setValue('position_id', 0);
       setReportingTime('Select office and position');
       setDutyHours('Select office and position');
+      prevOfficeIdRef.current = null;
     }
     // eslint-disable-next-line
-    }, [officeId, allPositions, employee?.office_id, setValue, employee]);
+    }, [officeId, allPositions]);
 
   useEffect(() => {
     const fetchOfficePositionData = async () => {
