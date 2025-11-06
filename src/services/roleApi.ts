@@ -3,6 +3,15 @@ import { Role } from '../types';
 
 const API_BASE_URL = '/api/roles';
 
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+};
+
 interface RoleResponse {
   roles: Role[];
   pagination: {
@@ -36,7 +45,9 @@ const roleApi = {
 
     const url = queryParams.toString() ? `${API_BASE_URL}?${queryParams}` : API_BASE_URL;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch roles');
@@ -47,7 +58,9 @@ const roleApi = {
 
   // Get role by ID
   async getRoleById(id: number): Promise<Role> {
-    const response = await fetch(`${API_BASE_URL}/${id}`);
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch role');
@@ -60,9 +73,7 @@ const roleApi = {
   async createRole(roleData: Omit<Role, 'roleId' | 'created_at' | 'updated_at'>): Promise<Role> {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(roleData),
     });
 
@@ -79,9 +90,7 @@ const roleApi = {
   async updateRole(id: number, roleData: Partial<Omit<Role, 'roleId' | 'created_at' | 'updated_at'>>): Promise<Role> {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(roleData),
     });
 
@@ -98,6 +107,7 @@ const roleApi = {
   async deleteRole(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -108,7 +118,9 @@ const roleApi = {
 
   // Get role names for dropdown
   async getRoleNames(): Promise<string[]> {
-    const response = await fetch(`${API_BASE_URL}/names`);
+    const response = await fetch(`${API_BASE_URL}/names`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch role names');
@@ -120,7 +132,9 @@ const roleApi = {
 
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string; module: string; database: string; totalRecords: number }> {
-    const response = await fetch(`${API_BASE_URL}/health`);
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Health check failed');
