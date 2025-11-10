@@ -115,10 +115,11 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
         ];
       case 'role':
         return [
-          { key: 'roleId', label: 'Role ID' },
-          { key: 'roleName', label: 'Role Name' },
-          { key: 'created_at', label: 'Created' },
-          { key: 'updated_at', label: 'Updated' }
+          { key: 'id', label: 'Role ID' },
+          { key: 'name', label: 'Role Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'isActive', label: 'Status' },
+          { key: 'created_at', label: 'Created' }
         ];
       case 'recruitmentSource':
         return [
@@ -223,16 +224,30 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
         case 'created_at':
         case 'updated_at':
           return formatDate(value);
-        case 'roleName':
+        case 'name':
           return (
             <span className="font-medium text-gray-900">
               {value || '-'}
             </span>
           );
-        case 'roleId':
+        case 'id':
           return (
             <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
               {value || '-'}
+            </span>
+          );
+        case 'isActive':
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {value ? 'Active' : 'Inactive'}
+            </span>
+          );
+        case 'description':
+          return (
+            <span className="text-gray-600 text-sm">
+              {value || 'No description'}
             </span>
           );
       }
@@ -319,7 +334,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
               const itemId = dataType === 'office' ? item.office_id || item.id : 
                            dataType === 'position' ? item.position_id || item.id : 
                            dataType === 'platform' ? item.id :
-                           dataType === 'role' ? item.roleId || item.id :
+                           dataType === 'role' ? item.id :
                            dataType === 'recruitmentSource' ? item.sourceId || item.id :
                            dataType === 'recruitmentPipeline' ? item.pipelineId || item.id :
                            dataType === 'recruitmentPlatform' ? item.platformId || item.id :
