@@ -22,16 +22,27 @@ export const useUsers = (): UseUsersReturn => {
     try {
       setLoading(true);
       setError(null);
+      // NOTE: The Role Management page expects a list of users with a role string.
+      // The current backend exposes role master data at `/roles` and doesn't yet
+      // provide a dedicated users listing endpoint. Until that exists, we map
+      // role records to a user-shaped object so the UI renders meaningful values.
       const response = await api.get('/roles');
-      
-      // Handle the roles API response format: { roles: [...] }
+
+      // Handle the roles API response format: { roles: [...] } or direct array
       const rolesData = response.data?.roles || response.data || [];
-      
-      // Transform backend response to match frontend expectations
-      const transformedUsers = (Array.isArray(rolesData) ? rolesData : []).map((user: any) => ({
-        ...user,
-        // Convert assigned_offices to offices for frontend compatibility
-        offices: user.assigned_offices || []
+
+      // Map role masters -> pseudo-users for display
+      const transformedUsers = (Array.isArray(rolesData) ? rolesData : []).map((role: any) => ({
+        id: role.id,
+        // Show role name as the visible username for now
+        username: role.name,
+        // And also as the role badge text
+        role: role.name,
+        two_factor_enabled: false,
+        created_at: role.created_at,
+        updated_at: role.updated_at,
+        // Normalize any office assignments field to `offices`
+        offices: role.assigned_offices || []
       }));
       
       setUsers(transformedUsers);
@@ -60,7 +71,7 @@ export const useUsers = (): UseUsersReturn => {
             return null;
           }
           return officeId;
-        }).filter(id => id !== null) : []
+  }).filter((id: number | null) => id !== null) : []
       };
 
       console.log('Sending create user data:', transformedData);
@@ -103,7 +114,7 @@ export const useUsers = (): UseUsersReturn => {
             return null;
           }
           return officeId;
-        }).filter(id => id !== null) : []
+  }).filter((id: number | null) => id !== null) : []
       };
 
       // Only include password if it's provided (not empty)
