@@ -28,28 +28,63 @@ async function importData() {
     
     for (let i = 0; i < statements.length; i++) {
       const stmt = statements[i];
-      
-      if (stmt.includes('DELETE FROM') || stmt.includes('INSERT INTO')) {
+      const isDelete = /DELETE FROM\s+(\w+)/i.test(stmt);
+      const isInsert = /INSERT INTO\s+(\w+)/i.test(stmt);
+
+      if (isDelete || isInsert) {
+        const tableName = (stmt.match(/(?:DELETE FROM|INSERT INTO)\s+(\w+)/i) || [null, ''])[1];
         try {
           console.log(`⏳ Executing statement ${i + 1}/${statements.length}...`);
-          
-          if (stmt.includes('DELETE FROM')) {
-            console.log(`   🗑️  Clearing table: ${stmt.match(/DELETE FROM (\w+)/)[1]}`);
-          } else if (stmt.includes('INSERT INTO')) {
-            const tableName = stmt.match(/INSERT INTO (\w+)/)[1];
+          if (isDelete) {
+            console.log(`   🗑️  Clearing table: ${tableName}`);
+          } else if (isInsert) {
             console.log(`   📝 Inserting data into: ${tableName}`);
+
+            // Extra diagnostics for column/value mismatches when no explicit column list provided
+            const hasExplicitColumns = /INSERT INTO\s+\w+\s*\(/i.test(stmt) && !/INSERT INTO\s+\w+\s*VALUES/i.test(stmt);
+            const usesValuesWithoutColumns = /INSERT INTO\s+\w+\s+VALUES\s*\(/i.test(stmt);
+            if (usesValuesWithoutColumns) {
+              try {
+                // Fetch column count from database
+                const [columns] = await db.query(`DESCRIBE ${tableName}`);
+                const columnCount = columns.length;
+
+                // Extract first tuple inside VALUES (...),(...)
+                const firstValuesTupleMatch = stmt.match(/VALUES\s*\(([^)]*)\)/i);
+                if (firstValuesTupleMatch) {
+                  const firstTuple = firstValuesTupleMatch[1];
+                  // Count values (comma separated) - rough split handling quoted commas by not splitting inside quotes (basic approach)
+                  const valueItems = firstTuple
+                    .split(/,(?=(?:[^']*'[^']*')*[^']*$)/) // split on commas not inside single quotes
+                    .map(v => v.trim());
+                  const valueCount = valueItems.length;
+                  if (valueCount !== columnCount) {
+                    console.warn(`   ⚠️  Potential mismatch: table has ${columnCount} columns, first VALUES tuple has ${valueCount} items.`);
+                    console.warn(`   👉  Recommendation: Regenerate dump OR rewrite INSERT with explicit column list. Row preview:`);
+                    console.warn(`   ⇢  ${valueItems.slice(0, Math.min(10, valueItems.length)).join(', ')}${valueItems.length > 10 ? ' ...' : ''}`);
+                  }
+                }
+              } catch (diagErr) {
+                console.warn(`   ⚠️  Column diagnostics failed for ${tableName}: ${diagErr.message}`);
+              }
+            } else if (!hasExplicitColumns) {
+              console.warn('   ℹ️  Could not determine column style for INSERT (custom pattern).');
+            }
           }
-          
+
           await db.query(stmt);
           successCount++;
           console.log(`   ✅ Success`);
-          
         } catch (error) {
           errorCount++;
           console.error(`   ❌ Error: ${error.message}`);
+          if (isInsert) {
+            // Show truncated failing statement start for context
+            console.error('   🔎 Statement head:', stmt.slice(0, 180).replace(/\s+/g, ' ') + (stmt.length > 180 ? ' ...' : ''));
+          }
         }
       } else {
-        // For SET statements and other simple ones
+        // Non-data statements (SET, etc.)
         try {
           await db.query(stmt);
           successCount++;

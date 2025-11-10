@@ -80,11 +80,15 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
       if (Array.isArray(result)) {
         setData(result);
         console.log(`✅ Successfully fetched ${result.length} ${dataType} records`);
+        if (dataType === 'role') {
+          console.log('📊 Role data:', result);
+        }
       } else if (result && typeof result === 'object') {
         // Handle different response formats
         if (dataType === 'role' && result.roles) {
           setData(result.roles);
           console.log(`✅ Successfully fetched ${result.roles.length} ${dataType} records`);
+          console.log('📊 Role data:', result.roles);
         } else if (dataType === 'recruitmentSource' && result.sources) {
           setData(result.sources);
           console.log(`✅ Successfully fetched ${result.sources.length} ${dataType} records`);
