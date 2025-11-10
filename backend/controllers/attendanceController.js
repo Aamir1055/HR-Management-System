@@ -85,6 +85,19 @@ function formatDateForDB(date) {
   return null;
 }
 
+// Normalize Employee ID from Excel to numeric DB key (removes leading zeros)
+function normalizeEmployeeId(value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  // Match digits and strip leading zeros
+  const m = s.match(/^0*(\d+)$/);
+  if (m) {
+    return parseInt(m[1], 10);
+  }
+  const n = parseInt(s, 10);
+  return isNaN(n) ? null : n;
+}
+
 
 
 
@@ -223,7 +236,10 @@ exports.upload = async (req, res) => {
     }
     
     const [accessibleEmployees] = await db.query(employeeQuery, params);
-    const accessibleEmployeeMap = new Map(accessibleEmployees.map(emp => [emp.employeeId, emp.office_id]));
+    // Build a map keyed by normalized numeric employeeId to allow Excel IDs like "079"
+    const accessibleEmployeeMap = new Map(
+      accessibleEmployees.map(emp => [normalizeEmployeeId(emp.employeeId), emp.office_id])
+    );
 
     const validRecords = [];
     const invalidEmployeeIds = new Set();
@@ -231,16 +247,18 @@ exports.upload = async (req, res) => {
     const nonWorkingDayRecords = [];
 
     for (const row of data) {
-      const employeeId = row[columnMapping.employeeId];
+      const rawEmployeeId = row[columnMapping.employeeId];
+      const employeeId = normalizeEmployeeId(rawEmployeeId);
       const date = row[columnMapping.date];
       const punchIn = row[columnMapping.punchIn];
       const punchOut = row[columnMapping.punchOut];
 
       console.log(`[Attendance] Processing row - Employee: ${employeeId}, Date: ${date}, In: ${punchIn}, Out: ${punchOut}`);
 
-      if (!accessibleEmployeeMap.has(employeeId)) {
-        if (!invalidEmployeeIds.has(employeeId)) {
-          unauthorizedEmployeeIds.add(employeeId);
+      if (employeeId === null || !accessibleEmployeeMap.has(employeeId)) {
+        // Track the original ID value for clearer user feedback
+        if (!invalidEmployeeIds.has(rawEmployeeId)) {
+          unauthorizedEmployeeIds.add(rawEmployeeId);
         }
         continue;
       }

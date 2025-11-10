@@ -22,30 +22,23 @@ export const useUsers = (): UseUsersReturn => {
     try {
       setLoading(true);
       setError(null);
-      // NOTE: The Role Management page expects a list of users with a role string.
-      // The current backend exposes role master data at `/roles` and doesn't yet
-      // provide a dedicated users listing endpoint. Until that exists, we map
-      // role records to a user-shaped object so the UI renders meaningful values.
-      const response = await api.get('/roles');
+      // Use the dedicated users endpoint which returns { users, total }
+      const response = await api.get('/users');
+      const usersData = response.data?.users || [];
 
-      // Handle the roles API response format: { roles: [...] } or direct array
-      const rolesData = response.data?.roles || response.data || [];
-
-      // Map role masters -> pseudo-users for display
-      const transformedUsers = (Array.isArray(rolesData) ? rolesData : []).map((role: any) => ({
-        id: role.id,
-        // Show role name as the visible username for now
-        username: role.name,
-        // And also as the role badge text
-        role: role.name,
-        two_factor_enabled: false,
-        created_at: role.created_at,
-        updated_at: role.updated_at,
-        // Normalize any office assignments field to `offices`
-        offices: role.assigned_offices || []
+      // Normalize office IDs to strings to match UI types
+      const normalized = (Array.isArray(usersData) ? usersData : []).map((u: any) => ({
+        ...u,
+        offices: Array.isArray(u.offices)
+          ? u.offices.map((o: any) => ({
+              id: String(o.id),
+              name: o.name,
+              location: o.location,
+            }))
+          : [],
       }));
-      
-      setUsers(transformedUsers);
+
+      setUsers(normalized);
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.response?.data?.message || 'Failed to load users');
@@ -55,116 +48,21 @@ export const useUsers = (): UseUsersReturn => {
   };
 
   // Create new user
-  const createUser = async (userData: any) => {
-    try {
-      // Transform the data to match backend expectations
-      const transformedData = {
-        username: userData.username,
-        password: userData.password,
-        role: userData.role,
-        two_factor_enabled: userData.two_factor_enabled || false,
-        office_ids: userData.offices ? userData.offices.map((office: any) => {
-          // Ensure office ID is a valid number
-          const officeId = parseInt(typeof office.id === 'string' ? office.id : office.id.toString());
-          if (isNaN(officeId)) {
-            console.warn('Invalid office ID during create:', office.id, 'from office:', office);
-            return null;
-          }
-          return officeId;
-  }).filter((id: number | null) => id !== null) : []
-      };
-
-      console.log('Sending create user data:', transformedData);
-      console.log('Office IDs being sent for create:', transformedData.office_ids);
-      
-      const response = await api.post('/roles', transformedData);
-      
-      console.log('Create response:', response);
-      
-      // The backend doesn't return a success field, it returns the user directly
-      if (response.data) {
-        await fetchUsers();
-      } else {
-        throw new Error('Failed to create user');
-      }
-    } catch (err: any) {
-      console.error('Error creating user:', err);
-      console.error('Create error details:', {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
-      });
-      throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create user');
-    }
+  const createUser = async (_userData: any) => {
+    // Not yet implemented server-side; prevent accidental calls to /roles
+    throw new Error('User creation is not available yet. Listing and office visibility are enabled.');
   };
 
   // Update existing user
-  const updateUser = async (id: number, userData: any) => {
-    try {
-      // Transform the data to match backend expectations
-      const transformedData: any = {
-        username: userData.username,
-        role: userData.role,
-        two_factor_enabled: userData.two_factor_enabled || false,
-        office_ids: userData.offices ? userData.offices.map((office: any) => {
-          // Ensure office ID is a valid number
-          const officeId = parseInt(typeof office.id === 'string' ? office.id : office.id.toString());
-          if (isNaN(officeId)) {
-            console.warn('Invalid office ID:', office.id, 'from office:', office);
-            return null;
-          }
-          return officeId;
-  }).filter((id: number | null) => id !== null) : []
-      };
-
-      // Only include password if it's provided (not empty)
-      if (userData.password && userData.password.trim()) {
-        transformedData.password = userData.password;
-      }
-
-      console.log('Sending update data to /roles/' + id + ':', transformedData);
-      console.log('Office IDs being sent:', transformedData.office_ids);
-      
-      const response = await api.put(`/roles/${id}`, transformedData);
-      
-      console.log('Update response:', response);
-      
-      // Backend returns the updated user directly, not wrapped in success field
-      if (response.data) {
-        console.log('User update successful, refreshing users list');
-        // Just refresh the users list to get the latest data
-        await fetchUsers();
-      } else {
-        console.error('Update response missing data:', response);
-        throw new Error('Failed to update user - no data returned');
-      }
-    } catch (err: any) {
-      console.error('Error updating user:', err);
-      console.error('Error details:', {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
-      });
-      throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update user');
-    }
+  const updateUser = async (_id: number, _userData: any) => {
+    // Not yet implemented server-side; prevent accidental calls to /roles
+    throw new Error('User update is not available yet.');
   };
 
   // Delete user
-  const deleteUser = async (id: number) => {
-    try {
-      const response = await api.delete(`/roles/${id}`);
-      
-      // Backend returns { message: 'User deleted successfully' }, not success field
-      if (response.data && response.data.message) {
-        // Remove from local state
-        setUsers(prev => prev.filter(user => user.id !== id));
-      } else {
-        throw new Error('Failed to delete user');
-      }
-    } catch (err: any) {
-      console.error('Error deleting user:', err);
-      throw new Error(err.response?.data?.error || err.response?.data?.message || 'Failed to delete user');
-    }
+  const deleteUser = async (_id: number) => {
+    // Not yet implemented server-side; prevent accidental calls to /roles
+    throw new Error('User deletion is not available yet.');
   };
 
   // Refresh users (public method)

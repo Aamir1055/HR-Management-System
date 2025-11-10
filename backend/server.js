@@ -48,6 +48,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes'); // NEW - DASHBOARD
 const recruitmentRoutes = require('./routes/recruitmentRoutes'); // NEW - RECRUITMENT PANEL
 const peticashRoutes = require('./routes/peticashRoutes'); // NEW - PETICASH MANAGEMENT
 const halfDayWaiverRoutes = require('./routes/halfDayWaiverRoutes'); // NEW - HALF DAY WAIVERS
+const userRoutes = require('./routes/userRoutes'); // NEW - USERS (LIST)
 
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
@@ -156,6 +157,7 @@ app.use('/api/dashboard', dashboardRoutes); // NEW - DASHBOARD
 app.use('/api/recruitment', recruitmentRoutes); // NEW - RECRUITMENT PANEL
 app.use('/api/peticash', peticashRoutes); // NEW - PETICASH MANAGEMENT
 app.use('/api/half-day-waivers', halfDayWaiverRoutes); // NEW - HALF DAY WAIVERS
+app.use('/api/users', userRoutes); // NEW - USERS (LIST)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -233,6 +235,7 @@ app.listen(PORT, async () => {
     console.log('🎉 Celebrations Dashboard: /api/dashboard/* (auth required)');
     console.log('👔 Recruitment Panel: /api/recruitment/* (hr+ required for CUD, auth for read)');
     console.log(' Petty Cash: /api/peticash/* (hr+ required for CUD, manager+ for delete)');
+  console.log('👥 Users: /api/users (auth required)');
     
     console.log('\n⚙️ Setup Instructions:');
     console.log('1. Run: node migrate.js');
