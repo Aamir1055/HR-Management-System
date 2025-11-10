@@ -130,6 +130,13 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
           name: itemData.office_name || itemData.name,
           location: itemData.location
         };
+      } else if (dataType === 'role') {
+        // Map frontend field names to backend field names
+        body = {
+          name: itemData.roleName || itemData.name,
+          description: itemData.description || null,
+          isActive: itemData.isActive !== undefined ? itemData.isActive : true
+        };
       } else if (dataType === 'position' && itemData.offices && Array.isArray(itemData.offices) && itemData.offices.length > 0) {
         console.log('🏢 Using multiple office position creation endpoint');
         endpoint = '/api/masters/positions-multiple-offices';
@@ -254,6 +261,13 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
         updateBody = {
           name: itemData.office_name || itemData.name,
           location: itemData.location
+        };
+      } else if (dataType === 'role') {
+        // Map frontend field names to backend field names
+        updateBody = {
+          name: itemData.roleName || itemData.name,
+          description: itemData.description || null,
+          isActive: itemData.isActive !== undefined ? itemData.isActive : true
         };
       }
 
