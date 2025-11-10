@@ -78,7 +78,7 @@ const MasterData = () => {
         const itemId = activeTab === 'office' ? editingItem.office_id || editingItem.id :
                       activeTab === 'position' ? editingItem.position_id || editingItem.id :
                       activeTab === 'platform' ? editingItem.id :
-                      activeTab === 'role' ? editingItem.roleId || editingItem.id :
+                      activeTab === 'role' ? editingItem.id :
                       editingItem.id;
         await updateItem(itemId, formData);
       } else {
@@ -115,8 +115,12 @@ const MasterData = () => {
           item.platform_name?.toLowerCase().includes(searchTermLower)
         );
       case 'role':
+        // If no search term, include all roles
+        if (!searchTermLower) return true;
+        // Match against canonical backend fields
         return (
-          item.roleName?.toLowerCase().includes(searchTermLower)
+          item.name?.toLowerCase().includes(searchTermLower) ||
+          item.description?.toLowerCase().includes(searchTermLower)
         );
       case 'recruitmentSource':
         return (
