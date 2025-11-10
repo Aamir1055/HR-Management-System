@@ -79,11 +79,26 @@ const AttendanceUpload: React.FC = () => {
         const headerRow = rows[0];
         setHeaders(headerRow);
 
-        // Validate required columns
-        const requiredColumns = ['EmployeeID', 'Name', 'Date', 'Punch In', 'Punch Out'];
-        const missingColumns = requiredColumns.filter(col => !headerRow.includes(col));
-        if (missingColumns.length > 0) {
-          throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+        // Flexible header validation: allow common variations, case differences, spaces/underscores
+        const rawHeadersNormalized = headerRow.map(h => h && h.toString().trim().toLowerCase().replace(/[_\s]+/g, ''));
+
+        // Define required logical fields and their acceptable variants
+        const requiredLogical = [
+          { key: 'employeeId', variants: ['employeeid','employee id','employee_id','empid','emp id'] },
+          { key: 'name', variants: ['name','employee name','fullname','employee'] },
+          { key: 'date', variants: ['date','attendance date'] },
+          { key: 'punchIn', variants: ['punchin','punch in','punch_in','checkin','check in','timein','time in'] },
+          { key: 'punchOut', variants: ['punchout','punch out','punch_out','checkout','check out','timeout','time out'] }
+        ];
+
+        const missingLogical: string[] = [];
+        requiredLogical.forEach(req => {
+          const found = req.variants.some(v => rawHeadersNormalized.includes(v));
+          if (!found) missingLogical.push(req.variants[0]);
+        });
+
+        if (missingLogical.length > 0) {
+          throw new Error(`Missing required columns (flex match): ${missingLogical.join(', ')} | Available: ${headerRow.join(', ')}`);
         }
 
         const dataRows = rows.slice(1, 11).map((arr) => {

@@ -332,6 +332,8 @@ exports.upload = async (req, res) => {
     const recordsWithCalculations = await batchCalculateAttendanceMetrics(validRecords, employees);
     
     // Prepare data for insertion with calculated values
+    // Note: Only include columns that exist in the current schema for reliable inserts.
+    // Planned half-day helper fields are intentionally excluded here to avoid column/value mismatches.
     const insertData = recordsWithCalculations.map(r => [
       r.employee_id, 
       r.date, 
@@ -344,10 +346,7 @@ exports.upload = async (req, res) => {
       r.is_half_day,
       r.is_late,
       r.duty_hours_deficit,
-      r.duty_hours,
-      r.is_planned_half_day || false,
-      r.planned_half_day_shift_id || null,
-      r.planned_half_day_shift_name || null
+      r.duty_hours
     ]);
     
     await db.query(`
