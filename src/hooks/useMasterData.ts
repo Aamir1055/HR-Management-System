@@ -22,14 +22,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const getAuthHeaders = () => {
-    // For loan, role, and recruitment master endpoints, we don't need auth headers since routes are open
-    if (dataType === 'loan' || dataType === 'role' || dataType === 'recruitmentSource' || dataType === 'recruitmentPipeline' || dataType === 'recruitmentPlatform') {
-      return {
-        'Content-Type': 'application/json'
-      };
-    }
-    
-    // For other endpoints, keep auth headers
+    // Get auth token for all endpoints
     const token = localStorage.getItem('token');
     return {
       'Content-Type': 'application/json',
@@ -74,7 +67,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
       });
       
       if (!response.ok) {
-        if (response.status === 401 && dataType !== 'loan' && dataType !== 'role') {
+        if (response.status === 401) {
           setError('Authentication failed. Please log in again.');
           return;
         }
@@ -293,7 +286,7 @@ export const useMasterData = (dataType: DataType): UseMasterDataReturn => {
           
           // Show success message for auto-processing
           toast.success(`Loan updated and ${deductionDifference.toFixed(2)} AED deduction processed automatically`);
-        } catch (deductionError) {
+        } catch (deductionError: any) {
           console.error('⚠️ Auto-deduction failed but loan was updated:', deductionError);
           // Show warning but don't fail the whole operation
           toast.warning(`Loan updated but automatic payment recording failed: ${deductionError.message}`);
