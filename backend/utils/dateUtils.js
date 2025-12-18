@@ -173,7 +173,8 @@ function dateToExcelSerial(dateStr) {
     if (typeof dateStr === 'string') {
       // If it's already in YYYY-MM-DD format (from database)
       if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        date = new Date(dateStr + 'T00:00:00');
+        const [year, month, day] = dateStr.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       }
       // If it's in DD/MM/YYYY format, parse correctly
       else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
@@ -182,24 +183,28 @@ function dateToExcelSerial(dateStr) {
       }
       // Try to parse as a general date
       else {
-        date = new Date(dateStr + 'T00:00:00');
+        const [year, month, day] = dateStr.split(/[-\/]/);
+        if (year && month && day) {
+          date = new Date(parseInt(year.length === 4 ? year : day), 
+                         parseInt(month) - 1, 
+                         parseInt(year.length === 4 ? day : year));
+        } else {
+          date = new Date(dateStr);
+        }
       }
     } else {
       date = new Date(dateStr);
     }
     
-    // Add +1 day to fix Excel export date offset issue
+    // Excel date serial calculation (1900-based system) - removed +1 day fix
     if (date && !isNaN(date.getTime())) {
-      date.setDate(date.getDate() + 1);
-      
-      // Excel date serial calculation (1900-based system)
-      const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)); // December 30, 1899
+      const EXCEL_EPOCH = new Date(1899, 11, 30); // December 30, 1899
       const MS_PER_DAY = 86400000;
       
       const timeDiff = date.getTime() - EXCEL_EPOCH.getTime();
       const excelSerial = Math.floor(timeDiff / MS_PER_DAY);
       
-      console.log(`📅 Date to Excel serial: ${dateStr} → +1 day → ${excelSerial}`);
+      console.log(`📅 Date to Excel serial: ${dateStr} → ${excelSerial}`);
       return excelSerial;
     }
     
@@ -217,6 +222,15 @@ function dateToExcelSerial(dateStr) {
  */
 function formatDateForTemplate(dateStr) {
   try {
+    if (!dateStr) return dateStr;
+    
+    // If already in YYYY-MM-DD format, parse directly without timezone issues
+    if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    
+    // Otherwise create date object from components to avoid timezone issues
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
     
