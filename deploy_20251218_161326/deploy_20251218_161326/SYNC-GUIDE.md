@@ -1,0 +1,367 @@
+# 🔄 Local to Server Synchronization Guide
+
+## 📋 Overview
+
+This guide explains how to sync your local development code with the production server at `65.20.84.140`.
+
+## 🚀 Available Sync Scripts
+
+### 1. **Simple Sync (Recommended for beginners)**
+**File:** `simple-sync.ps1`
+
+Interactive menu-based sync with 4 options:
+```powershell
+.\simple-sync.ps1
+```
+
+**Options:**
+- **Option 1:** Full Git sync (push local → pull server) ⭐ RECOMMENDED
+- **Option 2:** Backend only (direct rsync)
+- **Option 3:** Frontend only (direct rsync)
+- **Option 4:** Single file sync
+
+### 2. **Auto Sync (Complete deployment)**
+**File:** `auto-sync-to-server.ps1`
+
+Automated full deployment with all steps:
+```powershell
+.\auto-sync-to-server.ps1
+```
+
+**Features:**
+- ✅ Commits and pushes local changes
+- ✅ Pulls on server
+- ✅ Installs dependencies
+- ✅ Builds frontend
+- ✅ Restarts services
+- ✅ Verifies deployment
+
+**Flags:**
+```powershell
+# Skip frontend build
+.\auto-sync-to-server.ps1 -SkipBuild
+
+# Skip service restart
+.\auto-sync-to-server.ps1 -SkipRestart
+
+# Dry run (test without making changes)
+.\auto-sync-to-server.ps1 -DryRun
+```
+
+### 3. **Watch Mode (Auto-sync on changes)**
+**File:** `watch-and-sync.ps1`
+
+Monitors files and syncs automatically when you save:
+```powershell
+.\watch-and-sync.ps1
+```
+
+**What it does:**
+- 👁️ Watches `src/` and `backend/` directories
+- 🔄 Syncs changed files automatically
+- 🔄 Restarts backend service on backend changes
+- ⏱️ 5-second cooldown between syncs
+
+Press `Ctrl+C` to stop watching.
+
+---
+
+## 📖 Step-by-Step Guide
+
+### **Method 1: Git Sync (RECOMMENDED)**
+
+This is the cleanest and safest method.
+
+#### **Prerequisites:**
+- Git installed on local machine ✅
+- Git installed on server ✅
+- SSH access to server ✅
+- GitHub repository synced ✅
+
+#### **Steps:**
+
+1. **Check your current status:**
+```powershell
+git status
+```
+
+2. **Run simple sync:**
+```powershell
+.\simple-sync.ps1
+# Choose option 1
+```
+
+3. **Or manual git sync:**
+```powershell
+# Add all changes
+git add .
+
+# Commit with message
+git commit -m "Your commit message"
+
+# Push to GitHub
+git push origin master
+
+# SSH to server and pull
+ssh deployer@65.20.84.140
+cd ~/HR-Management-System
+git pull origin master
+pm2 restart all
+exit
+```
+
+---
+
+### **Method 2: Direct File Sync (Fast for quick changes)**
+
+Use this when you need to quickly sync specific files without committing to git.
+
+#### **Sync entire backend:**
+```powershell
+rsync -avz --exclude='node_modules' --exclude='.env' --exclude='uploads' ./backend/ deployer@65.20.84.140:/home/deployer/HR-Management-System/backend/
+ssh deployer@65.20.84.140 "cd ~/HR-Management-System && pm2 restart backend"
+```
+
+#### **Sync entire frontend:**
+```powershell
+rsync -avz --exclude='node_modules' --exclude='dist' ./src/ deployer@65.20.84.140:/home/deployer/HR-Management-System/src/
+ssh deployer@65.20.84.140 "cd ~/HR-Management-System && npm run build && pm2 restart frontend"
+```
+
+#### **Sync single file:**
+```powershell
+scp path/to/file deployer@65.20.84.140:/home/deployer/HR-Management-System/path/to/file
+```
+
+---
+
+### **Method 3: Watch Mode (For active development)**
+
+When making multiple changes and want instant sync:
+
+```powershell
+.\watch-and-sync.ps1
+```
+
+Now any file you save in `src/` or `backend/` will automatically sync to server!
+
+**Note:** This is great for development but remember:
+- Frontend changes need rebuild: `npm run build` on server
+- Backend changes auto-restart the service
+
+---
+
+## 🔧 Manual Server Commands
+
+Sometimes you need to run commands directly on the server:
+
+### **SSH to server:**
+```powershell
+ssh deployer@65.20.84.140
+```
+
+### **Navigate to project:**
+```bash
+cd ~/HR-Management-System
+```
+
+### **Pull latest code:**
+```bash
+git pull origin master
+```
+
+### **Install dependencies:**
+```bash
+# Backend dependencies
+cd backend
+npm install
+cd ..
+
+# Frontend dependencies
+npm install
+```
+
+### **Build frontend:**
+```bash
+npm run build
+```
+
+### **Restart services:**
+```bash
+pm2 restart all
+```
+
+### **Check service status:**
+```bash
+pm2 status
+pm2 logs
+```
+
+### **Database migrations:**
+```bash
+cd backend
+node migrate.js
+```
+
+---
+
+## 📁 Project Structure on Server
+
+```
+/home/deployer/HR-Management-System/
+├── backend/              # Backend Node.js application
+│   ├── server.js        # Main server file
+│   ├── controllers/     # API controllers
+│   ├── routes/          # API routes
+│   ├── models/          # Database models
+│   ├── services/        # Business logic
+│   └── .env            # Environment variables (DO NOT SYNC)
+├── src/                 # Frontend React application
+│   ├── pages/          # Page components
+│   ├── components/     # Reusable components
+│   └── api/            # API client
+├── dist/               # Built frontend (generated)
+└── node_modules/       # Dependencies (DO NOT SYNC)
+```
+
+---
+
+## ⚠️ Important Notes
+
+### **Files to NEVER sync:**
+- `.env` files (contain sensitive credentials)
+- `node_modules/` (too large, install via npm)
+- `dist/` (generated by build)
+- `uploads/` (user-uploaded files)
+- `.log` files
+
+### **After syncing backend changes:**
+Always restart the backend service:
+```bash
+ssh deployer@65.20.84.140 "pm2 restart backend"
+```
+
+### **After syncing frontend changes:**
+Rebuild the frontend:
+```bash
+ssh deployer@65.20.84.140 "cd ~/HR-Management-System && npm run build"
+```
+
+### **Database changes:**
+If you modified database schema, run migrations:
+```bash
+ssh deployer@65.20.84.140 "cd ~/HR-Management-System/backend && node migrate.js"
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### **SSH connection fails:**
+```powershell
+# Test SSH connection
+ssh deployer@65.20.84.140 "echo 'Connected!'"
+
+# If password prompt appears every time, set up SSH key:
+ssh-keygen -t rsa
+ssh-copy-id deployer@65.20.84.140
+```
+
+### **Git push fails:**
+```powershell
+# Check remote
+git remote -v
+
+# If no remote, add it:
+git remote add origin https://github.com/Aamir1055/HR-Management-System.git
+```
+
+### **Server pull fails:**
+```bash
+# On server, check for conflicts
+cd ~/HR-Management-System
+git status
+
+# Stash local changes
+git stash
+
+# Pull again
+git pull origin master
+
+# Reapply stash if needed
+git stash pop
+```
+
+### **PM2 not found:**
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Or use npm start
+cd ~/HR-Management-System/backend
+npm start
+```
+
+---
+
+## 🎯 Quick Reference
+
+### **Quick sync everything:**
+```powershell
+.\simple-sync.ps1
+# Choose option 1
+```
+
+### **Quick backend sync:**
+```powershell
+rsync -avz --exclude='node_modules' ./backend/ deployer@65.20.84.140:/home/deployer/HR-Management-System/backend/
+ssh deployer@65.20.84.140 "pm2 restart backend"
+```
+
+### **Quick frontend sync:**
+```powershell
+rsync -avz --exclude='node_modules' ./src/ deployer@65.20.84.140:/home/deployer/HR-Management-System/src/
+```
+
+### **Check server status:**
+```powershell
+ssh deployer@65.20.84.140 "pm2 status && pm2 logs --lines 20"
+```
+
+---
+
+## 📞 Need Help?
+
+If sync fails or you encounter issues:
+
+1. Check SSH connection: `ssh deployer@65.20.84.140`
+2. Check server logs: `ssh deployer@65.20.84.140 "pm2 logs"`
+3. Verify git status: `git status`
+4. Check server disk space: `ssh deployer@65.20.84.140 "df -h"`
+
+---
+
+## ✅ Best Practices
+
+1. **Always commit to git** before syncing for version control
+2. **Test locally** before syncing to production
+3. **Use watch mode** during active development
+4. **Backup database** before major changes
+5. **Check PM2 logs** after deployment: `pm2 logs`
+6. **Keep .env files separate** - never sync them
+7. **Run migrations** after database schema changes
+
+---
+
+## 🎉 Success!
+
+Your code is now synced and deployed! 
+
+**Check your app:**
+- Frontend: http://65.20.84.140
+- Backend: http://65.20.84.140:4000/api/health
+
+**Monitor services:**
+```bash
+ssh deployer@65.20.84.140 "pm2 monit"
+```

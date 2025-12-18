@@ -1,0 +1,12 @@
+// Date conversion helper for DD/MM/YYYY to YYYY-MM-DD
+const convertDateForInput = (dateStr: string): string => {
+  if (!dateStr) return '';
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return \\-\-\\;
+    }
+  }
+  return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+};
+

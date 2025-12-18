@@ -1,0 +1,115 @@
+{
+  "timestamp": "2025-09-27T12:38:15.171Z",
+  "summary": {
+    "duration": 363,
+    "environment": {
+      "platform": "win32",
+      "node": "v22.17.0",
+      "cwd": "C:\\Users\\bazaa\\Desktop\\PayRollManagementSystem\\payroleManagement1\\payroleManagement2"
+    },
+    "overallScore": 72
+  },
+  "results": {
+    "structure": {
+      "valid": true,
+      "results": [
+        {
+          "path": "src",
+          "name": "Source Directory",
+          "type": "dir",
+          "exists": true,
+          "isCorrectType": true
+        },
+        {
+          "path": "src/components",
+          "name": "Components Directory",
+          "type": "dir",
+          "exists": true,
+          "isCorrectType": true
+        },
+        {
+          "path": "src/components/Dashboard",
+          "name": "Dashboard Components",
+          "type": "dir",
+          "exists": true,
+          "isCorrectType": true
+        },
+        {
+          "path": "src/components/Dashboard/MetricCard.tsx",
+          "name": "MetricCard Component",
+          "type": "file",
+          "exists": true,
+          "isCorrectType": true
+        },
+        {
+          "path": "package.json",
+          "name": "Package Configuration",
+          "type": "file",
+          "exists": true,
+          "isCorrectType": true
+        },
+        {
+          "path": "tsconfig.json",
+          "name": "TypeScript Configuration",
+          "type": "file",
+          "exists": true,
+          "isCorrectType": true
+        }
+      ]
+    },
+    "functionality": {
+      "success": true,
+      "score": 8,
+      "total": 9,
+      "percentage": 89,
+      "features": [
+        {
+          "name": "TypeScript Interface",
+          "check": true
+        },
+        {
+          "name": "Props Handling",
+          "check": true
+        },
+        {
+          "name": "Click Handler",
+          "check": true
+        },
+        {
+          "name": "Color Support",
+          "check": true
+        },
+        {
+          "name": "Icon Support",
+          "check": true
+        },
+        {
+          "name": "Trend Display",
+          "check": true
+        },
+        {
+          "name": "Tailwind Classes",
+          "check": true
+        },
+        {
+          "name": "Hover Effects",
+          "check": true
+        },
+        {
+          "name": "Responsive Design",
+          "check": false
+        }
+      ]
+    },
+    "htmlTests": {
+      "success": true,
+      "message": "HTML tests ready for interactive execution",
+      "details": "Open the HTML file in a browser to run comprehensive card tests"
+    },
+    "jestTests": {
+      "success": true,
+      "message": "Jest tests skipped - not configured",
+      "skipped": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+dist/
+build/
+.cache/
+
+# Environment-specific files (DO NOT COMMIT to avoid server conflicts)
+# CRITICAL: These contain sensitive credentials and server-specific config
+.env
+.env.*
+!.env.example
+!.env.template
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.template
+backend/node_modules/
+backend/uploads/
+backend/logs/
+
+# Backup files
+*.backup
+.env.backup
+backend/.env.backup
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Keep these local development files
+backend/fix_*.js
+backend/test_*.js
+backend/*.backup*
+backend/controllers/*.backup*

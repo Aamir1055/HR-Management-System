@@ -1,0 +1,229 @@
+# Docker Compose Production Configuration for PayRoll Management System
+# Complete production-ready setup with MySQL, Backend, Frontend, and optional Redis
+
+version: '3.8'
+
+networks:
+  payroll-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  mysql-data:
+    driver: local
+  payroll-uploads:
+    driver: local
+  payroll-logs:
+    driver: local
+  redis-data:
+    driver: local
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: payroll-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secure_root_password}
+      MYSQL_DATABASE: ${DB_NAME:-payroll_system}
+      MYSQL_USER: ${DB_USER:-payroll_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secure_password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=256M
+      --max-connections=200
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis (Optional - for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: payroll-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.11
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      timeout: 3s
+      retries: 5
+    profiles:
+      - with-redis
+
+  # Backend API Server
+  payroll-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: payroll-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Database Configuration
+      DB_HOST: mysql
+      DB_USER: ${DB_USER:-payroll_user}
+      DB_PASSWORD: ${DB_PASSWORD:-secure_password}
+      DB_NAME: ${DB_NAME:-payroll_system}
+      
+      # Server Configuration
+      PORT: 5000
+      NODE_ENV: production
+      
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret-key-min-32-characters-long}
+      
+      # Features
+      HALF_DAY_FEATURE_ENABLED: ${HALF_DAY_FEATURE_ENABLED:-true}
+      
+      # CORS
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80}
+      
+      # Rate Limiting
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-1000}
+      
+      # File Upload
+      UPLOAD_PATH: uploads
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-5242880}
+      
+      # Redis (if enabled)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - payroll-uploads:/app/uploads
+      - payroll-logs:/app/logs
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.20
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.payroll-backend.rule=Host(`${BACKEND_DOMAIN:-api.payroll.local}`)"
+      - "traefik.http.services.payroll-backend.loadbalancer.server.port=5000"
+
+  # Frontend Web Server
+  payroll-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
+    container_name: payroll-frontend
+    restart: unless-stopped
+    depends_on:
+      payroll-backend:
+        condition: service_healthy
+    environment:
+      NGINX_HOST: localhost
+      NGINX_PORT: 80
+      BACKEND_HOST: payroll-backend
+      BACKEND_PORT: 5000
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.30
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.payroll-frontend.rule=Host(`${FRONTEND_DOMAIN:-payroll.local}`)"
+      - "traefik.http.services.payroll-frontend.loadbalancer.server.port=80"
+
+  # Reverse Proxy / Load Balancer (Optional)
+  traefik:
+    image: traefik:v2.9
+    container_name: payroll-traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@payroll.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.5
+    profiles:
+      - with-traefik
+
+  # Monitoring - Prometheus (Optional)
+  prometheus:
+    image: prom/prometheus
+    container_name: payroll-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.40
+    profiles:
+      - monitoring
+
+  # Monitoring - Grafana (Optional)
+  grafana:
+    image: grafana/grafana
+    container_name: payroll-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      payroll-network:
+        ipv4_address: 172.20.0.41
+    profiles:
+      - monitoring
+
+volumes:
+  grafana-data:
+    driver: local

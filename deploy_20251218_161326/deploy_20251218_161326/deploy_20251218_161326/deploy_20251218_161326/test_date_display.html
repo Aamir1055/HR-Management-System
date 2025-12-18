@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Format Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .date-test { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            margin: 10px 0; 
+            background-color: #f9f9f9; 
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Date Format Display Test</h1>
+    
+    <div class="date-test">
+        <h3>Test Date Formats from Database</h3>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // Test dates from the database (as they would come from API)
+        const sampleDates = [
+            '2020-01-01',  // Joining date
+            '1990-11-03',  // DOB  
+            '2027-05-15',  // Passport expiry
+            '2026-06-28'   // Visa expiry
+        ];
+
+        const testDiv = document.getElementById('test-results');
+
+        // Test different date formatting methods
+        sampleDates.forEach((dateStr, index) => {
+            const date = new Date(dateStr);
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <p><strong>Date ${index + 1}: ${dateStr}</strong></p>
+                <ul>
+                    <li>toLocaleDateString(): ${date.toLocaleDateString()}</li>
+                    <li>toLocaleDateString('en-GB'): ${date.toLocaleDateString('en-GB')}</li>
+                    <li>toLocaleDateString('en-US'): ${date.toLocaleDateString('en-US')}</li>
+                    <li>toDateString(): ${date.toDateString()}</li>
+                    <li>ISO String (first 10): ${date.toISOString().slice(0, 10)}</li>
+                </ul>
+                <hr>
+            `;
+            testDiv.appendChild(div);
+        });
+
+        // Add a section to show how the frontend component would display dates
+        const frontendTest = document.createElement('div');
+        frontendTest.innerHTML = `
+            <h3>Frontend Component Simulation (using toLocaleDateString('en-GB'))</h3>
+            <table border="1" style="border-collapse: collapse; width: 100%;">
+                <tr>
+                    <th style="padding: 8px;">Employee</th>
+                    <th style="padding: 8px;">Joining Date</th>
+                    <th style="padding: 8px;">DOB</th>
+                    <th style="padding: 8px;">Passport Expiry</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">ANISH SONI</td>
+                    <td style="padding: 8px;">${new Date('2020-01-01').toLocaleDateString('en-GB')}</td>
+                    <td style="padding: 8px;">${new Date('1990-11-03').toLocaleDateString('en-GB')}</td>
+                    <td style="padding: 8px;">${new Date('2027-05-15').toLocaleDateString('en-GB')}</td>
+                </tr>
+            </table>
+        `;
+        testDiv.appendChild(frontendTest);
+
+        // Check if the dates are showing as dd/mm/yyyy
+        const sampleDate = new Date('2020-01-01').toLocaleDateString('en-GB');
+        const resultDiv = document.createElement('div');
+        resultDiv.className = sampleDate === '01/01/2020' ? 'success' : 'error';
+        resultDiv.innerHTML = `
+            <h3>✅ Test Result</h3>
+            <p><strong>Expected format:</strong> dd/mm/yyyy (01/01/2020)</p>
+            <p><strong>Actual format:</strong> ${sampleDate}</p>
+            <p><strong>Status:</strong> ${sampleDate === '01/01/2020' ? '✅ CORRECT - dd/mm/yyyy format working!' : '❌ INCORRECT - Date format issue detected'}</p>
+        `;
+        testDiv.appendChild(resultDiv);
+    </script>
+</body>
+</html>
