@@ -146,19 +146,26 @@ const employeeController = {
       
       const employee = await services.employeeService.createEmployee(req.body, context);
       
-      // Log audit entry
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'CREATE',
-        entityType: 'employees',
-        entityId: employee.id,
-        entityName: `${employee.first_name} ${employee.last_name}`,
-        description: `Created employee: ${employee.first_name} ${employee.last_name} (${employee.employee_id})`,
-        newValues: employee,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+      // Log audit entry (only if user is authenticated)
+      if (req.user) {
+        try {
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'CREATE',
+            entityType: 'employees',
+            entityId: employee.id,
+            entityName: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employee.employee_id}`,
+            description: `Created employee: ${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employee.employee_id}`,
+            newValues: employee,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Failed to log audit entry:', auditError);
+          // Continue with the response even if audit logging fails
+        }
+      }
       
       res.status(201).json(employee);
     } catch (error) {
@@ -177,8 +184,13 @@ const employeeController = {
       
       console.log('🔍 UPDATE - Raw request body:', req.body);
       
-      // Get old employee data for audit log
-      const oldEmployee = await services.employeeRepository.getEmployeeById(employeeId);
+      // Get old employee data for audit log (optional, don't fail if it doesn't exist)
+      let oldEmployee = null;
+      try {
+        oldEmployee = await services.employeeRepository.getEmployeeById(employeeId);
+      } catch (auditError) {
+        console.warn('Could not fetch old employee data for audit:', auditError.message);
+      }
       
       const employee = await services.employeeService.updateEmployee(employeeId, req.body, context);
       
@@ -186,28 +198,37 @@ const employeeController = {
         return res.status(404).json({ error: 'Employee not found' });
       }
       
-      // Log audit entry with old and new values
-      const changes = [];
-      if (oldEmployee.first_name !== employee.first_name) changes.push('first name');
-      if (oldEmployee.last_name !== employee.last_name) changes.push('last name');
-      if (oldEmployee.email !== employee.email) changes.push('email');
-      if (oldEmployee.phone !== employee.phone) changes.push('phone');
-      if (oldEmployee.designation !== employee.designation) changes.push('designation');
-      if (oldEmployee.status !== employee.status) changes.push('status');
-      
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'UPDATE',
-        entityType: 'employees',
-        entityId: employee.id,
-        entityName: `${employee.first_name} ${employee.last_name}`,
-        description: `Updated employee: ${employee.first_name} ${employee.last_name} - Changed: ${changes.join(', ') || 'various fields'}`,
-        oldValues: oldEmployee,
-        newValues: employee,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+      // Log audit entry with old and new values (only if user is authenticated)
+      if (req.user) {
+        try {
+          const changes = [];
+          if (oldEmployee) {
+            if (oldEmployee.first_name !== employee.first_name) changes.push('first name');
+            if (oldEmployee.last_name !== employee.last_name) changes.push('last name');
+            if (oldEmployee.email !== employee.email) changes.push('email');
+            if (oldEmployee.phone !== employee.phone) changes.push('phone');
+            if (oldEmployee.designation !== employee.designation) changes.push('designation');
+            if (oldEmployee.status !== employee.status) changes.push('status');
+          }
+          
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'UPDATE',
+            entityType: 'employees',
+            entityId: employee.id,
+            entityName: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employeeId}`,
+            description: `Updated employee: ${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employeeId}` + (changes.length > 0 ? ` - Changed: ${changes.join(', ')}` : ''),
+            oldValues: oldEmployee,
+            newValues: employee,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Failed to log audit entry:', auditError);
+          // Continue with the response even if audit logging fails
+        }
+      }
       
       res.json(employee);
     } catch (error) {
@@ -223,26 +244,36 @@ const employeeController = {
       const services = initializeServices(req.db);
       const { employeeId } = req.params;
       
-      // Get employee data before deletion for audit log
-      const employee = await services.employeeRepository.getEmployeeById(employeeId);
+      // Get employee data before deletion for audit log (optional)
+      let employee = null;
+      try {
+        employee = await services.employeeRepository.getEmployeeById(employeeId);
+      } catch (auditError) {
+        console.warn('Could not fetch employee data for audit:', auditError.message);
+      }
       
       const deleted = await services.employeeService.deleteEmployee(employeeId);
       
       if (deleted) {
-        // Log audit entry
-        if (employee) {
-          await logAudit({
-            userId: req.user.id,
-            username: req.user.username,
-            action: 'DELETE',
-            entityType: 'employees',
-            entityId: employeeId,
-            entityName: `${employee.first_name} ${employee.last_name}`,
-            description: `Deleted employee: ${employee.first_name} ${employee.last_name} (${employee.employee_id})`,
-            oldValues: employee,
-            ipAddress: req.ip,
-            userAgent: req.get('user-agent')
-          });
+        // Log audit entry (only if user is authenticated)
+        if (req.user && employee) {
+          try {
+            await logAudit({
+              userId: req.user.id,
+              username: req.user.username,
+              action: 'DELETE',
+              entityType: 'employees',
+              entityId: employeeId,
+              entityName: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employeeId}`,
+              description: `Deleted employee: ${employee.first_name || ''} ${employee.last_name || ''}`.trim() || `Employee ${employeeId}`,
+              oldValues: employee,
+              ipAddress: req.ip,
+              userAgent: req.get('user-agent')
+            });
+          } catch (auditError) {
+            console.error('Failed to log audit entry:', auditError);
+            // Continue with the response even if audit logging fails
+          }
         }
         
         res.json({ message: 'Employee deleted successfully' });
