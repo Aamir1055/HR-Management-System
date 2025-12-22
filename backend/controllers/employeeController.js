@@ -499,12 +499,14 @@ const employeeController = {
   
   /**
    * Get positions by office (configured positions)
+   * Falls back to all positions if office has no specific position assignments
    */
   async getPositionsByOffice(req, res) {
     try {
       const { officeId } = req.params;
       
-      const [results] = await req.db.query(`
+      // First try to get office-specific positions
+      const [officePositions] = await req.db.query(`
         SELECT DISTINCT p.id, p.title 
         FROM positions p
         INNER JOIN office_positions op ON p.id = op.position_id
@@ -512,7 +514,19 @@ const employeeController = {
         ORDER BY p.title
       `, [officeId]);
       
-      res.json(results);
+      // If office has configured positions, return them
+      if (officePositions.length > 0) {
+        return res.json(officePositions);
+      }
+      
+      // Otherwise, return all positions
+      const [allPositions] = await req.db.query(`
+        SELECT id, title 
+        FROM positions 
+        ORDER BY title
+      `);
+      
+      res.json(allPositions);
     } catch (error) {
       handleError(res, error, 'Failed to get positions by office');
     }
