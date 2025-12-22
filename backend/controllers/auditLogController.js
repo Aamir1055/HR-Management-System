@@ -76,14 +76,14 @@ async function getAuditLogs(req, res) {
        ${whereClause}
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Parse JSON fields
     const parsedLogs = logs.map(log => ({
       ...log,
-      old_values: log.old_values ? JSON.parse(log.old_values) : null,
-      new_values: log.new_values ? JSON.parse(log.new_values) : null
+      old_values: log.old_values ? (typeof log.old_values === 'string' ? JSON.parse(log.old_values) : log.old_values) : null,
+      new_values: log.new_values ? (typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values) : null
     }));
 
     res.json({
