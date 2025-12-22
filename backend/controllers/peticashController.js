@@ -102,9 +102,9 @@ const peticashController = {
       
       console.log('Executing query with params:', { query, queryParams });
       
-      // Execute queries
-      const [expenses] = await req.db.execute(query, queryParams);
-      const [countResult] = await req.db.execute(countQuery, queryParams.slice(0, -2)); // Remove limit and offset for count
+      // Use query() instead of execute() to avoid prepared statement issues
+      const [expenses] = await req.db.query(query, queryParams);
+      const [countResult] = await req.db.query(countQuery, queryParams.slice(0, -2)); // Remove limit and offset for count
       
       const total = countResult[0].total;
       const totalPages = Math.ceil(total / finalLimit);
