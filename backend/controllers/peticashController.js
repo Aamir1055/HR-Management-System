@@ -46,9 +46,13 @@ const peticashController = {
   async getAllPeticash(req, res) {
     try {
       const { page = 1, limit = 50, search, company, expense_category, payment_type, payable } = req.query;
-      const pageNum = parseInt(page) || 1;
-      const limitNum = parseInt(limit) || 50;
+      
+      // Ensure page and limit are valid integers
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.min(1000, Math.max(1, parseInt(limit) || 50)); // Cap at 1000
       const offset = (pageNum - 1) * limitNum;
+      
+      console.log('Petty cash query params:', { page, limit, pageNum, limitNum, offset });
       
       let query = 'SELECT * FROM peticash WHERE 1=1';
       let countQuery = 'SELECT COUNT(*) as total FROM peticash WHERE 1=1';
@@ -89,14 +93,21 @@ const peticashController = {
       
       // Add ordering and pagination
       query += ' ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
-      queryParams.push(limitNum, offset);
+      
+      // Ensure parameters are integers, not strings or NaN
+      const finalLimit = Number.isInteger(limitNum) ? limitNum : 50;
+      const finalOffset = Number.isInteger(offset) ? offset : 0;
+      
+      queryParams.push(finalLimit, finalOffset);
+      
+      console.log('Executing query with params:', { query, queryParams });
       
       // Execute queries
       const [expenses] = await req.db.execute(query, queryParams);
       const [countResult] = await req.db.execute(countQuery, queryParams.slice(0, -2)); // Remove limit and offset for count
       
       const total = countResult[0].total;
-      const totalPages = Math.ceil(total / limitNum);
+      const totalPages = Math.ceil(total / finalLimit);
       
       // Convert to model format
       const formattedExpenses = expenses.map(expense => {
@@ -107,10 +118,10 @@ const peticashController = {
       res.json({
         expenses: formattedExpenses,
         pagination: {
-          currentPage: parseInt(page),
+          currentPage: pageNum,
           totalPages,
           totalItems: total,
-          itemsPerPage: parseInt(limit)
+          itemsPerPage: finalLimit
         }
       });
     } catch (error) {
