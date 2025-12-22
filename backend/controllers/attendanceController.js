@@ -569,11 +569,17 @@ exports.update = async (req, res) => {
   const { punch_in, punch_out } = req.body;
 
   try {
-    // Get old attendance data for audit log
-    const [oldData] = await db.query(
-      'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
-      [employeeId, date]
-    );
+    // Get old attendance data for audit log (optional)
+    let oldData = null;
+    try {
+      const [data] = await db.query(
+        'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
+        [employeeId, date]
+      );
+      oldData = data[0];
+    } catch (auditError) {
+      console.warn('Could not fetch old attendance data for audit:', auditError.message);
+    }
     
     const [result] = await db.query(
       `UPDATE attendance
@@ -589,28 +595,40 @@ exports.update = async (req, res) => {
       [employeeId, date]
     );
     
-    // Get employee name
-    const [employee] = await db.query(
-      'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
-      [employeeId]
-    );
-    const employeeName = employee.length > 0 ? `${employee[0].first_name} ${employee[0].last_name}` : `Employee ${employeeId}`;
-    
-    // Log audit entry
+    // Log audit entry (non-blocking)
     if (req.user) {
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'UPDATE',
-        entityType: 'attendance',
-        entityId: rows[0].id,
-        entityName: `${employeeName} - ${date}`,
-        description: `Updated attendance for ${employeeName} on ${date}`,
-        oldValues: oldData[0],
-        newValues: rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+      try {
+        // Get employee name
+        let employeeName = `Employee ${employeeId}`;
+        try {
+          const [employee] = await db.query(
+            'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
+            [employeeId]
+          );
+          if (employee.length > 0) {
+            employeeName = `${employee[0].first_name || ''} ${employee[0].last_name || ''}`.trim() || employeeName;
+          }
+        } catch (err) {
+          console.warn('Could not fetch employee name for audit:', err.message);
+        }
+        
+        await logAudit({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'UPDATE',
+          entityType: 'attendance',
+          entityId: rows[0].id,
+          entityName: `${employeeName} - ${date}`,
+          description: `Updated attendance for ${employeeName} on ${date}`,
+          oldValues: oldData,
+          newValues: rows[0],
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Continue with response even if audit logging fails
+      }
     }
     
     res.json({ success: true, data: rows[0] });
@@ -623,11 +641,17 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   const { employeeId, date } = req.params;
   try {
-    // Get attendance data before deletion for audit log
-    const [attendanceData] = await db.query(
-      'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
-      [employeeId, date]
-    );
+    // Get attendance data before deletion for audit log (optional)
+    let attendanceData = null;
+    try {
+      const [data] = await db.query(
+        'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
+        [employeeId, date]
+      );
+      attendanceData = data[0];
+    } catch (auditError) {
+      console.warn('Could not fetch attendance data for audit:', auditError.message);
+    }
     
     const [result] = await db.query(
       'DELETE FROM attendance WHERE employee_id = ? AND date = ?',
@@ -637,27 +661,39 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ message: 'Record not found' });
     }
     
-    // Get employee name
-    const [employee] = await db.query(
-      'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
-      [employeeId]
-    );
-    const employeeName = employee.length > 0 ? `${employee[0].first_name} ${employee[0].last_name}` : `Employee ${employeeId}`;
-    
-    // Log audit entry
-    if (req.user && attendanceData.length > 0) {
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'DELETE',
-        entityType: 'attendance',
-        entityId: attendanceData[0].id,
-        entityName: `${employeeName} - ${date}`,
-        description: `Deleted attendance for ${employeeName} on ${date}`,
-        oldValues: attendanceData[0],
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+    // Log audit entry (non-blocking)
+    if (req.user && attendanceData) {
+      try {
+        // Get employee name
+        let employeeName = `Employee ${employeeId}`;
+        try {
+          const [employee] = await db.query(
+            'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
+            [employeeId]
+          );
+          if (employee.length > 0) {
+            employeeName = `${employee[0].first_name || ''} ${employee[0].last_name || ''}`.trim() || employeeName;
+          }
+        } catch (err) {
+          console.warn('Could not fetch employee name for audit:', err.message);
+        }
+        
+        await logAudit({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'DELETE',
+          entityType: 'attendance',
+          entityId: attendanceData.id,
+          entityName: `${employeeName} - ${date}`,
+          description: `Deleted attendance for ${employeeName} on ${date}`,
+          oldValues: attendanceData,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Continue with response even if audit logging fails
+      }
     }
     
     res.json({ success: true });
