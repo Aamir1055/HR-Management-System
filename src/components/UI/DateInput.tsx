@@ -156,21 +156,24 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(({
         />
         
         {/* Calendar icon - clickable */}
-        <div 
+        <button
+          type="button"
           className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
           onClick={handleCalendarClick}
+          disabled={disabled}
         >
-          <Calendar className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-        </div>
+          <Calendar className={`w-4 h-4 ${disabled ? 'text-gray-300' : 'text-gray-400 hover:text-gray-600'}`} />
+        </button>
         
-        {/* Hidden date picker - positioned off-screen */}
+        {/* Hidden date picker - visually hidden but functional */}
         <input
           ref={dateInputRef}
           type="date"
           value={ddmmyyyyToISO(value)}
           onChange={handleDatePickerChange}
           disabled={disabled}
-          className="absolute -left-[9999px] opacity-0 pointer-events-none"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          style={{ zIndex: -1 }}
           tabIndex={-1}
         />
       </div>
