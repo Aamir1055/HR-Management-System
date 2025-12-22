@@ -19,6 +19,8 @@ volumes:
     driver: local
   redis-data:
     driver: local
+  grafana-data:
+    driver: local
 
 services:
   # MySQL Database
@@ -223,7 +225,3 @@ services:
         ipv4_address: 172.20.0.41
     profiles:
       - monitoring
-
-volumes:
-  grafana-data:
-    driver: local

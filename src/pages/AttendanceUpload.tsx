@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { MainLayout } from '../components/Layout/MainLayout';
 import * as XLSX from 'xlsx';
-import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, 
   AlertCircle, 
   Loader2, 
   FileDown, 
   Upload, 
-  FileText, 
-  Calendar,
-  Users,
-  TrendingUp
+  FileText
 } from 'lucide-react';
 
 // Helper: Convert Excel serial date to YYYY-MM-DD string
@@ -33,14 +29,12 @@ const SAMPLE_DATA = [
 ];
 
 const AttendanceUpload: React.FC = () => {
-  const navigate = useNavigate();
   const [previewRows, setPreviewRows] = useState<Array<any>>([]);
   const [headers, setHeaders] = useState<Array<string>>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMsg, setUploadMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadStats, setUploadStats] = useState<any>(null);
   // Date range now unused
   // const [fromDate, setFromDate] = useState('');
   // const [toDate, setToDate] = useState('');
@@ -62,7 +56,6 @@ const AttendanceUpload: React.FC = () => {
     setError('');
     setHeaders([]);
     setPreviewRows([]);
-    setUploadStats(null);
 
     if (!file) return;
 
@@ -116,27 +109,6 @@ const AttendanceUpload: React.FC = () => {
         const validRows = dataRows.filter(row => Object.values(row).some(Boolean));
         setPreviewRows(validRows);
 
-        // Date range: find min/max in string order and use as is (no parsing as JS Date)
-        let sortedDates = validRows
-          .map(row => row.Date)
-          .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
-          .sort();
-        const dateRangeObj = sortedDates.length > 0 ? {
-          start: sortedDates[0],
-          end: sortedDates[sortedDates.length - 1]
-        } : null;
-
-        // Calculate preview stats
-        const totalRows = rows.length - 1;
-        const uniqueEmployees = new Set(validRows.map(row => row['EmployeeID'])).size;
-
-        setUploadStats({
-          totalRecords: totalRows,
-          // validRecords: validRows.length, // REMOVED
-          uniqueEmployees,
-          dateRange: dateRangeObj
-        });
-
       } catch (err: any) {
         setError(`⚠️ Could not parse file: ${err.message}`);
         setPreviewRows([]);
@@ -174,7 +146,6 @@ const AttendanceUpload: React.FC = () => {
           setSelectedFile(null);
           setPreviewRows([]);
           setHeaders([]);
-          setUploadStats(null);
         }, 2000);
       } else {
         if (data.unauthorizedEmployeeIds && data.unauthorizedEmployeeIds.length > 0) {
