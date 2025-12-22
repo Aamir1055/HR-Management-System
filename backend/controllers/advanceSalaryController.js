@@ -451,20 +451,27 @@ exports.createOrUpdate = async (req, res) => {
       [employee_id, month_year]
     );
 
-    // Log audit entry
-    await logAudit({
-      userId: req.user.id,
-      username: req.user.username,
-      action: isUpdate ? 'UPDATE' : 'CREATE',
-      entityType: 'advance_salary',
-      entityId: rows[0].id,
-      entityName: `${rows[0].employee_name} - ${month_year}`,
-      description: `${isUpdate ? 'Updated' : 'Created'} advance salary for ${rows[0].employee_name} for ${month_year} - Amount: ${validAmount}`,
-      oldValues: isUpdate ? existing[0] : null,
-      newValues: rows[0],
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
+    // Log audit entry (non-blocking)
+    if (req.user) {
+      try {
+        await logAudit({
+          userId: req.user.id,
+          username: req.user.username,
+          action: isUpdate ? 'UPDATE' : 'CREATE',
+          entityType: 'advance_salary',
+          entityId: rows[0]?.id,
+          entityName: `${rows[0]?.employee_name || 'Employee'} - ${month_year}`,
+          description: `${isUpdate ? 'Updated' : 'Created'} advance salary for ${rows[0]?.employee_name || employee_id} for ${month_year} - Amount: ${validAmount}`,
+          oldValues: isUpdate ? existing[0] : null,
+          newValues: rows[0],
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Continue with response even if audit logging fails
+      }
+    }
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
@@ -541,14 +548,20 @@ exports.update = async (req, res) => {
       return res.status(404).json({ message: 'Record not found or access denied' });
     }
 
-    // Get old data for audit log
-    const [oldData] = await db.query(
-      `SELECT a.*, e.name as employee_name
-       FROM advance_salary a 
-       INNER JOIN employees e ON a.employee_id = e.employeeId 
-       WHERE a.employee_id = ? AND a.month_year = ?`,
-      [employeeId, monthYear]
-    );
+    // Get old data for audit log (optional)
+    let oldData = null;
+    try {
+      const [data] = await db.query(
+        `SELECT a.*, e.name as employee_name
+         FROM advance_salary a 
+         INNER JOIN employees e ON a.employee_id = e.employeeId 
+         WHERE a.employee_id = ? AND a.month_year = ?`,
+        [employeeId, monthYear]
+      );
+      oldData = data[0];
+    } catch (auditError) {
+      console.warn('Could not fetch old advance salary data for audit:', auditError.message);
+    }
 
     // Update the record
     const [result] = await db.query(
@@ -575,21 +588,26 @@ exports.update = async (req, res) => {
       [employeeId, monthYear]
     );
     
-    // Log audit entry
-    if (oldData.length > 0) {
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'UPDATE',
-        entityType: 'advance_salary',
-        entityId: rows[0].id,
-        entityName: `${rows[0].employee_name} - ${monthYear}`,
-        description: `Updated advance salary for ${rows[0].employee_name} for ${monthYear} - Old: ${oldData[0].amount}, New: ${validAmount}`,
-        oldValues: oldData[0],
-        newValues: rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+    // Log audit entry (non-blocking)
+    if (req.user && oldData) {
+      try {
+        await logAudit({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'UPDATE',
+          entityType: 'advance_salary',
+          entityId: rows[0]?.id,
+          entityName: `${rows[0]?.employee_name || 'Employee'} - ${monthYear}`,
+          description: `Updated advance salary for ${rows[0]?.employee_name || employeeId} for ${monthYear} - Old: ${oldData.amount}, New: ${validAmount}`,
+          oldValues: oldData,
+          newValues: rows[0],
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Continue with response even if audit logging fails
+      }
     }
     
     res.json({ success: true, data: rows[0] });
@@ -624,14 +642,20 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ message: 'Record not found or access denied' });
     }
 
-    // Get data before deletion for audit log
-    const [oldData] = await db.query(
-      `SELECT a.*, e.name as employee_name
-       FROM advance_salary a 
-       INNER JOIN employees e ON a.employee_id = e.employeeId 
-       WHERE a.employee_id = ? AND a.month_year = ?`,
-      [employeeId, monthYear]
-    );
+    // Get data before deletion for audit log (optional)
+    let oldData = null;
+    try {
+      const [data] = await db.query(
+        `SELECT a.*, e.name as employee_name
+         FROM advance_salary a 
+         INNER JOIN employees e ON a.employee_id = e.employeeId 
+         WHERE a.employee_id = ? AND a.month_year = ?`,
+        [employeeId, monthYear]
+      );
+      oldData = data[0];
+    } catch (auditError) {
+      console.warn('Could not fetch advance salary data for audit:', auditError.message);
+    }
 
     // Delete the record
     const [result] = await db.query(
@@ -643,20 +667,25 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ message: 'Record not found' });
     }
 
-    // Log audit entry
-    if (oldData.length > 0) {
-      await logAudit({
-        userId: req.user.id,
-        username: req.user.username,
-        action: 'DELETE',
-        entityType: 'advance_salary',
-        entityId: oldData[0].id,
-        entityName: `${oldData[0].employee_name} - ${monthYear}`,
-        description: `Deleted advance salary for ${oldData[0].employee_name} for ${monthYear} - Amount: ${oldData[0].amount}`,
-        oldValues: oldData[0],
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+    // Log audit entry (non-blocking)
+    if (req.user && oldData) {
+      try {
+        await logAudit({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'DELETE',
+          entityType: 'advance_salary',
+          entityId: oldData.id,
+          entityName: `${oldData.employee_name || 'Employee'} - ${monthYear}`,
+          description: `Deleted advance salary for ${oldData.employee_name || employeeId} for ${monthYear} - Amount: ${oldData.amount}`,
+          oldValues: oldData,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit entry:', auditError);
+        // Continue with response even if audit logging fails
+      }
     }
 
     res.json({ success: true });
