@@ -184,14 +184,16 @@ export default function UserForm({ user, isOpen, onClose, onSubmit, mode, viewOn
     setLoading(true);
 
     try {
-      const userData: Partial<User> = {
-        ...formData,
-        offices: offices.filter(office => selectedOfficeIds.includes(office.id))
+      const userData: any = {
+        username: formData.username,
+        role: formData.role,
+        two_factor_enabled: formData.two_factor_enabled,
+        office_ids: selectedOfficeIds.map(id => parseInt(id)) // Convert to numbers
       };
 
-      // Don't include password if it's empty (for edit mode)
-      if (!userData.password?.trim() && mode === 'edit') {
-        delete userData.password;
+      // Include password for new users or if it's being changed
+      if (formData.password?.trim()) {
+        userData.password = formData.password;
       }
 
       await onSubmit(userData);

@@ -48,15 +48,27 @@ export const useUsers = (): UseUsersReturn => {
   };
 
   // Create new user
-  const createUser = async (_userData: any) => {
-    // Not yet implemented server-side; prevent accidental calls to /roles
-    throw new Error('User creation is not available yet. Listing and office visibility are enabled.');
+  const createUser = async (userData: any) => {
+    try {
+      const response = await api.post('/users', userData);
+      await fetchUsers(); // Refresh the user list
+      return response.data;
+    } catch (err: any) {
+      console.error('Error creating user:', err);
+      throw err; // Re-throw to be handled by the caller
+    }
   };
 
   // Update existing user
-  const updateUser = async (_id: number, _userData: any) => {
-    // Not yet implemented server-side; prevent accidental calls to /roles
-    throw new Error('User update is not available yet.');
+  const updateUser = async (id: number, userData: any) => {
+    try {
+      const response = await api.put(`/users/${id}`, userData);
+      await fetchUsers(); // Refresh the user list
+      return response.data;
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      throw err; // Re-throw to be handled by the caller
+    }
   };
 
   // Delete user
