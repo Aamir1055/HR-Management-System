@@ -32,6 +32,7 @@ import { PlatformEmployeeDetails } from './pages/PlatformEmployeeDetails';
 import { CelebrationsPage } from './pages/CelebrationsPage';
 import { Recruitments } from './pages/Recruitments';
 import { PeticashPage } from './pages/Peticash';
+import { AuditLogs } from './pages/AuditLogs';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -373,6 +374,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute permission="manage_users">
             <RoleManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit-logs"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <AuditLogs />
           </ProtectedRoute>
         }
       />

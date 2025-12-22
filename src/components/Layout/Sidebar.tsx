@@ -17,7 +17,8 @@ import {
   UserPlus,
   Wallet,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Shield
 } from 'lucide-react';
 
 const navigationGroups = [
@@ -50,6 +51,7 @@ const navigationGroups = [
     name: 'Administration',
     items: [
       { name: 'Role Management', href: '/roles', icon: UserCog },
+      { name: 'Audit Logs', href: '/audit-logs', icon: Shield, adminOnly: true },
       { name: 'Master Data', href: '/master-data', icon: Settings },
     ]
   }
@@ -96,6 +98,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
     switch (item.href) {
       case '/roles':
+        return user?.role === 'admin';
+      case '/audit-logs':
         return user?.role === 'admin';
       case '/holidays':
         return hasPermission('manage_holidays');
