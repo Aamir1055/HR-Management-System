@@ -12,7 +12,7 @@ async function getAuditLogs(req, res) {
   try {
     const {
       page = 1,
-      limit = 50,
+      limit = 20,
       action,
       entityType,
       userId,
@@ -21,7 +21,9 @@ async function getAuditLogs(req, res) {
       search
     } = req.query;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
     
     // Build WHERE clause
     const conditions = [];
@@ -67,7 +69,11 @@ async function getAuditLogs(req, res) {
     );
     const total = countResult[0].total;
 
-    // Get paginated results
+    // Get paginated results - Build query params separately for LIMIT/OFFSET
+    const queryParams = [...params];
+    const limitValue = limitNum;
+    const offsetValue = offset;
+    
     const [logs] = await db.execute(
       `SELECT 
         id, user_id, username, action, entity_type, entity_id, entity_name,
@@ -75,24 +81,35 @@ async function getAuditLogs(req, res) {
        FROM audit_logs 
        ${whereClause}
        ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${limitValue} OFFSET ${offsetValue}`,
+      queryParams
     );
 
-    // Parse JSON fields
-    const parsedLogs = logs.map(log => ({
-      ...log,
-      old_values: log.old_values ? (typeof log.old_values === 'string' ? JSON.parse(log.old_values) : log.old_values) : null,
-      new_values: log.new_values ? (typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values) : null
-    }));
+    // Parse JSON fields safely
+    const parsedLogs = logs.map(log => {
+      try {
+        return {
+          ...log,
+          old_values: log.old_values ? (typeof log.old_values === 'string' ? JSON.parse(log.old_values) : log.old_values) : null,
+          new_values: log.new_values ? (typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values) : null
+        };
+      } catch (parseError) {
+        console.error('Error parsing audit log JSON:', parseError);
+        return {
+          ...log,
+          old_values: null,
+          new_values: null
+        };
+      }
+    });
 
     res.json({
       logs: parsedLogs,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / parseInt(limit))
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
