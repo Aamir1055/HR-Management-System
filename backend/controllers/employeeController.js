@@ -187,7 +187,7 @@ const employeeController = {
       // Get old employee data for audit log (optional, don't fail if it doesn't exist)
       let oldEmployee = null;
       try {
-        oldEmployee = await services.employeeRepository.getEmployeeById(employeeId);
+        oldEmployee = await services.employeeRepository.findById(employeeId);
       } catch (auditError) {
         console.warn('Could not fetch old employee data for audit:', auditError.message);
       }
@@ -247,7 +247,7 @@ const employeeController = {
       // Get employee data before deletion for audit log (optional)
       let employee = null;
       try {
-        employee = await services.employeeRepository.getEmployeeById(employeeId);
+        employee = await services.employeeRepository.findById(employeeId);
       } catch (auditError) {
         console.warn('Could not fetch employee data for audit:', auditError.message);
       }
