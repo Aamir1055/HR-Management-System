@@ -60,9 +60,15 @@ export const useUsers = (): UseUsersReturn => {
   };
 
   // Delete user
-  const deleteUser = async (_id: number) => {
-    // Not yet implemented server-side; prevent accidental calls to /roles
-    throw new Error('User deletion is not available yet.');
+  const deleteUser = async (id: number) => {
+    try {
+      await api.delete(`/users/${id}`);
+      // Refresh the user list after deletion
+      await fetchUsers();
+    } catch (err: any) {
+      console.error('Error deleting user:', err);
+      throw new Error(err.response?.data?.error || 'Failed to delete user');
+    }
   };
 
   // Refresh users (public method)

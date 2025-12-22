@@ -52,4 +52,54 @@ async function getUsers(req, res) {
   }
 }
 
-module.exports = { getUsers };
+async function deleteUser(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists
+    const [users] = await db.execute('SELECT id, username, role FROM users WHERE id = ?', [userId]);
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+
+    // Prevent deleting yourself
+    if (req.user && req.user.id === userId) {
+      return res.status(403).json({ error: 'Cannot delete your own account' });
+    }
+
+    // Prevent deleting the last admin
+    if (user.role === 'admin') {
+      const [adminCount] = await db.execute('SELECT COUNT(*) as count FROM users WHERE role = ?', ['admin']);
+      if (adminCount[0].count <= 1) {
+        return res.status(403).json({ error: 'Cannot delete the last admin user' });
+      }
+    }
+
+    // Delete user office assignments first (foreign key constraint)
+    await db.execute('DELETE FROM user_offices WHERE user_id = ?', [userId]);
+
+    // Delete the user
+    await db.execute('DELETE FROM users WHERE id = ?', [userId]);
+
+    res.json({ 
+      message: 'User deleted successfully',
+      deletedUser: {
+        id: userId,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error('deleteUser error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+}
+
+module.exports = { getUsers, deleteUser };
