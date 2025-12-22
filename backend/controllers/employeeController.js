@@ -10,6 +10,7 @@ const EmployeeService = require('../services/EmployeeService');
 const EmployeeValidationService = require('../services/EmployeeValidationService');
 const EmployeeImportService = require('../services/EmployeeImportService');
 const ImprovedEmployeeImportService = require('../services/ImprovedEmployeeImportService');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 // Service instances cache (to avoid recreating on each request)
 let serviceInstances = null;
@@ -145,6 +146,20 @@ const employeeController = {
       
       const employee = await services.employeeService.createEmployee(req.body, context);
       
+      // Log audit entry
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'CREATE',
+        entityType: 'employees',
+        entityId: employee.id,
+        entityName: `${employee.first_name} ${employee.last_name}`,
+        description: `Created employee: ${employee.first_name} ${employee.last_name} (${employee.employee_id})`,
+        newValues: employee,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+      
       res.status(201).json(employee);
     } catch (error) {
       handleError(res, error, 'Failed to create employee');
@@ -162,11 +177,37 @@ const employeeController = {
       
       console.log('🔍 UPDATE - Raw request body:', req.body);
       
+      // Get old employee data for audit log
+      const oldEmployee = await services.employeeRepository.getEmployeeById(employeeId);
+      
       const employee = await services.employeeService.updateEmployee(employeeId, req.body, context);
       
       if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
       }
+      
+      // Log audit entry with old and new values
+      const changes = [];
+      if (oldEmployee.first_name !== employee.first_name) changes.push('first name');
+      if (oldEmployee.last_name !== employee.last_name) changes.push('last name');
+      if (oldEmployee.email !== employee.email) changes.push('email');
+      if (oldEmployee.phone !== employee.phone) changes.push('phone');
+      if (oldEmployee.designation !== employee.designation) changes.push('designation');
+      if (oldEmployee.status !== employee.status) changes.push('status');
+      
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'UPDATE',
+        entityType: 'employees',
+        entityId: employee.id,
+        entityName: `${employee.first_name} ${employee.last_name}`,
+        description: `Updated employee: ${employee.first_name} ${employee.last_name} - Changed: ${changes.join(', ') || 'various fields'}`,
+        oldValues: oldEmployee,
+        newValues: employee,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
       
       res.json(employee);
     } catch (error) {
@@ -182,9 +223,28 @@ const employeeController = {
       const services = initializeServices(req.db);
       const { employeeId } = req.params;
       
+      // Get employee data before deletion for audit log
+      const employee = await services.employeeRepository.getEmployeeById(employeeId);
+      
       const deleted = await services.employeeService.deleteEmployee(employeeId);
       
       if (deleted) {
+        // Log audit entry
+        if (employee) {
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'DELETE',
+            entityType: 'employees',
+            entityId: employeeId,
+            entityName: `${employee.first_name} ${employee.last_name}`,
+            description: `Deleted employee: ${employee.first_name} ${employee.last_name} (${employee.employee_id})`,
+            oldValues: employee,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        }
+        
         res.json({ message: 'Employee deleted successfully' });
       } else {
         res.status(404).json({ error: 'Employee not found' });

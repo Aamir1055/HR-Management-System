@@ -8,7 +8,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Eye,
-  Calendar,
   User,
   Activity,
   TrendingUp
