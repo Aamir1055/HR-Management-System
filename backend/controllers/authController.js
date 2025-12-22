@@ -37,8 +37,9 @@ const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = 
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // First login: require 2FA setup regardless of current two_factor_enabled flag
-    if (user.first_login) {
+    // First login with 2FA enabled: require 2FA setup
+    // Only enforce 2FA setup if user.two_factor_enabled is true
+    if (user.first_login && user.two_factor_enabled) {
       // Reuse existing secret if already generated; otherwise create and persist a new one
       let secretBase32 = user.two_factor_secret;
       if (!secretBase32) {
@@ -74,8 +75,13 @@ const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = 
       });
     }
 
+    // If first login without 2FA enabled, just mark first_login as false and proceed
+    if (user.first_login && !user.two_factor_enabled) {
+      await req.db.query('UPDATE users SET first_login = 0 WHERE id = ?', [user.id]);
+    }
 
-    if (user.two_factor_enabled) {
+    // Regular 2FA check for non-first-login users with 2FA enabled
+    if (user.two_factor_enabled && !user.first_login) {
       if (!twoFactorCode) {
         return res.status(200).json({ requiresTwoFactor: true, message: '2FA code required' });
       }
