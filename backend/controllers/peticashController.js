@@ -46,7 +46,9 @@ const peticashController = {
   async getAllPeticash(req, res) {
     try {
       const { page = 1, limit = 50, search, company, expense_category, payment_type, payable } = req.query;
-      const offset = (page - 1) * limit;
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 50;
+      const offset = (pageNum - 1) * limitNum;
       
       let query = 'SELECT * FROM peticash WHERE 1=1';
       let countQuery = 'SELECT COUNT(*) as total FROM peticash WHERE 1=1';
@@ -87,14 +89,14 @@ const peticashController = {
       
       // Add ordering and pagination
       query += ' ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
-      queryParams.push(parseInt(limit), parseInt(offset));
+      queryParams.push(limitNum, offset);
       
       // Execute queries
       const [expenses] = await req.db.execute(query, queryParams);
       const [countResult] = await req.db.execute(countQuery, queryParams.slice(0, -2)); // Remove limit and offset for count
       
       const total = countResult[0].total;
-      const totalPages = Math.ceil(total / limit);
+      const totalPages = Math.ceil(total / limitNum);
       
       // Convert to model format
       const formattedExpenses = expenses.map(expense => {
