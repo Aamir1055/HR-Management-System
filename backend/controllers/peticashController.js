@@ -4,6 +4,7 @@
  */
 
 const { Peticash, PaymentTypes, ExpenseCategories } = require('../models/Peticash');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 /**
  * Handle HTTP errors consistently

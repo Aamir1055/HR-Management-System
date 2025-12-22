@@ -4,6 +4,7 @@
  */
 const db = require('../db');
 const XLSX = require('xlsx');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 // Helper function to get user's office names
 async function getUserOfficeNames(req) {
@@ -419,6 +420,13 @@ exports.createOrUpdate = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found or access denied' });
     }
 
+    // Check if this is update or create
+    const [existing] = await db.query(
+      'SELECT * FROM advance_salary WHERE employee_id = ? AND month_year = ?',
+      [employee_id, month_year]
+    );
+    const isUpdate = existing.length > 0;
+
     // Insert or update using ON DUPLICATE KEY UPDATE
     await db.query(
       `INSERT INTO advance_salary (employee_id, month_year, amount, uploaded_by)
@@ -442,6 +450,21 @@ exports.createOrUpdate = async (req, res) => {
       WHERE a.employee_id = ? AND a.month_year = ?`,
       [employee_id, month_year]
     );
+
+    // Log audit entry
+    await logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      action: isUpdate ? 'UPDATE' : 'CREATE',
+      entityType: 'advance_salary',
+      entityId: rows[0].id,
+      entityName: `${rows[0].employee_name} - ${month_year}`,
+      description: `${isUpdate ? 'Updated' : 'Created'} advance salary for ${rows[0].employee_name} for ${month_year} - Amount: ${validAmount}`,
+      oldValues: isUpdate ? existing[0] : null,
+      newValues: rows[0],
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
@@ -518,6 +541,15 @@ exports.update = async (req, res) => {
       return res.status(404).json({ message: 'Record not found or access denied' });
     }
 
+    // Get old data for audit log
+    const [oldData] = await db.query(
+      `SELECT a.*, e.name as employee_name
+       FROM advance_salary a 
+       INNER JOIN employees e ON a.employee_id = e.employeeId 
+       WHERE a.employee_id = ? AND a.month_year = ?`,
+      [employeeId, monthYear]
+    );
+
     // Update the record
     const [result] = await db.query(
       `UPDATE advance_salary 
@@ -542,6 +574,23 @@ exports.update = async (req, res) => {
       WHERE a.employee_id = ? AND a.month_year = ?`,
       [employeeId, monthYear]
     );
+    
+    // Log audit entry
+    if (oldData.length > 0) {
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'UPDATE',
+        entityType: 'advance_salary',
+        entityId: rows[0].id,
+        entityName: `${rows[0].employee_name} - ${monthYear}`,
+        description: `Updated advance salary for ${rows[0].employee_name} for ${monthYear} - Old: ${oldData[0].amount}, New: ${validAmount}`,
+        oldValues: oldData[0],
+        newValues: rows[0],
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    }
     
     res.json({ success: true, data: rows[0] });
   } catch (err) {
@@ -575,6 +624,15 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ message: 'Record not found or access denied' });
     }
 
+    // Get data before deletion for audit log
+    const [oldData] = await db.query(
+      `SELECT a.*, e.name as employee_name
+       FROM advance_salary a 
+       INNER JOIN employees e ON a.employee_id = e.employeeId 
+       WHERE a.employee_id = ? AND a.month_year = ?`,
+      [employeeId, monthYear]
+    );
+
     // Delete the record
     const [result] = await db.query(
       'DELETE FROM advance_salary WHERE employee_id = ? AND month_year = ?',
@@ -584,6 +642,23 @@ exports.remove = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Record not found' });
     }
+
+    // Log audit entry
+    if (oldData.length > 0) {
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'DELETE',
+        entityType: 'advance_salary',
+        entityId: oldData[0].id,
+        entityName: `${oldData[0].employee_name} - ${monthYear}`,
+        description: `Deleted advance salary for ${oldData[0].employee_name} for ${monthYear} - Amount: ${oldData[0].amount}`,
+        oldValues: oldData[0],
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });

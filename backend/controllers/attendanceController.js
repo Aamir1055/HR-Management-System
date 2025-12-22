@@ -7,6 +7,7 @@ const XLSX = require('xlsx');
 const axios = require('axios');
 const moment = require('moment');
 const { calculateAttendanceMetrics, batchCalculateAttendanceMetrics } = require('../utils/attendanceCalculator');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 // Helper function to get user's office names
 async function getUserOfficeNames(req) {
@@ -568,6 +569,12 @@ exports.update = async (req, res) => {
   const { punch_in, punch_out } = req.body;
 
   try {
+    // Get old attendance data for audit log
+    const [oldData] = await db.query(
+      'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
+      [employeeId, date]
+    );
+    
     const [result] = await db.query(
       `UPDATE attendance
          SET punch_in = ?, punch_out = ?
@@ -581,6 +588,31 @@ exports.update = async (req, res) => {
       'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
       [employeeId, date]
     );
+    
+    // Get employee name
+    const [employee] = await db.query(
+      'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
+      [employeeId]
+    );
+    const employeeName = employee.length > 0 ? `${employee[0].first_name} ${employee[0].last_name}` : `Employee ${employeeId}`;
+    
+    // Log audit entry
+    if (req.user) {
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'UPDATE',
+        entityType: 'attendance',
+        entityId: rows[0].id,
+        entityName: `${employeeName} - ${date}`,
+        description: `Updated attendance for ${employeeName} on ${date}`,
+        oldValues: oldData[0],
+        newValues: rows[0],
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    }
+    
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -591,6 +623,12 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   const { employeeId, date } = req.params;
   try {
+    // Get attendance data before deletion for audit log
+    const [attendanceData] = await db.query(
+      'SELECT * FROM attendance WHERE employee_id = ? AND date = ?',
+      [employeeId, date]
+    );
+    
     const [result] = await db.query(
       'DELETE FROM attendance WHERE employee_id = ? AND date = ?',
       [employeeId, date]
@@ -598,6 +636,30 @@ exports.remove = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Record not found' });
     }
+    
+    // Get employee name
+    const [employee] = await db.query(
+      'SELECT first_name, last_name FROM employees WHERE employeeId = ?',
+      [employeeId]
+    );
+    const employeeName = employee.length > 0 ? `${employee[0].first_name} ${employee[0].last_name}` : `Employee ${employeeId}`;
+    
+    // Log audit entry
+    if (req.user && attendanceData.length > 0) {
+      await logAudit({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'DELETE',
+        entityType: 'attendance',
+        entityId: attendanceData[0].id,
+        entityName: `${employeeName} - ${date}`,
+        description: `Deleted attendance for ${employeeName} on ${date}`,
+        oldValues: attendanceData[0],
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    }
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });

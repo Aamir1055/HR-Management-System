@@ -4,6 +4,7 @@
  */
 const { query } = require('../utils/dbPromise');
 const moment = require('moment');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 // Helper to update loan status based on remaining amount
 // ✅ ENHANCED: Helper to update loan status with better completion logic
