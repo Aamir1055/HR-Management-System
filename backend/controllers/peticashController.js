@@ -92,7 +92,7 @@ const peticashController = {
       }
       
       // Add ordering and pagination
-      query += ' ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
+      query += ' ORDER BY `date` DESC, created_at DESC LIMIT ? OFFSET ?';
       
       // Ensure parameters are integers, not strings or NaN
       const finalLimit = Number.isInteger(limitNum) ? limitNum : 50;
