@@ -1,0 +1,35 @@
+#!/bin/bash
+cat > /etc/nginx/sites-available/payroll << 'NGINXEOF'
+server {
+    listen 5000;
+    server_name 77.42.45.79;
+    
+    root /root/HR-Management-System/dist;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+NGINXEOF
+
+ln -sf /etc/nginx/sites-available/payroll /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+echo "Nginx configured and restarted"
+pm2 list
+echo ""
+echo "==================================="
+echo "Deployment Complete!"
+echo "Frontend: http://77.42.45.79:5000"
+echo "Backend API: http://77.42.45.79:3000"
+echo "==================================="
