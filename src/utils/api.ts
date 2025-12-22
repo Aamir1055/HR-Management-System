@@ -7,9 +7,7 @@ const getAuthHeaders = () => {
 };
 
 const getFullUrl = (url: string) => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_BACKEND_PORT || '5000'}`;
-  const apiUrl = `${baseUrl}/api`;
-  return url.startsWith('/') ? `${apiUrl}${url}` : `${apiUrl}/${url}`;
+  return url.startsWith('/') ? `/api${url}` : `/api/${url}`;
 };
 
 export const api = {

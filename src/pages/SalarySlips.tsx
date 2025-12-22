@@ -195,8 +195,7 @@ const useEmployeeData = () => {
 
       // Get API base URL from environment
       const getApiUrl = (endpoint: string) => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:${import.meta.env.VITE_BACKEND_PORT || '5000'}`;
-        return `${baseUrl}/api${endpoint}`;
+        return `/api${endpoint}`;
       };
 
       // Parallel fetch for better performance
