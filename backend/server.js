@@ -25,6 +25,7 @@ app.use((req, res, next) => {
 
 // Import middleware
 const { verifyToken, requireAdmin, requireHR, requireManager } = require('./middleware/auth');
+const { auditMiddleware } = require('./middleware/auditMiddleware');
 const upload = require('./middleware/upload');
 
 // Import routes
@@ -49,6 +50,7 @@ const recruitmentRoutes = require('./routes/recruitmentRoutes'); // NEW - RECRUI
 const peticashRoutes = require('./routes/peticashRoutes'); // NEW - PETICASH MANAGEMENT
 const halfDayWaiverRoutes = require('./routes/halfDayWaiverRoutes'); // NEW - HALF DAY WAIVERS
 const userRoutes = require('./routes/userRoutes'); // NEW - USERS (LIST)
+const auditLogRoutes = require('./routes/auditLogRoutes'); // NEW - AUDIT LOGS
 
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
@@ -65,6 +67,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+// Audit middleware - attach audit helper to all requests
+app.use(auditMiddleware);
 
 // Request logging for debugging
 app.use((req, res, next) => {
@@ -158,6 +163,7 @@ app.use('/api/recruitment', recruitmentRoutes); // NEW - RECRUITMENT PANEL
 app.use('/api/peticash', peticashRoutes); // NEW - PETICASH MANAGEMENT
 app.use('/api/half-day-waivers', halfDayWaiverRoutes); // NEW - HALF DAY WAIVERS
 app.use('/api/users', userRoutes); // NEW - USERS (LIST)
+app.use('/api/audit-logs', auditLogRoutes); // NEW - AUDIT LOGS
 
 // Error handling middleware
 app.use((err, req, res, next) => {

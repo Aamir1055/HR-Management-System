@@ -4,6 +4,7 @@
  */
 const db = require('../db');
 const bcrypt = require('bcrypt');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 async function getUsers(req, res) {
   try {
@@ -118,6 +119,27 @@ async function createUser(req, res) {
       'SELECT o.id, o.name, o.location FROM offices o INNER JOIN user_offices uo ON o.id = uo.office_id WHERE uo.user_id = ?',
       [userId]
     );
+
+    // Log audit entry
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('user-agent');
+    await logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'CREATE',
+      entityType: 'users',
+      entityId: userId,
+      entityName: username,
+      description: `Created new user: ${username} with role: ${role}`,
+      newValues: {
+        username,
+        role,
+        two_factor_enabled,
+        office_count: office_ids?.length || 0
+      },
+      ipAddress,
+      userAgent
+    });
 
     res.status(201).json({
       message: 'User created successfully',
@@ -253,6 +275,38 @@ async function updateUser(req, res) {
       [userId]
     );
 
+    // Log audit entry with changes
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('user-agent');
+    const changes = [];
+    if (username && username !== existingUser.username) changes.push('username');
+    if (password) changes.push('password');
+    if (role && role !== existingUser.role) changes.push('role');
+    if (two_factor_enabled !== undefined) changes.push('two_factor_enabled');
+    if (office_ids !== undefined) changes.push('office assignments');
+
+    await logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE',
+      entityType: 'users',
+      entityId: userId,
+      entityName: username || existingUser.username,
+      description: `Updated user: ${existingUser.username}. Changed: ${changes.join(', ')}`,
+      oldValues: {
+        username: existingUser.username,
+        role: existingUser.role
+      },
+      newValues: {
+        username: username || existingUser.username,
+        role: role || existingUser.role,
+        two_factor_enabled,
+        office_count: office_ids?.length
+      },
+      ipAddress,
+      userAgent
+    });
+
     res.json({
       message: 'User updated successfully',
       user: {
@@ -306,6 +360,25 @@ async function deleteUser(req, res) {
 
     // Delete the user
     await db.execute('DELETE FROM users WHERE id = ?', [userId]);
+
+    // Log audit entry
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('user-agent');
+    await logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'DELETE',
+      entityType: 'users',
+      entityId: userId,
+      entityName: user.username,
+      description: `Deleted user: ${user.username} (role: ${user.role})`,
+      oldValues: {
+        username: user.username,
+        role: user.role
+      },
+      ipAddress,
+      userAgent
+    });
 
     res.json({ 
       message: 'User deleted successfully',

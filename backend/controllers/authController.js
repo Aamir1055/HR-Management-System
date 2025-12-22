@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_EXPIRY = '24h';
@@ -119,6 +120,21 @@ const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = 
     });
 
     console.log(`🔄 Cache cleared for user: ${user.username}`);
+
+    // Log successful login to audit log
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('user-agent');
+    await logAudit({
+      userId: user.id,
+      username: user.username,
+      action: 'LOGIN',
+      entityType: 'auth',
+      entityId: user.id,
+      entityName: user.username,
+      description: `User logged in successfully${twoFactorCode ? ' with 2FA' : ''}`,
+      ipAddress,
+      userAgent
+    });
 
     res.json({
       token,
