@@ -161,8 +161,14 @@ exports.deleteOffice = async (req, res) => {
 // Create office with positions - simplified version
 exports.createOfficeWithPositions = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { officeName, location, positions } = bodyData;
     
     if (!officeName) {
@@ -288,25 +294,34 @@ exports.getAllPositions = async (req, res) => {
   }
 };
 
-// Create a new position (supports both single and multiple offices)
+// Create a new position (supports both single and multiple offices - offices are now optional)
 exports.createPosition = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { title, description, office_name, reporting_time, duty_hours, offices } = bodyData;
+    
+    console.log('📥 Create Position - Body type:', typeof req.body);
+    console.log('📋 Create Position - Data:', bodyData);
     
     if (!title) {
       return res.status(400).json({ error: 'Position title is required' });
     }
     
-    // Always create a new position (allow same titles for different offices)
+    // Always create a new position (allow same titles - positions are now independent)
     const newPosResult = await query(
       'INSERT INTO positions (title, description) VALUES (?, ?)', 
       [title, description || '']
     );
     const positionId = newPosResult.insertId;
     
-    // Handle multiple offices (new format)
+    // Handle multiple offices (new format) - OPTIONAL
     if (offices && Array.isArray(offices) && offices.length > 0) {
       // Validate each office entry
       for (let i = 0; i < offices.length; i++) {
@@ -419,9 +434,18 @@ exports.createPosition = async (req, res) => {
 exports.updatePosition = async (req, res) => {
   try {
     const { id } = req.params;
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { title, description, office_name, reporting_time, duty_hours } = bodyData;
+    
+    console.log('📥 Update Position - Body type:', typeof req.body);
+    console.log('📋 Update Position - ID:', id, 'Data:', bodyData);
     
     if (!title) {
       return res.status(400).json({ error: 'Position title is required' });
@@ -512,8 +536,14 @@ exports.deletePosition = async (req, res) => {
 // Create office-specific position with schedule
 exports.createOfficeSpecificPosition = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { officeName, positionName, reportingTime, dutyHours } = bodyData;
     
     if (!officeName || !positionName || !reportingTime || !dutyHours) {
@@ -566,8 +596,14 @@ exports.createOfficeSpecificPosition = async (req, res) => {
 // Create a position with multiple offices - OPTIMIZED VERSION
 exports.createPositionWithMultipleOffices = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { title, description, offices } = bodyData;
     
     // Validate required fields
@@ -684,8 +720,14 @@ exports.getAllVisaTypes = async (req, res) => {
 // Create a new visa type
 exports.createVisaType = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { typeofvisa } = bodyData;
     
     if (!typeofvisa) {
@@ -715,8 +757,14 @@ exports.createVisaType = async (req, res) => {
 exports.updateVisaType = async (req, res) => {
   try {
     const { id } = req.params;
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { typeofvisa } = bodyData;
     
     if (!typeofvisa) {
@@ -804,8 +852,14 @@ exports.getAllPlatforms = async (req, res) => {
 // Create a new platform
 exports.createPlatform = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { platform_name } = bodyData;
     
     if (!platform_name) {
@@ -835,8 +889,14 @@ exports.createPlatform = async (req, res) => {
 exports.updatePlatform = async (req, res) => {
   try {
     const { id } = req.params;
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
     const { platform_name } = bodyData;
     
     if (!platform_name) {
