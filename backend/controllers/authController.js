@@ -32,7 +32,21 @@ exports.login = async (req, res) => {
         password = params.get('password');
         twoFactorCode = params.get('twoFactorCode') || undefined;
       } catch (_) {
-        // Fall back to undefined
+        // Fallback: attempt to parse loose object syntax { username:admin,password:admin123 }
+        try {
+          const loose = req.body.trim().replace(/^\{\s*|\s*\}$/g, '');
+          const parts = loose.split(',');
+          for (const p of parts) {
+            const [keyRaw, valRaw] = p.split(':');
+            const key = (keyRaw || '').trim();
+            const val = (valRaw || '').trim();
+            if (key === 'username') username = val.replace(/^"|"$/g, '');
+            if (key === 'password') password = val.replace(/^"|"$/g, '');
+            if (key === 'twoFactorCode') twoFactorCode = val.replace(/^"|"$/g, '');
+          }
+        } catch (__) {
+          // leave undefined
+        }
       }
     }
   } else {
