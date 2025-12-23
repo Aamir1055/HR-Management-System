@@ -68,9 +68,18 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// Accept raw text for application/json to manually handle malformed payloads
-app.use(express.text({ type: 'application/json' }));
-app.use(express.json());
+// Conditional body parsing to avoid crashing on malformed JSON
+app.use((req, res, next) => {
+  const ct = req.headers['content-type'] || '';
+  if (ct.includes('application/json')) {
+    // Read as text; controllers will parse JSON or urlencoded fallback
+    return express.text({ type: 'application/json' })(req, res, next);
+  }
+  if (ct.includes('application/x-www-form-urlencoded')) {
+    return express.urlencoded({ extended: true })(req, res, next);
+  }
+  next();
+});
 
 // Debug: log login request content-type to diagnose JSON parse issues
 app.use('/api/auth', (req, res, next) => {
