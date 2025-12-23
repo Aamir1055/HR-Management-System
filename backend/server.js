@@ -3,14 +3,16 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-require('dotenv').config();
+// Load env from backend folder explicitly to avoid wrong .env resolution
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'payroll_system2',
+  database: process.env.DB_NAME || 'payroll_system',
   waitForConnections: true,
   connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
   queueLimit: parseInt(process.env.DB_QUEUE_LIMIT) || 0,
