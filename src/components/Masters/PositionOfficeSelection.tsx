@@ -142,14 +142,14 @@ const PositionOfficeSelection: React.FC<PositionOfficeSelectionProps> = ({
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-3">
-        Select Offices <span className="text-red-500">*</span>
+        Select Offices <span className="text-gray-400">(Optional)</span>
       </label>
       
       {/* Summary */}
       <div className="mb-3 p-2 bg-blue-50 rounded-md">
         <div className="text-sm text-blue-700">
           {selectedCount === 0 
-            ? "Select at least one office for this position"
+            ? "No offices selected - position will be available for all offices"
             : `${selectedCount} office${selectedCount > 1 ? 's' : ''} selected`
           }
         </div>
@@ -227,22 +227,16 @@ const PositionOfficeSelection: React.FC<PositionOfficeSelectionProps> = ({
         ))}
       </div>
 
-      {/* Validation Errors */}
-      {selectedCount === 0 && (
-        <p className="mt-2 text-sm text-red-600">At least one office must be selected</p>
-      )}
-      
+      {/* Validation Errors - Only show duplicate position error */}
       {validationError && (
         <p className="mt-2 text-sm text-red-600">{validationError}</p>
       )}
 
-      {/* Hidden input for form validation */}
+      {/* Hidden input for form validation - offices are now optional */}
       <input
         {...register('offices', {
           validate: (value) => {
-            if (!value || value.length === 0) {
-              return 'At least one office must be selected';
-            }
+            // Allow empty offices array - positions are now independent
             if (validationError) {
               return validationError;
             }
