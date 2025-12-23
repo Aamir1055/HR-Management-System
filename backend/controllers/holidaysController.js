@@ -172,7 +172,24 @@ exports.addHoliday = async (req, res) => {
 // Update holiday
 exports.updateHoliday = async (req, res) => {
   const { id } = req.params;
-  const { name, date, reason } = req.body;
+  
+  // Handle both string and object req.body (null prototype issue)
+  let body;
+  try {
+    if (typeof req.body === 'string') {
+      body = JSON.parse(req.body);
+    } else {
+      body = JSON.parse(JSON.stringify(req.body));
+    }
+  } catch (e) {
+    console.error('Error parsing holiday update request body:', e);
+    return res.status(400).json({ error: 'Invalid request data' });
+  }
+
+  const { name, date, reason } = body;
+
+  console.log('🔍 UPDATE HOLIDAY - Body:', body);
+  console.log('🔍 UPDATE HOLIDAY - name:', name, 'date:', date, 'reason:', reason);
 
   if (!name && !date && !reason) {
     return res.status(400).json({ error: 'At least one field is required to update' });
