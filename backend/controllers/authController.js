@@ -17,12 +17,14 @@ exports.login = async (req, res) => {
 
   // Handle cases where body arrived as raw text due to malformed JSON
   if (typeof req.body === 'string') {
+    console.log('🔍 Raw login body (first 100 chars):', req.body.slice(0, 100));
     try {
       const parsed = JSON.parse(req.body);
       username = parsed.username;
       password = parsed.password;
       twoFactorCode = parsed.twoFactorCode;
     } catch (e) {
+      console.warn('JSON.parse failed for login body, attempting URLSearchParams parsing');
       // Attempt to parse urlencoded style: username=...&password=...
       try {
         const params = new URLSearchParams(req.body);
