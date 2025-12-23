@@ -138,30 +138,48 @@ class EmployeeRepository {
       
       const dbData = employee.toDbFormat();
       
+      // Build dynamic UPDATE query - only update fields that are actually provided
+      const updateFields = [];
+      const values = [];
+      
+      // List of all possible fields that can be updated
+      const allowedFields = [
+        'name', 'first_name', 'last_name', 'nationality', 'email', 'office_id', 'position_id',
+        'monthlySalary', 'joiningDate', 'status', 'dob', 'passport_number', 'passport_expiry',
+        'visa_type', 'visa_expiry', 'platform', 'address', 'current_address', 'phone', 'whatsapp',
+        'gender', 'primary_language', 'secondary_language', 'marital_status', 'hiring_source',
+        'salary_currency', 'emirates_id', 'emergency_contact', 'emergency_contact_relation', 'shift_timings'
+      ];
+      
+      // Only include fields that are explicitly provided in the update data
+      allowedFields.forEach(field => {
+        if (dbData.hasOwnProperty(field) && dbData[field] !== undefined) {
+          updateFields.push(`${field} = ?`);
+          values.push(dbData[field]);
+        }
+      });
+      
+      // If no fields to update, return the existing employee
+      if (updateFields.length === 0) {
+        console.warn('No fields to update for employee:', employeeId);
+        return await this.findById(employeeId);
+      }
+      
+      values.push(employeeId); // Add employeeId for WHERE clause
+      
       const sql = `
         UPDATE ${EmployeeTableName} SET
-          name = ?, first_name = ?, last_name = ?, nationality = ?, email = ?, office_id = ?, position_id = ?,
-          monthlySalary = ?, joiningDate = ?, status = ?,
-          dob = ?, passport_number = ?, passport_expiry = ?, visa_type = ?, visa_expiry = ?, platform = ?, address = ?, current_address = ?, phone = ?, whatsapp = ?, gender = ?,
-          primary_language = ?, secondary_language = ?, marital_status = ?, hiring_source = ?, salary_currency = ?, emirates_id = ?, emergency_contact = ?, emergency_contact_relation = ?, shift_timings = ?
+          ${updateFields.join(', ')}
         WHERE employeeId = ?
       `;
-      
-      const values = [
-        dbData.name, dbData.first_name, dbData.last_name, dbData.nationality, 
-        dbData.email, dbData.office_id, dbData.position_id, dbData.monthlySalary, dbData.joiningDate, dbData.status,
-        dbData.dob, dbData.passport_number, dbData.passport_expiry, dbData.visa_type, dbData.visa_expiry, 
-        dbData.platform, dbData.address, dbData.current_address, dbData.phone, dbData.whatsapp, dbData.gender,
-        dbData.primary_language, dbData.secondary_language, dbData.marital_status, dbData.hiring_source, 
-        dbData.salary_currency, dbData.emirates_id, dbData.emergency_contact, dbData.emergency_contact_relation, dbData.shift_timings,
-        employeeId
-      ];
       
       const [result] = await this.db.query(sql, values);
       
       if (result.affectedRows === 0) {
         return null; // Employee not found
       }
+      
+      console.log(`✅ Updated ${updateFields.length} field(s) for employee: ${employeeId}`);
       
       // Return the updated employee
       return await this.findById(employeeId);

@@ -114,7 +114,13 @@ class EmployeeService {
         throw new Error('Employee ID is required');
       }
 
-      // Process and prepare update data
+      // Get existing employee first
+      const existingEmployee = await this.employeeRepository.findById(employeeId);
+      if (!existingEmployee) {
+        return null; // Employee not found
+      }
+
+      // Process and prepare update data (only fields being updated)
       const processedData = await this.prepareEmployeeData(updateData, context, false);
       
       // Validate update data
@@ -126,29 +132,37 @@ class EmployeeService {
         throw error;
       }
 
-      // Create employee instance with update data
-      const employee = new Employee(processedData);
+      // Create a partial update object - DO NOT create a full Employee instance
+      // This ensures only provided fields are updated
+      const updateFields = { ...processedData };
       
       // Generate full name if first/last name changed
-      if (processedData.first_name !== undefined || processedData.last_name !== undefined) {
-        employee.generateFullName();
+      if (updateFields.first_name !== undefined || updateFields.last_name !== undefined) {
+        const firstName = updateFields.first_name !== undefined ? updateFields.first_name : existingEmployee.first_name;
+        const lastName = updateFields.last_name !== undefined ? updateFields.last_name : existingEmployee.last_name;
+        updateFields.name = `${firstName || ''} ${lastName || ''}`.trim();
       }
       
       // Auto-compute shift timings if office/position changed
-      if (processedData.office_id || processedData.position_id) {
-        const existingEmployee = await this.employeeRepository.findById(employeeId);
-        if (existingEmployee) {
-          const newOfficeId = processedData.office_id || existingEmployee.office_id;
-          const newPositionId = processedData.position_id || existingEmployee.position_id;
-          
-          if (newOfficeId !== existingEmployee.office_id || newPositionId !== existingEmployee.position_id) {
-            employee.shift_timings = await this.computeEmployeeShiftTimings(newOfficeId, newPositionId);
-          }
+      if (updateFields.office_id !== undefined || updateFields.position_id !== undefined) {
+        const newOfficeId = updateFields.office_id !== undefined ? updateFields.office_id : existingEmployee.office_id;
+        const newPositionId = updateFields.position_id !== undefined ? updateFields.position_id : existingEmployee.position_id;
+        
+        if (newOfficeId !== existingEmployee.office_id || newPositionId !== existingEmployee.position_id) {
+          updateFields.shift_timings = await this.computeEmployeeShiftTimings(newOfficeId, newPositionId);
         }
       }
 
+      // Convert status to number format if provided
+      if (updateFields.status !== undefined) {
+        updateFields.status = updateFields.status ? 1 : 0;
+      }
+
+      // Create a minimal Employee instance with only the fields to update
+      const employeeUpdate = new Employee(updateFields);
+
       // Update employee in database
-      const updatedEmployee = await this.employeeRepository.update(employeeId, employee);
+      const updatedEmployee = await this.employeeRepository.update(employeeId, employeeUpdate);
       
       if (!updatedEmployee) {
         return null; // Employee not found
