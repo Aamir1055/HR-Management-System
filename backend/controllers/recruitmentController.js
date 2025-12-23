@@ -6,6 +6,7 @@
 const RecruitmentRepository = require('../repositories/RecruitmentRepository');
 const RecruitmentService = require('../services/RecruitmentService');
 const { RecruitmentSources, RecruitmentPipelines, CommonNationalities } = require('../models/Recruitment');
+const { logAudit } = require('../middleware/auditMiddleware');
 
 // Service instance cache
 let serviceInstance = null;
@@ -77,6 +78,26 @@ const recruitmentController = {
       } : 'No file');
       
       const recruitment = await service.createRecruitment(req.body, req.file);
+      
+      // Log audit entry
+      if (req.user) {
+        try {
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'CREATE',
+            entityType: 'recruitments',
+            entityId: recruitment.id,
+            entityName: recruitment.fullName,
+            description: `Created recruitment record for ${recruitment.fullName}`,
+            newValues: recruitment,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Failed to log audit entry:', auditError);
+        }
+      }
       
       res.status(201).json({
         message: 'Recruitment record created successfully',
@@ -162,8 +183,56 @@ const recruitmentController = {
         return res.status(404).json({ error: 'Recruitment record not found' });
       }
       
-      res.json({
-        message: 'Recruitment record updated successfully',
+      // Log audit entry
+      if (req.user) {
+        try {
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'UPDATE',
+            entityType: 'recruitments',
+            entityId: recruitment.id,
+            entityName: recruitment.fullName,
+            description: `Updated recruitment record for ${recruitment.fullName}`,
+            newValues: recruitment,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Failed to log audit entry:', auditError);
+        }
+      // Get recruitment data before deletion for audit log
+      let recruitmentData = null;
+      try {
+        recruitmentData = await service.getRecruitmentById(parseInt(id));
+      } catch (auditError) {
+        console.warn('Could not fetch recruitment data for audit:', auditError.message);
+      }
+      
+      const deleted = await service.deleteRecruitment(parseInt(id));
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'Recruitment record not found' });
+      }
+      
+      // Log audit entry
+      if (req.user && recruitmentData) {
+        try {
+          await logAudit({
+            userId: req.user.id,
+            username: req.user.username,
+            action: 'DELETE',
+            entityType: 'recruitments',
+            entityId: recruitmentData.id,
+            entityName: recruitmentData.fullName,
+            description: `Deleted recruitment record for ${recruitmentData.fullName}`,
+            oldValues: recruitmentData,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Failed to log audit entry:', auditError);
+        }
         recruitment
       });
     } catch (error) {
