@@ -146,7 +146,7 @@ const employeeController = {
       console.log('🔍 CREATE - Raw request body:', JSON.stringify(req.body).substring(0, 500));
       console.log('🔍 CREATE - Content-Type:', req.headers['content-type']);
 
-      // Parse and normalize incoming body (handles raw text, urlencoded, and loose formats)
+      // Parse and normalize incoming body (handles raw text, urlencoded, null prototype, and loose formats)
       let payload = req.body;
       if (typeof payload === 'string') {
         try {
@@ -180,6 +180,9 @@ const employeeController = {
             }
           }
         }
+      } else if (typeof payload === 'object' && payload !== null) {
+        // Handle null prototype objects from body parser
+        payload = JSON.parse(JSON.stringify(payload));
       }
 
       console.log('🔍 CREATE - Parsed payload keys:', Object.keys(payload || {}));
@@ -285,7 +288,7 @@ const employeeController = {
       
       console.log('🔍 UPDATE - Raw request body:', req.body);
       
-      // Parse and normalize incoming body similar to createEmployee
+      // Parse and normalize incoming body similar to createEmployee (handles null prototype objects)
       let payload = req.body;
       if (typeof payload === 'string') {
         try {
@@ -317,6 +320,9 @@ const employeeController = {
             }
           }
         }
+      } else if (typeof payload === 'object' && payload !== null) {
+        // Handle null prototype objects from body parser
+        payload = JSON.parse(JSON.stringify(payload));
       }
       const data = { ...payload };
       if (data.employee_id && !data.employeeId) data.employeeId = data.employee_id;
