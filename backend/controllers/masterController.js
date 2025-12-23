@@ -75,9 +75,9 @@ exports.createOffice = async (req, res) => {
 exports.updateOffice = async (req, res) => {
   try {
     const { id } = req.params;
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
-    const { name, location } = bodyData;
+    // Handle null prototype objects from body-parser - access properties directly
+    const name = req.body.name || req.body.office_name;
+    const location = req.body.location;
     
     if (!name) {
       return res.status(400).json({ error: 'Office name is required' });
