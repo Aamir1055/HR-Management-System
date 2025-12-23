@@ -111,49 +111,53 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
 
   // Handle calendar icon click to open native date picker
   const handleCalendarClick = () => {
-    if (viewOnly) return;
+    if (viewOnly || !dateInputRef.current) return;
     
-    // For desktop: use a native date input trick
-    if (dateInputRef.current) {
-      // Create a temporary date input
-      const tempInput = document.createElement('input');
-      tempInput.type = 'date';
-      tempInput.style.position = 'absolute';
-      tempInput.style.opacity = '0';
-      tempInput.style.pointerEvents = 'none';
+    const input = dateInputRef.current;
+    const currentDisplayDate = watch('date');
+    const currentISODate = toISODate(currentDisplayDate);
+    
+    // Store original values
+    const originalType = input.type;
+    const originalValue = input.value;
+    
+    // Convert to date input
+    input.type = 'date';
+    input.value = currentISODate;
+    
+    // Force focus and click to open picker
+    input.focus();
+    
+    // Use a small timeout to ensure the input is ready
+    setTimeout(() => {
+      input.click();
       
-      // Get current value in ISO format
-      const currentDisplayDate = watch('date');
-      const currentISODate = toISODate(currentDisplayDate);
-      tempInput.value = currentISODate;
-      
-      document.body.appendChild(tempInput);
-      
-      // Show the date picker
-      tempInput.showPicker?.().catch(() => {
-        // Fallback: just focus the input
-        tempInput.focus();
-        tempInput.click();
-      });
-      
-      // Handle date change
-      tempInput.addEventListener('change', () => {
-        if (tempInput.value) {
-          const displayDate = toDisplayDate(tempInput.value);
+      // Listen for change
+      const handleChange = () => {
+        if (input.value) {
+          const displayDate = toDisplayDate(input.value);
           setValue('date', displayDate as any, { shouldValidate: true });
         }
-        document.body.removeChild(tempInput);
-      });
+        // Revert back to text input
+        input.type = originalType;
+        input.value = toDisplayDate(input.value || currentISODate);
+        input.removeEventListener('change', handleChange);
+        input.removeEventListener('blur', handleBlur);
+      };
       
-      // Clean up if user cancels
-      tempInput.addEventListener('blur', () => {
+      const handleBlur = () => {
+        // Revert if user closes without selecting
         setTimeout(() => {
-          if (document.body.contains(tempInput)) {
-            document.body.removeChild(tempInput);
-          }
+          input.type = originalType;
+          input.value = originalValue;
+          input.removeEventListener('change', handleChange);
+          input.removeEventListener('blur', handleBlur);
         }, 200);
-      });
-    }
+      };
+      
+      input.addEventListener('change', handleChange);
+      input.addEventListener('blur', handleBlur, { once: true });
+    }, 100);
   };
 
   return (
