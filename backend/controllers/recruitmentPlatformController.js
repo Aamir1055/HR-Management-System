@@ -68,9 +68,11 @@ const recruitmentPlatformController = {
     try {
       const service = initializeService(req.db);
       
-      console.log('🔍 CREATE PLATFORM - Request body:', req.body);
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
+      console.log('🔍 CREATE PLATFORM - Request body:', bodyData);
       
-      const platform = await service.createPlatform(req.body);
+      const platform = await service.createPlatform(bodyData);
       
       res.status(201).json({
         message: 'Recruitment platform created successfully',
@@ -137,10 +139,12 @@ const recruitmentPlatformController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
       console.log('🔍 UPDATE PLATFORM - ID:', id);
-      console.log('🔍 UPDATE PLATFORM - Request body:', req.body);
+      console.log('🔍 UPDATE PLATFORM - Request body:', bodyData);
       
-      const platform = await service.updatePlatform(parseInt(id), req.body);
+      const platform = await service.updatePlatform(parseInt(id), bodyData);
       
       if (!platform) {
         return res.status(404).json({ error: 'Recruitment platform not found' });

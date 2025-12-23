@@ -39,7 +39,9 @@ exports.getAllOffices = async (req, res) => {
 // Create a new office
 exports.createOffice = async (req, res) => {
   try {
-    const { name, location } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { name, location } = bodyData;
     
     if (!name) {
       return res.status(400).json({ error: 'Office name is required' });
@@ -69,7 +71,9 @@ exports.createOffice = async (req, res) => {
 exports.updateOffice = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, location } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { name, location } = bodyData;
     
     if (!name) {
       return res.status(400).json({ error: 'Office name is required' });
@@ -132,7 +136,9 @@ exports.deleteOffice = async (req, res) => {
 // Create office with positions - simplified version
 exports.createOfficeWithPositions = async (req, res) => {
   try {
-    const { officeName, location, positions } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { officeName, location, positions } = bodyData;
     
     if (!officeName) {
       return res.status(400).json({ error: 'Office name is required' });
@@ -260,7 +266,9 @@ exports.getAllPositions = async (req, res) => {
 // Create a new position (supports both single and multiple offices)
 exports.createPosition = async (req, res) => {
   try {
-    const { title, description, office_name, reporting_time, duty_hours, offices } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { title, description, office_name, reporting_time, duty_hours, offices } = bodyData;
     
     if (!title) {
       return res.status(400).json({ error: 'Position title is required' });
@@ -386,7 +394,9 @@ exports.createPosition = async (req, res) => {
 exports.updatePosition = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, office_name, reporting_time, duty_hours } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { title, description, office_name, reporting_time, duty_hours } = bodyData;
     
     if (!title) {
       return res.status(400).json({ error: 'Position title is required' });
@@ -477,7 +487,9 @@ exports.deletePosition = async (req, res) => {
 // Create office-specific position with schedule
 exports.createOfficeSpecificPosition = async (req, res) => {
   try {
-    const { officeName, positionName, reportingTime, dutyHours } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { officeName, positionName, reportingTime, dutyHours } = bodyData;
     
     if (!officeName || !positionName || !reportingTime || !dutyHours) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -529,7 +541,9 @@ exports.createOfficeSpecificPosition = async (req, res) => {
 // Create a position with multiple offices - OPTIMIZED VERSION
 exports.createPositionWithMultipleOffices = async (req, res) => {
   try {
-    const { title, description, offices } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { title, description, offices } = bodyData;
     
     // Validate required fields
     if (!title) {
@@ -645,7 +659,9 @@ exports.getAllVisaTypes = async (req, res) => {
 // Create a new visa type
 exports.createVisaType = async (req, res) => {
   try {
-    const { typeofvisa } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { typeofvisa } = bodyData;
     
     if (!typeofvisa) {
       return res.status(400).json({ error: 'Visa type name is required' });
@@ -674,7 +690,9 @@ exports.createVisaType = async (req, res) => {
 exports.updateVisaType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { typeofvisa } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { typeofvisa } = bodyData;
     
     if (!typeofvisa) {
       return res.status(400).json({ error: 'Visa type name is required' });
@@ -761,7 +779,9 @@ exports.getAllPlatforms = async (req, res) => {
 // Create a new platform
 exports.createPlatform = async (req, res) => {
   try {
-    const { platform_name } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { platform_name } = bodyData;
     
     if (!platform_name) {
       return res.status(400).json({ error: 'Platform name is required' });
@@ -790,7 +810,9 @@ exports.createPlatform = async (req, res) => {
 exports.updatePlatform = async (req, res) => {
   try {
     const { id } = req.params;
-    const { platform_name } = req.body;
+    // Handle null prototype objects from body-parser
+    const bodyData = JSON.parse(JSON.stringify(req.body));
+    const { platform_name } = bodyData;
     
     if (!platform_name) {
       return res.status(400).json({ error: 'Platform name is required' });

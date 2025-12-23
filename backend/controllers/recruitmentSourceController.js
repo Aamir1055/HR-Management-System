@@ -68,9 +68,11 @@ const recruitmentSourceController = {
     try {
       const service = initializeService(req.db);
       
-      console.log('🔍 CREATE SOURCE - Request body:', req.body);
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
+      console.log('🔍 CREATE SOURCE - Request body:', bodyData);
       
-      const source = await service.createSource(req.body);
+      const source = await service.createSource(bodyData);
       
       res.status(201).json({
         message: 'Recruitment source created successfully',
@@ -137,10 +139,12 @@ const recruitmentSourceController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
       console.log('🔍 UPDATE SOURCE - ID:', id);
-      console.log('🔍 UPDATE SOURCE - Request body:', req.body);
+      console.log('🔍 UPDATE SOURCE - Request body:', bodyData);
       
-      const source = await service.updateSource(parseInt(id), req.body);
+      const source = await service.updateSource(parseInt(id), bodyData);
       
       if (!source) {
         return res.status(404).json({ error: 'Recruitment source not found' });

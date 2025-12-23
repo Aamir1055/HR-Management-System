@@ -68,9 +68,11 @@ const recruitmentPipelineController = {
     try {
       const service = initializeService(req.db);
       
-      console.log('🔍 CREATE PIPELINE - Request body:', req.body);
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
+      console.log('🔍 CREATE PIPELINE - Request body:', bodyData);
       
-      const pipeline = await service.createPipeline(req.body);
+      const pipeline = await service.createPipeline(bodyData);
       
       res.status(201).json({
         message: 'Recruitment pipeline created successfully',
@@ -137,10 +139,12 @@ const recruitmentPipelineController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
+      // Handle null prototype objects from body-parser
+      const bodyData = JSON.parse(JSON.stringify(req.body));
       console.log('🔍 UPDATE PIPELINE - ID:', id);
-      console.log('🔍 UPDATE PIPELINE - Request body:', req.body);
+      console.log('🔍 UPDATE PIPELINE - Request body:', bodyData);
       
-      const pipeline = await service.updatePipeline(parseInt(id), req.body);
+      const pipeline = await service.updatePipeline(parseInt(id), bodyData);
       
       if (!pipeline) {
         return res.status(404).json({ error: 'Recruitment pipeline not found' });
