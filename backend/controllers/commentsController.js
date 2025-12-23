@@ -22,7 +22,21 @@ module.exports = {
   addComment: async (req, res) => {
     try {
       const { employeeId } = req.params;
-      const { comment } = req.body;
+      
+      // Handle null prototype objects from body parser
+      let body;
+      try {
+        if (typeof req.body === 'string') {
+          body = JSON.parse(req.body);
+        } else {
+          body = JSON.parse(JSON.stringify(req.body));
+        }
+      } catch (e) {
+        console.error('Error parsing comment request body:', e);
+        return res.status(400).json({ error: 'Invalid request data' });
+      }
+
+      const { comment } = body;
       
       // Get username from authenticated user
       const username = req.user?.username || 'Unknown User';
@@ -53,7 +67,21 @@ module.exports = {
   updateComment: async (req, res) => {
     try {
       const { commentId } = req.params;
-      const { comment } = req.body;
+      
+      // Handle null prototype objects from body parser
+      let body;
+      try {
+        if (typeof req.body === 'string') {
+          body = JSON.parse(req.body);
+        } else {
+          body = JSON.parse(JSON.stringify(req.body));
+        }
+      } catch (e) {
+        console.error('Error parsing update comment request body:', e);
+        return res.status(400).json({ error: 'Invalid request data' });
+      }
+
+      const { comment } = body;
 
       if (!comment || !comment.trim()) {
         return res.status(400).json({ error: 'Comment is required' });
