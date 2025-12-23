@@ -69,6 +69,9 @@ const roleController = {
       const service = initializeService(req.db);
       
       console.log('🔍 CREATE ROLE - Request body:', req.body);
+      console.log('🔍 CREATE ROLE - name field:', req.body.name, 'type:', typeof req.body.name);
+      console.log('🔍 CREATE ROLE - description field:', req.body.description, 'type:', typeof req.body.description);
+      console.log('🔍 CREATE ROLE - isActive field:', req.body.isActive, 'type:', typeof req.body.isActive);
       
       const role = await service.createRole(req.body);
       

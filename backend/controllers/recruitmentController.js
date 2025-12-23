@@ -201,6 +201,26 @@ const recruitmentController = {
         } catch (auditError) {
           console.error('Failed to log audit entry:', auditError);
         }
+      }
+      
+      res.json({
+        message: 'Recruitment record updated successfully',
+        recruitment
+      });
+    } catch (error) {
+      handleError(res, error, 'Failed to update recruitment record');
+    }
+  },
+  
+  /**
+   * Delete recruitment record
+   * DELETE /api/recruitment/:id
+   */
+  async deleteRecruitment(req, res) {
+    try {
+      const service = initializeService(req.db);
+      const { id } = req.params;
+      
       // Get recruitment data before deletion for audit log
       let recruitmentData = null;
       try {
@@ -233,26 +253,6 @@ const recruitmentController = {
         } catch (auditError) {
           console.error('Failed to log audit entry:', auditError);
         }
-        recruitment
-      });
-    } catch (error) {
-      handleError(res, error, 'Failed to update recruitment record');
-    }
-  },
-  
-  /**
-   * Delete recruitment record
-   * DELETE /api/recruitment/:id
-   */
-  async deleteRecruitment(req, res) {
-    try {
-      const service = initializeService(req.db);
-      const { id } = req.params;
-      
-      const deleted = await service.deleteRecruitment(parseInt(id));
-      
-      if (!deleted) {
-        return res.status(404).json({ error: 'Recruitment record not found' });
       }
       
       res.json({ message: 'Recruitment record deleted successfully' });
