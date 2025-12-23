@@ -34,7 +34,7 @@ const PositionOfficeSelection: React.FC<PositionOfficeSelectionProps> = ({
   const { data: positions } = useMasterData('position');
   const watchedTitle = watch('title');
 
-  // Initialize offices with default values
+  // Initialize offices with default values - ALL OFFICES SELECTED BY DEFAULT
   useEffect(() => {
     if (offices && offices.length > 0) {
       const officeData: OfficeSelectionData[] = offices.map(office => ({
@@ -42,7 +42,7 @@ const PositionOfficeSelection: React.FC<PositionOfficeSelectionProps> = ({
         office_name: office.office_name,
         reporting_time: '09:00',
         duty_hours: 8.0,
-        selected: false
+        selected: true // Select all offices by default
       }));
       setSelectedOffices(officeData);
     }
@@ -150,12 +150,14 @@ const PositionOfficeSelection: React.FC<PositionOfficeSelectionProps> = ({
         <div className="text-sm text-blue-700">
           {selectedCount === 0 
             ? "No offices selected - position will be available for all offices"
+            : selectedCount === offices.length
+            ? `All ${selectedCount} offices selected - position will be available everywhere`
             : `${selectedCount} office${selectedCount > 1 ? 's' : ''} selected`
           }
         </div>
         {selectedCount > 0 && (
           <div className="text-xs text-blue-600 mt-1">
-            💡 Tip: You can create the same position with different reporting times in the same office by submitting this form again with different time settings.
+            💡 Tip: All offices are selected by default. Uncheck offices if you want to limit this position to specific locations.
           </div>
         )}
       </div>
