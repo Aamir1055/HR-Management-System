@@ -39,15 +39,15 @@ exports.getAllOffices = async (req, res) => {
 // Create a new office
 exports.createOffice = async (req, res) => {
   try {
-    // Handle null prototype objects from body-parser
-    const bodyData = JSON.parse(JSON.stringify(req.body));
-    console.log('📥 Create Office - Received body:', req.body);
-    console.log('📋 Create Office - Parsed bodyData:', bodyData);
+    // Handle null prototype objects from body-parser - direct property access
+    const name = req.body?.name || req.body?.office_name;
+    const location = req.body?.location || '';
     
-    const { name, location } = bodyData;
+    console.log('📥 Create Office - Received body:', req.body);
+    console.log('📋 Create Office - Extracted name:', name, 'location:', location);
     
     if (!name) {
-      console.log('❌ Create Office - Name missing. bodyData:', bodyData);
+      console.log('❌ Create Office - Name missing. req.body:', JSON.stringify(req.body));
       return res.status(400).json({ error: 'Office name is required' });
     }
     
