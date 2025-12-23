@@ -142,7 +142,9 @@ const employeeController = {
       const services = initializeServices(req.db);
       const context = buildRequestContext(req);
       
-      console.log('🔍 CREATE - Raw request body:', req.body);
+      console.log('🔍 CREATE - Raw request body type:', typeof req.body);
+      console.log('🔍 CREATE - Raw request body:', JSON.stringify(req.body).substring(0, 500));
+      console.log('🔍 CREATE - Content-Type:', req.headers['content-type']);
 
       // Parse and normalize incoming body (handles raw text, urlencoded, and loose formats)
       let payload = req.body;
@@ -180,14 +182,68 @@ const employeeController = {
         }
       }
 
-      // Normalize common field aliases from frontend
+      console.log('🔍 CREATE - Parsed payload keys:', Object.keys(payload || {}));
+      console.log('🔍 CREATE - Parsed payload:', JSON.stringify(payload).substring(0, 500));
+
+      // Normalize ALL possible field aliases from frontend (comprehensive mapping)
       const data = { ...payload };
+      
+      // Employee ID aliases
       if (data.employee_id && !data.employeeId) data.employeeId = data.employee_id;
+      if (data['employee-id'] && !data.employeeId) data.employeeId = data['employee-id'];
+      
+      // Name aliases
       if (data.full_name && !data.name) data.name = data.full_name;
+      if (data.fullName && !data.name) data.name = data.fullName;
+      if (data.Full_Name && !data.name) data.name = data.Full_Name;
+      if (!data.name && data.first_name && data.last_name) {
+        data.name = `${data.first_name} ${data.last_name}`.trim();
+      }
+      if (!data.name && data.firstName && data.lastName) {
+        data.name = `${data.firstName} ${data.lastName}`.trim();
+      }
+      
+      // Office aliases
       if (data.officeId && !data.office_id) data.office_id = Number(data.officeId);
+      if (data['office-id'] && !data.office_id) data.office_id = Number(data['office-id']);
+      if (data.Office && !data.office_id && typeof data.Office === 'number') data.office_id = data.Office;
+      
+      // Position aliases
       if (data.positionId && !data.position_id) data.position_id = Number(data.positionId);
+      if (data['position-id'] && !data.position_id) data.position_id = Number(data['position-id']);
+      if (data.Position && !data.position_id && typeof data.Position === 'number') data.position_id = data.Position;
+      
+      // Salary aliases
       if (data.monthly_salary && !data.monthlySalary) data.monthlySalary = parseFloat(data.monthly_salary);
+      if (data.salary && !data.monthlySalary) data.monthlySalary = parseFloat(data.salary);
+      if (data.Salary && !data.monthlySalary) data.monthlySalary = parseFloat(data.Salary);
+      if (data['monthly-salary'] && !data.monthlySalary) data.monthlySalary = parseFloat(data['monthly-salary']);
+      
+      // Joining date aliases
       if (data.joining_date && !data.joiningDate) data.joiningDate = data.joining_date;
+      if (data['joining-date'] && !data.joiningDate) data.joiningDate = data['joining-date'];
+      if (data.JoiningDate && !data.joiningDate) data.joiningDate = data.JoiningDate;
+      if (data.dateOfJoining && !data.joiningDate) data.joiningDate = data.dateOfJoining;
+      
+      // Email (in case of casing issues)
+      if (data.Email && !data.email) data.email = data.Email;
+      
+      // First/Last name consistency
+      if (data.firstName && !data.first_name) data.first_name = data.firstName;
+      if (data.lastName && !data.last_name) data.last_name = data.lastName;
+      if (data['first-name'] && !data.first_name) data.first_name = data['first-name'];
+      if (data['last-name'] && !data.last_name) data.last_name = data['last-name'];
+
+      console.log('🔍 CREATE - Normalized data keys:', Object.keys(data));
+      console.log('🔍 CREATE - Critical fields:', {
+        employeeId: data.employeeId,
+        name: data.name,
+        email: data.email,
+        office_id: data.office_id,
+        position_id: data.position_id,
+        monthlySalary: data.monthlySalary,
+        joiningDate: data.joiningDate
+      });
 
       const employee = await services.employeeService.createEmployee(data, context);
       
