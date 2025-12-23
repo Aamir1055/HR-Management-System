@@ -431,8 +431,24 @@ const generateAllSimplifiedSalarySlips = async (req, res) => {
   console.log(`Starting salary slip generation at ${new Date().toISOString()}`);
   
   try {
-    // Handle both GET and POST requests
-    const requestData = req.method === 'POST' ? req.body : req.query;
+    // Handle both GET and POST requests with null prototype fix
+    let requestData;
+    if (req.method === 'POST') {
+      // Handle null prototype objects from body parser
+      try {
+        if (typeof req.body === 'string') {
+          requestData = JSON.parse(req.body);
+        } else {
+          requestData = JSON.parse(JSON.stringify(req.body));
+        }
+      } catch (e) {
+        console.error('Error parsing salary slip request body:', e);
+        return res.status(400).json({ error: 'Invalid request data' });
+      }
+    } else {
+      requestData = req.query;
+    }
+    
     const { month, year, search, office, position, employeeIds } = requestData;
     
     if (!month || !year) {
