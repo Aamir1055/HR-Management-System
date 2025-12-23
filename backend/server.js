@@ -70,6 +70,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Debug: log login request content-type to diagnose JSON parse issues
+app.use('/api/auth', (req, res, next) => {
+  if (req.method === 'POST' && req.path === '/login') {
+    console.log('📝 Login request content-type:', req.headers['content-type']);
+  }
+  next();
+});
+
 // Audit middleware - attach audit helper to all requests
 app.use(auditMiddleware);
 
@@ -168,6 +176,20 @@ app.use('/api/users', userRoutes); // NEW - USERS (LIST)
 app.use('/api/audit-logs', auditLogRoutes); // NEW - AUDIT LOGS
 
 // Error handling middleware
+// Handle JSON parse errors from body-parser explicitly
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('Invalid JSON payload:', {
+      url: req.originalUrl,
+      method: req.method,
+      contentType: req.headers['content-type'],
+      message: err.message
+    });
+    return res.status(400).json({ error: 'Invalid JSON', message: 'Malformed JSON in request body' });
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   if (err.name === 'JsonWebTokenError') {
