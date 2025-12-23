@@ -199,7 +199,7 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
               ></textarea>
             </div>
 
-            {/* Enhanced Multiple Office Selection with Checkboxes */}
+            {/* Office selection hidden - positions are independent of offices 
             {mode === 'add' ? (
               <PositionOfficeSelection 
                 offices={offices}
@@ -269,6 +269,7 @@ const MasterDataForm: React.FC<MasterDataFormProps> = ({
                 </div>
               </>
             )}
+            */}
           </>
         );
 
