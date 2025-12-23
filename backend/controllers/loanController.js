@@ -1532,7 +1532,20 @@ exports.getLoanOverview = async (req, res) => {
 // Add skip month for loan deduction
 exports.addSkipMonth = async (req, res) => {
   try {
-    const { loan_id, skip_month, reason } = req.body;
+    // Handle null prototype objects from body parser
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing add skip month request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { loan_id, skip_month, reason } = body;
     
     if (!loan_id || !skip_month) {
       return res.status(400).json({
@@ -1709,7 +1722,21 @@ exports.removeSkipMonth = async (req, res) => {
 exports.updateSkipMonth = async (req, res) => {
   try {
     const { skip_id } = req.params;
-    const { loan_id, skip_month, reason } = req.body;
+    
+    // Handle null prototype objects from body parser
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing update skip month request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { loan_id, skip_month, reason } = body;
     
     // Validate required fields
     if (!loan_id || !skip_month) {
