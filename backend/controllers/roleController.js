@@ -68,12 +68,17 @@ const roleController = {
     try {
       const service = initializeService(req.db);
       
-      console.log('🔍 CREATE ROLE - Request body:', req.body);
-      console.log('🔍 CREATE ROLE - name field:', req.body.name, 'type:', typeof req.body.name);
-      console.log('🔍 CREATE ROLE - description field:', req.body.description, 'type:', typeof req.body.description);
-      console.log('🔍 CREATE ROLE - isActive field:', req.body.isActive, 'type:', typeof req.body.isActive);
+      // Handle null prototype objects by creating a proper object
+      const roleData = {
+        name: req.body.name,
+        description: req.body.description,
+        isActive: req.body.isActive
+      };
       
-      const role = await service.createRole(req.body);
+      console.log('🔍 CREATE ROLE - Request body:', req.body);
+      console.log('🔍 CREATE ROLE - Normalized data:', roleData);
+      
+      const role = await service.createRole(roleData);
       
       res.status(201).json({
         message: 'Role created successfully',
@@ -139,10 +144,18 @@ const roleController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
+      // Handle null prototype objects by creating a proper object
+      const roleData = {
+        name: req.body.name,
+        description: req.body.description,
+        isActive: req.body.isActive
+      };
+      
       console.log('🔍 UPDATE ROLE - ID:', id);
       console.log('🔍 UPDATE ROLE - Request body:', req.body);
+      console.log('🔍 UPDATE ROLE - Normalized data:', roleData);
       
-      const role = await service.updateRole(parseInt(id), req.body);
+      const role = await service.updateRole(parseInt(id), roleData);
       
       if (!role) {
         return res.status(404).json({ error: 'Role not found' });
