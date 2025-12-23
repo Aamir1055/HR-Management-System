@@ -136,7 +136,8 @@ class EmployeeRepository {
       // Ensure required columns exist
       await this.ensureColumnsExist();
       
-      const dbData = employee.toDbFormat();
+      // Handle both Employee instances and plain objects
+      const dbData = employee.toDbFormat ? employee.toDbFormat() : employee;
       
       // Build dynamic UPDATE query - only update fields that are actually provided
       const updateFields = [];

@@ -33,23 +33,40 @@ async function logAudit({
   userAgent = null
 }) {
   try {
+    const toNullIfUndefined = (v) => (v === undefined ? null : v);
+
+    let oldJson = null;
+    let newJson = null;
+    try {
+      oldJson = oldValues ? JSON.stringify(oldValues) : null;
+    } catch (_) {
+      oldJson = null;
+    }
+    try {
+      newJson = newValues ? JSON.stringify(newValues) : null;
+    } catch (_) {
+      newJson = null;
+    }
+
+    const params = [
+      toNullIfUndefined(userId),
+      toNullIfUndefined(username),
+      toNullIfUndefined(action),
+      toNullIfUndefined(entityType),
+      toNullIfUndefined(entityId),
+      toNullIfUndefined(entityName),
+      toNullIfUndefined(description),
+      oldJson,
+      newJson,
+      toNullIfUndefined(ipAddress),
+      toNullIfUndefined(userAgent)
+    ];
+
     await db.execute(
       `INSERT INTO audit_logs 
        (user_id, username, action, entity_type, entity_id, entity_name, description, old_values, new_values, ip_address, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        username,
-        action,
-        entityType,
-        entityId,
-        entityName,
-        description,
-        oldValues ? JSON.stringify(oldValues) : null,
-        newValues ? JSON.stringify(newValues) : null,
-        ipAddress,
-        userAgent
-      ]
+      params
     );
   } catch (error) {
     // Don't throw error to prevent breaking the main operation

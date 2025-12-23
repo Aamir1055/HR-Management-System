@@ -158,11 +158,8 @@ class EmployeeService {
         updateFields.status = updateFields.status ? 1 : 0;
       }
 
-      // Create a minimal Employee instance with only the fields to update
-      const employeeUpdate = new Employee(updateFields);
-
-      // Update employee in database
-      const updatedEmployee = await this.employeeRepository.update(employeeId, employeeUpdate);
+      // Update employee in database using only explicitly provided fields
+      const updatedEmployee = await this.employeeRepository.update(employeeId, updateFields);
       
       if (!updatedEmployee) {
         return null; // Employee not found
