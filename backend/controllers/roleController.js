@@ -68,9 +68,16 @@ const roleController = {
     try {
       const service = initializeService(req.db);
       
-      // Handle null prototype objects by converting to a regular object
-      const roleData = Object.assign({}, req.body);
+      // Handle both string and object req.body
+      let roleData;
+      if (typeof req.body === 'string') {
+        roleData = JSON.parse(req.body);
+      } else {
+        // Handle null prototype objects
+        roleData = JSON.parse(JSON.stringify(req.body));
+      }
       
+      console.log('🔍 CREATE ROLE - Request body type:', typeof req.body);
       console.log('🔍 CREATE ROLE - Request body:', req.body);
       console.log('🔍 CREATE ROLE - Normalized data:', roleData);
       
@@ -140,11 +147,17 @@ const roleController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
-      // Handle null prototype objects by converting to a regular object
-      const roleData = Object.assign({}, req.body);
+      // Handle both string and object req.body
+      let roleData;
+      if (typeof req.body === 'string') {
+        roleData = JSON.parse(req.body);
+      } else {
+        // Handle null prototype objects
+        roleData = JSON.parse(JSON.stringify(req.body));
+      }
       
       console.log('🔍 UPDATE ROLE - ID:', id);
-      console.log('🔍 UPDATE ROLE - Request body:', req.body);
+      console.log('🔍 UPDATE ROLE - Request body type:', typeof req.body);
       console.log('🔍 UPDATE ROLE - Normalized data:', roleData);
       
       const role = await service.updateRole(parseInt(id), roleData);
