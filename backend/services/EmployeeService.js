@@ -292,6 +292,14 @@ class EmployeeService {
     const processedData = { ...employeeData };
 
     try {
+      console.log('🔧 prepareEmployeeData - Input:', {
+        office_name: processedData.office_name,
+        office_id: processedData.office_id,
+        position_name: processedData.position_name,
+        position_id: processedData.position_id,
+        hasDb: !!context.db
+      });
+
       // Convert date fields to storage format
       const dateFields = ['joiningDate', 'dob', 'passport_expiry', 'visa_expiry'];
       dateFields.forEach(field => {
@@ -302,11 +310,15 @@ class EmployeeService {
 
       // Resolve office and position names to IDs
       if (processedData.office_name && !processedData.office_id) {
+        console.log('🔧 Resolving office_name to office_id:', processedData.office_name);
         processedData.office_id = await this.resolveOfficeNameToId(processedData.office_name, context.db);
+        console.log('✅ Resolved office_id:', processedData.office_id);
       }
 
       if (processedData.position_name && !processedData.position_id) {
+        console.log('🔧 Resolving position_name to position_id:', processedData.position_name);
         processedData.position_id = await this.resolvePositionNameToId(processedData.position_name, context.db);
+        console.log('✅ Resolved position_id:', processedData.position_id);
       }
 
       // Resolve visa type name to database format
