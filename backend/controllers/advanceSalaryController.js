@@ -385,7 +385,20 @@ exports.filterByMonthYear = async (req, res) => {
 
 // Create or update advance salary record
 exports.createOrUpdate = async (req, res) => {
-  const { employee_id, month_year, amount } = req.body;
+  // Handle null prototype objects from body parser
+  let body;
+  try {
+    if (typeof req.body === 'string') {
+      body = JSON.parse(req.body);
+    } else {
+      body = JSON.parse(JSON.stringify(req.body));
+    }
+  } catch (e) {
+    console.error('Error parsing advance salary request body:', e);
+    return res.status(400).json({ message: 'Invalid request data' });
+  }
+
+  const { employee_id, month_year, amount } = body;
 
   if (!employee_id || !month_year || !amount) {
     return res.status(400).json({ message: 'employee_id, month_year, and amount are required' });
@@ -517,7 +530,21 @@ exports.getOne = async (req, res) => {
 // Update advance salary record
 exports.update = async (req, res) => {
   const { employeeId, monthYear } = req.params;
-  const { amount } = req.body;
+  
+  // Handle null prototype objects from body parser
+  let body;
+  try {
+    if (typeof req.body === 'string') {
+      body = JSON.parse(req.body);
+    } else {
+      body = JSON.parse(JSON.stringify(req.body));
+    }
+  } catch (e) {
+    console.error('Error parsing update advance salary request body:', e);
+    return res.status(400).json({ message: 'Invalid request data' });
+  }
+
+  const { amount } = body;
 
   // Validate amount
   const validAmount = validateAmount(amount);
