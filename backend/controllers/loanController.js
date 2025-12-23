@@ -426,6 +426,19 @@ exports.getLoanById = async (req, res) => {
 // Create a new loan (UPDATED)
 exports.createLoan = async (req, res) => {
   try {
+    // Handle null prototype objects from body parser
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing loan creation request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
     const { 
       employee_id, 
       total_amount, 
@@ -433,7 +446,7 @@ exports.createLoan = async (req, res) => {
       description, 
       start_date,
       approved_by
-    } = req.body;
+    } = body;
     
     // Validation
     if (!employee_id ||  !total_amount || !start_date) {
@@ -529,7 +542,21 @@ exports.createLoan = async (req, res) => {
 // Add amount to existing loan (UPDATED: Record transactions in loan_transactions table)
 exports.addAmountToLoan = async (req, res) => {
   const { id } = req.params;
-  const { additional_amount, reason } = req.body;
+  
+  // Handle null prototype objects from body parser
+  let body;
+  try {
+    if (typeof req.body === 'string') {
+      body = JSON.parse(req.body);
+    } else {
+      body = JSON.parse(JSON.stringify(req.body));
+    }
+  } catch (e) {
+    console.error('Error parsing add loan amount request body:', e);
+    return res.status(400).json({ error: 'Invalid request data' });
+  }
+
+  const { additional_amount, reason } = body;
   try {
     console.log(`➕ Adding amount to loan ${id}:`, { additional_amount, reason });
     const additionalAmount = parseFloat(additional_amount);
@@ -614,7 +641,21 @@ exports.addAmountToLoan = async (req, res) => {
 // Deduct amount from existing loan (UPDATED: Record transactions in loan_transactions table)
 exports.deductAmountFromLoan = async (req, res) => {
   const { id } = req.params;
-  const { deduction_amount, reason, record_as_payment } = req.body;
+  
+  // Handle null prototype objects from body parser
+  let body;
+  try {
+    if (typeof req.body === 'string') {
+      body = JSON.parse(req.body);
+    } else {
+      body = JSON.parse(JSON.stringify(req.body));
+    }
+  } catch (e) {
+    console.error('Error parsing deduct loan amount request body:', e);
+    return res.status(400).json({ error: 'Invalid request data' });
+  }
+
+  const { deduction_amount, reason, record_as_payment } = body;
   try {
     console.log(`➖ Deducting amount from loan ${id}:`, { deduction_amount, reason, record_as_payment });
     const deductAmount = parseFloat(deduction_amount);
@@ -709,7 +750,21 @@ exports.deductAmountFromLoan = async (req, res) => {
 exports.adjustLoanAmount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adjustment_type, amount, reason } = req.body;
+    
+    // Handle null prototype objects from body parser
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing adjust loan amount request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { adjustment_type, amount, reason } = body;
     
     if (!adjustment_type || !['add', 'deduct'].includes(adjustment_type)) {
       return res.status(400).json({ 
@@ -744,6 +799,20 @@ exports.adjustLoanAmount = async (req, res) => {
 exports.updateLoan = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Handle null prototype objects from body parser
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing loan update request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
     const { 
       total_amount, 
       description, 
@@ -752,7 +821,7 @@ exports.updateLoan = async (req, res) => {
       status,
       amount_added,
       amount_deducted
-    } = req.body;
+    } = body;
     
     // Check if loan exists
     const existingLoan = await query(
