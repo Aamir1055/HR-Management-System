@@ -238,6 +238,7 @@ app.listen(PORT, async () => {
   
   // NEW: Add half-day feature status
   console.log(`📅 Half-Day Feature: ${process.env.HALF_DAY_FEATURE_ENABLED === 'true' ? '✅ ENABLED' : '❌ DISABLED'}`);
+  console.log(`🔌 DB Config: host=${process.env.DB_HOST || '127.0.0.1'}, user=${process.env.DB_USER || 'root'}, name=${process.env.DB_NAME || 'payroll_system'}, passwordSet=${(process.env.DB_PASSWORD ? 'YES' : 'NO')}`);
   
   // Check half-day tables if feature is enabled
   await checkHalfDayTables();
