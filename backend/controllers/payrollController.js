@@ -1188,7 +1188,20 @@ const getEmployeePendingAttendanceDays = async (req, res) => {
 
 const deleteAttendanceByMonth = async (req, res) => {
   try {
-    const { year, month } = req.body;
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing delete attendance request body:', e);
+      return res.status(400).json({ success: false, error: 'Invalid request data' });
+    }
+
+    const { year, month } = body;
     
     if (!year || !month) {
       return res.status(400).json({ 
@@ -1258,7 +1271,20 @@ const deleteAttendanceByMonth = async (req, res) => {
 
 const deleteAttendanceByEmployeeMonth = async (req, res) => {
   try {
-    const { employeeId, year, month } = req.body;
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing delete employee attendance request body:', e);
+      return res.status(400).json({ success: false, error: 'Invalid request data' });
+    }
+
+    const { employeeId, year, month } = body;
     
     if (!employeeId || !year || !month) {
       return res.status(400).json({ 
@@ -1424,7 +1450,20 @@ const getHalfDayFeatureStatus = async (req, res) => {
 // Create new half-day shift (Admin only)
 const createHalfDayShift = async (req, res) => {
   try {
-    const { shift_name, start_time, end_time, min_hours } = req.body;
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing create half day shift request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { shift_name, start_time, end_time, min_hours } = body;
     
     if (!shift_name || !start_time || !end_time || !min_hours) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -1451,7 +1490,21 @@ const createHalfDayShift = async (req, res) => {
 const updateHalfDayShift = async (req, res) => {
   try {
     const { shiftId } = req.params;
-    const { shift_name, start_time, end_time, min_hours, is_active } = req.body;
+    
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing update half day shift request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { shift_name, start_time, end_time, min_hours, is_active } = body;
     
     const [result] = await db.query(
       `UPDATE half_day_shifts 
@@ -1502,7 +1555,21 @@ const deleteHalfDayShift = async (req, res) => {
 const updateEmployeeHalfDayEligibility = async (req, res) => {
   try {
     const { employeeId } = req.params;
-    const { half_day_eligible } = req.body;
+    
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing update employee half day eligibility request body:', e);
+      return res.status(400).json({ error: 'Invalid request data' });
+    }
+
+    const { half_day_eligible } = body;
     
     if (typeof half_day_eligible !== 'boolean') {
       return res.status(400).json({ error: 'half_day_eligible must be a boolean value' });
