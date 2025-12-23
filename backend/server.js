@@ -68,6 +68,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Accept raw text for application/json to manually handle malformed payloads
+app.use(express.text({ type: 'application/json' }));
 app.use(express.json());
 
 // Debug: log login request content-type to diagnose JSON parse issues

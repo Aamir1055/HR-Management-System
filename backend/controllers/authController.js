@@ -13,7 +13,29 @@ const JWT_EXPIRY = '24h';
 
 // ✅ Login with optional 2FA and first login setup
 exports.login = async (req, res) => {
-  const { username, password, twoFactorCode } = req.body;
+  let username, password, twoFactorCode;
+
+  // Handle cases where body arrived as raw text due to malformed JSON
+  if (typeof req.body === 'string') {
+    try {
+      const parsed = JSON.parse(req.body);
+      username = parsed.username;
+      password = parsed.password;
+      twoFactorCode = parsed.twoFactorCode;
+    } catch (e) {
+      // Attempt to parse urlencoded style: username=...&password=...
+      try {
+        const params = new URLSearchParams(req.body);
+        username = params.get('username');
+        password = params.get('password');
+        twoFactorCode = params.get('twoFactorCode') || undefined;
+      } catch (_) {
+        // Fall back to undefined
+      }
+    }
+  } else {
+    ({ username, password, twoFactorCode } = req.body);
+  }
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
