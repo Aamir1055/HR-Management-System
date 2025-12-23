@@ -41,9 +41,13 @@ exports.createOffice = async (req, res) => {
   try {
     // Handle null prototype objects from body-parser
     const bodyData = JSON.parse(JSON.stringify(req.body));
+    console.log('📥 Create Office - Received body:', req.body);
+    console.log('📋 Create Office - Parsed bodyData:', bodyData);
+    
     const { name, location } = bodyData;
     
     if (!name) {
+      console.log('❌ Create Office - Name missing. bodyData:', bodyData);
       return res.status(400).json({ error: 'Office name is required' });
     }
     
