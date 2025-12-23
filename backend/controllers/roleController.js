@@ -68,12 +68,8 @@ const roleController = {
     try {
       const service = initializeService(req.db);
       
-      // Handle null prototype objects by creating a proper object
-      const roleData = {
-        name: req.body.name,
-        description: req.body.description,
-        isActive: req.body.isActive
-      };
+      // Handle null prototype objects by converting to a regular object
+      const roleData = Object.assign({}, req.body);
       
       console.log('🔍 CREATE ROLE - Request body:', req.body);
       console.log('🔍 CREATE ROLE - Normalized data:', roleData);
@@ -144,12 +140,8 @@ const roleController = {
       const service = initializeService(req.db);
       const { id } = req.params;
       
-      // Handle null prototype objects by creating a proper object
-      const roleData = {
-        name: req.body.name,
-        description: req.body.description,
-        isActive: req.body.isActive
-      };
+      // Handle null prototype objects by converting to a regular object
+      const roleData = Object.assign({}, req.body);
       
       console.log('🔍 UPDATE ROLE - ID:', id);
       console.log('🔍 UPDATE ROLE - Request body:', req.body);
