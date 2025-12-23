@@ -143,8 +143,53 @@ const employeeController = {
       const context = buildRequestContext(req);
       
       console.log('🔍 CREATE - Raw request body:', req.body);
-      
-      const employee = await services.employeeService.createEmployee(req.body, context);
+
+      // Parse and normalize incoming body (handles raw text, urlencoded, and loose formats)
+      let payload = req.body;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch (e) {
+          // Try URLSearchParams style: key=value&key2=value2
+          try {
+            const params = new URLSearchParams(payload);
+            const entries = Array.from(params.entries());
+            if (entries.length > 0) {
+              payload = Object.fromEntries(entries);
+            } else {
+              throw new Error('No urlencoded entries');
+            }
+          } catch (_) {
+            // Fallback: loose object syntax { key:val, key2:val2 }
+            try {
+              const loose = payload.trim().replace(/^\{\s*|\s*\}$/g, '');
+              const obj = {};
+              if (loose.length) {
+                loose.split(',').forEach(p => {
+                  const [kRaw, vRaw] = p.split(':');
+                  const k = (kRaw || '').trim();
+                  const v = (vRaw || '').trim().replace(/^"|"$/g, '');
+                  if (k) obj[k] = v;
+                });
+              }
+              payload = obj;
+            } catch (__) {
+              // leave as-is; validation will report missing fields
+            }
+          }
+        }
+      }
+
+      // Normalize common field aliases from frontend
+      const data = { ...payload };
+      if (data.employee_id && !data.employeeId) data.employeeId = data.employee_id;
+      if (data.full_name && !data.name) data.name = data.full_name;
+      if (data.officeId && !data.office_id) data.office_id = Number(data.officeId);
+      if (data.positionId && !data.position_id) data.position_id = Number(data.positionId);
+      if (data.monthly_salary && !data.monthlySalary) data.monthlySalary = parseFloat(data.monthly_salary);
+      if (data.joining_date && !data.joiningDate) data.joiningDate = data.joining_date;
+
+      const employee = await services.employeeService.createEmployee(data, context);
       
       // Log audit entry (only if user is authenticated)
       if (req.user) {
@@ -184,6 +229,47 @@ const employeeController = {
       
       console.log('🔍 UPDATE - Raw request body:', req.body);
       
+      // Parse and normalize incoming body similar to createEmployee
+      let payload = req.body;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch (e) {
+          try {
+            const params = new URLSearchParams(payload);
+            const entries = Array.from(params.entries());
+            if (entries.length > 0) {
+              payload = Object.fromEntries(entries);
+            } else {
+              throw new Error('No urlencoded entries');
+            }
+          } catch (_) {
+            try {
+              const loose = payload.trim().replace(/^\{\s*|\s*\}$/g, '');
+              const obj = {};
+              if (loose.length) {
+                loose.split(',').forEach(p => {
+                  const [kRaw, vRaw] = p.split(':');
+                  const k = (kRaw || '').trim();
+                  const v = (vRaw || '').trim().replace(/^"|"$/g, '');
+                  if (k) obj[k] = v;
+                });
+              }
+              payload = obj;
+            } catch (__) {
+              // leave as-is
+            }
+          }
+        }
+      }
+      const data = { ...payload };
+      if (data.employee_id && !data.employeeId) data.employeeId = data.employee_id;
+      if (data.full_name && !data.name) data.name = data.full_name;
+      if (data.officeId && !data.office_id) data.office_id = Number(data.officeId);
+      if (data.positionId && !data.position_id) data.position_id = Number(data.positionId);
+      if (data.monthly_salary && !data.monthlySalary) data.monthlySalary = parseFloat(data.monthly_salary);
+      if (data.joining_date && !data.joiningDate) data.joiningDate = data.joining_date;
+      
       // Get old employee data for audit log (optional, don't fail if it doesn't exist)
       let oldEmployee = null;
       try {
@@ -192,7 +278,7 @@ const employeeController = {
         console.warn('Could not fetch old employee data for audit:', auditError.message);
       }
       
-      const employee = await services.employeeService.updateEmployee(employeeId, req.body, context);
+      const employee = await services.employeeService.updateEmployee(employeeId, data, context);
       
       if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
