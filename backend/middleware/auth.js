@@ -25,9 +25,11 @@ const verifyToken = (req, res, next) => {
 
     // Add user info to request (skip DB check for performance)
     req.user = {
-      userId: user.userId,
+      id: user.userId,           // ✅ Primary identifier for audit logs
+      userId: user.userId,       // Keep for backward compatibility
       username: user.username,
-      role: user.role
+      role: user.role,
+      employeeId: user.employeeId
     };
     next();
   });
