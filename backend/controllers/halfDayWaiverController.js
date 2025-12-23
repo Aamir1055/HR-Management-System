@@ -13,7 +13,26 @@ const moment = require('moment');
  */
 const toggleHalfDayWaiver = async (req, res) => {
   try {
-    const { employee_id, date, reason } = req.body;
+    // Handle both string and object req.body (null prototype issue)
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = JSON.parse(JSON.stringify(req.body));
+      }
+    } catch (e) {
+      console.error('Error parsing half day waiver request body:', e);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request data' 
+      });
+    }
+
+    const { employee_id, date, reason } = body;
+
+    console.log('🔍 TOGGLE HALF DAY WAIVER - Body:', body);
+    console.log('🔍 TOGGLE HALF DAY WAIVER - employee_id:', employee_id, 'date:', date, 'reason:', reason);
     
     if (!employee_id || !date) {
       return res.status(400).json({ 
