@@ -242,9 +242,11 @@ export const AuditLogs: React.FC = () => {
                   <option value="">All Entities</option>
                   <option value="users">Users</option>
                   <option value="employees">Employees</option>
+                  <option value="recruitments">Recruitments</option>
                   <option value="auth">Authentication</option>
                   <option value="attendance">Attendance</option>
                   <option value="payroll">Payroll</option>
+                  <option value="advance_salary">Advance Salary</option>
                 </select>
               </div>
 
