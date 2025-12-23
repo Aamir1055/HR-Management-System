@@ -17,6 +17,8 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
   viewOnly = false,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const dateInputRef = React.useRef<HTMLInputElement>(null);
 
   // Date helpers to enforce dd/mm/yyyy in the form
   const toDisplayDate = (iso?: string) => {
@@ -107,6 +109,53 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
     }
   };
 
+  // Handle calendar icon click to open native date picker
+  const handleCalendarClick = () => {
+    if (viewOnly) return;
+    
+    // For desktop: use a native date input trick
+    if (dateInputRef.current) {
+      // Create a temporary date input
+      const tempInput = document.createElement('input');
+      tempInput.type = 'date';
+      tempInput.style.position = 'absolute';
+      tempInput.style.opacity = '0';
+      tempInput.style.pointerEvents = 'none';
+      
+      // Get current value in ISO format
+      const currentDisplayDate = watch('date');
+      const currentISODate = toISODate(currentDisplayDate);
+      tempInput.value = currentISODate;
+      
+      document.body.appendChild(tempInput);
+      
+      // Show the date picker
+      tempInput.showPicker?.().catch(() => {
+        // Fallback: just focus the input
+        tempInput.focus();
+        tempInput.click();
+      });
+      
+      // Handle date change
+      tempInput.addEventListener('change', () => {
+        if (tempInput.value) {
+          const displayDate = toDisplayDate(tempInput.value);
+          setValue('date', displayDate as any, { shouldValidate: true });
+        }
+        document.body.removeChild(tempInput);
+      });
+      
+      // Clean up if user cancels
+      tempInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (document.body.contains(tempInput)) {
+            document.body.removeChild(tempInput);
+          }
+        }, 200);
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -133,6 +182,7 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
               </label>
               <div className="relative">
                 <input
+                  ref={dateInputRef}
                   type="text"
                   placeholder="dd/mm/yyyy"
                   {...register('date', { 
@@ -142,7 +192,15 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
                   disabled={viewOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
                 />
-                <Calendar className="absolute right-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" />
+                <button
+                  type="button"
+                  onClick={handleCalendarClick}
+                  disabled={viewOnly}
+                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Pick a date"
+                >
+                  <Calendar className="w-5 h-5" />
+                </button>
               </div>
               {errors.date && (
                 <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
