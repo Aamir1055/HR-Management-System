@@ -84,11 +84,23 @@ exports.createOffice = async (req, res) => {
 exports.updateOffice = async (req, res) => {
   try {
     const { id } = req.params;
-    // Handle null prototype objects from body-parser - access properties directly
-    const name = req.body.name || req.body.office_name;
-    const location = req.body.location;
+    // Handle both string and object body (due to express.text() middleware)
+    let bodyData;
+    if (typeof req.body === 'string') {
+      bodyData = JSON.parse(req.body);
+    } else {
+      bodyData = { ...req.body };
+    }
+    
+    const name = bodyData.name || bodyData.office_name;
+    const location = bodyData.location || '';
+    
+    console.log('📥 Update Office - Body type:', typeof req.body);
+    console.log('📥 Update Office - Parsed bodyData:', bodyData);
+    console.log('📋 Update Office - ID:', id, 'name:', name, 'location:', location);
     
     if (!name) {
+      console.log('❌ Update Office - Name missing');
       return res.status(400).json({ error: 'Office name is required' });
     }
     
