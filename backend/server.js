@@ -7,6 +7,9 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
+// Trust proxy - required to get correct client IP when behind nginx
+app.set('trust proxy', true);
+
 const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
@@ -16,7 +19,8 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
   queueLimit: parseInt(process.env.DB_QUEUE_LIMIT) || 0,
-  rowsAsArray: false  
+  rowsAsArray: false,
+  dateStrings: true
 });
 
 // Attach pool to req.db for all incoming requests
@@ -68,18 +72,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// Conditional body parsing to avoid crashing on malformed JSON
-app.use((req, res, next) => {
-  const ct = req.headers['content-type'] || '';
-  if (ct.includes('application/json')) {
-    // Read as text; controllers will parse JSON or urlencoded fallback
-    return express.text({ type: 'application/json' })(req, res, next);
-  }
-  if (ct.includes('application/x-www-form-urlencoded')) {
-    return express.urlencoded({ extended: true })(req, res, next);
-  }
-  next();
-});
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Debug: log login request content-type to diagnose JSON parse issues
 app.use('/api/auth', (req, res, next) => {

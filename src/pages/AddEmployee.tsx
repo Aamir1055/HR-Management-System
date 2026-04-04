@@ -28,14 +28,17 @@ const EmployeePage: React.FC = () => {
   // Load employee if edit or view mode
   useEffect(() => {
     if (employeeId) {
-      const found = employees.find((emp) => emp.employeeId === employeeId);
-      if (found) setEmployee(found);
-      // fallback: fetch by id for hard refreshes or deep links
-      else if (fetchEmployeeById) fetchEmployeeById(employeeId).then(setEmployee);
+      // Always fetch fresh data by ID to avoid stale references
+      if (fetchEmployeeById) {
+        fetchEmployeeById(employeeId).then((emp) => {
+          if (emp) setEmployee(emp);
+        });
+      }
     } else {
       setEmployee(undefined);
     }
-  }, [employeeId, employees, fetchEmployeeById]);
+    // eslint-disable-next-line
+  }, [employeeId]);
 
   const handleSubmit = async (data: any) => {
     try {

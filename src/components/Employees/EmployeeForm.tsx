@@ -5,6 +5,7 @@ import { Employee } from '../../types';
 import { formatDateForInput, formatDateFromEpoch } from '../../utils/dateUtils';
 import EmployeeFormComments from './EmployeeFormComments';
 import DateInput from '../UI/DateInput';
+import CountryCodeSelect from '../UI/CountryCodeSelect';
 
 interface Office {
   id: number;
@@ -49,6 +50,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const [reportingTime, setReportingTime] = useState<string>('Select office and position');
   const [dutyHours, setDutyHours] = useState<string>('Select office and position');
   const [message, setMessage] = useState<string>('');
+  const [phoneCode, setPhoneCode] = useState<string>('');
+  const [whatsappCode, setWhatsappCode] = useState<string>('');
+
+  // Split a stored phone string like "971 581538366" into { code, number }
+  const splitPhone = (value: string): { code: string; number: string } => {
+    if (!value) return { code: '', number: '' };
+    const trimmed = value.trim().replace(/^\+/, '');
+    // Match 1-4 digit country code followed by a space or separator then the rest
+    const match = trimmed.match(/^(\d{1,4})[\s\-](.+)$/);
+    if (match) return { code: match[1], number: match[2].trim() };
+    return { code: '', number: trimmed };
+  };
   
   // Ref to track previous office ID to prevent unnecessary resets
   const prevOfficeIdRef = useRef<number | null>(null);
@@ -97,6 +110,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       emergency_contact: '',
       emergency_contact_relation: '',
       shift_timings: '9:00 AM - 6:00 PM',
+      last_working_date: '',
     },
   });
 
@@ -111,6 +125,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     register('joiningDate', { required: 'Joining date is required' });
     register('passport_expiry');
     register('visa_expiry');
+    register('last_working_date');
   }, [register]);
 
   // No need to auto-update name from first/last; use single name field
@@ -212,8 +227,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             platform: employee.platform || platformObj?.platform_name || '',
             address: employee.address || '',
             current_address: employee.current_address || '',
-            phone: employee.phone || '',
-            whatsapp: employee.whatsapp || '',
+            phone: (() => { const p = splitPhone(employee.phone || ''); setPhoneCode(p.code); return p.number; })(),
+            whatsapp: (() => { const w = splitPhone(employee.whatsapp || ''); setWhatsappCode(w.code); return w.number; })(),
             gender: employee.gender || '',
             primary_language: employee.primary_language || '',
             secondary_language: employee.secondary_language || '',
@@ -226,6 +241,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             nationality: employee.nationality || '',
             name: employee.name || '',
             shift_timings: employee.shift_timings || '9:00 AM - 6:00 PM',
+            last_working_date: formatDateForInput(employee.last_working_date) || '',
           });
 
           setReportingTime(employee.reporting_time?.toString() || 'Not set');
@@ -235,6 +251,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           }
         } else {
           reset();
+          // Auto-generate next employee ID for new employees
+          try {
+            const nextIdRes = await fetch('/api/employees/next-id', { headers: getAuthHeaders() });
+            if (nextIdRes.ok) {
+              const { nextId } = await nextIdRes.json();
+              setValue('employeeId', nextId);
+            }
+          } catch (err) {
+            console.error('Failed to fetch next employee ID:', err);
+          }
         }
       } catch (error) {
         console.error('Error fetching options:', error);
@@ -357,8 +383,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         platform: platform?.platform_name || null,
         address: formData.address || null,
         current_address: formData.current_address || null,
-        phone: formData.phone || null,
-        whatsapp: formData.whatsapp || null,
+        phone: (phoneCode && formData.phone) ? `${phoneCode} ${formData.phone}` : formData.phone || null,
+        whatsapp: (whatsappCode && formData.whatsapp) ? `${whatsappCode} ${formData.whatsapp}` : formData.whatsapp || null,
         gender: formData.gender || null,
         primary_language: formData.primary_language || null,
         secondary_language: formData.secondary_language || null,
@@ -369,6 +395,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         emergency_contact: formData.emergency_contact || null,
         emergency_contact_relation: formData.emergency_contact_relation || '',
         shift_timings: formData.shift_timings || '9:00 AM - 6:00 PM',
+        last_working_date: formData.last_working_date || null,
       };
 
       // Debug: Log the complete data being sent to backend
@@ -409,8 +436,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID <span className="text-red-600">*</span></label>
         <input
           {...register('employeeId', { required: 'Employee ID is required' })}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          disabled={viewOnly || !!employee}
+          readOnly
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
         />
         {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
       </div>
@@ -472,23 +500,37 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       {/* Phone Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-        <input
-          {...register('phone')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="e.g., +971-50-1234567"
-        />
+        <div className="flex gap-2">
+          <CountryCodeSelect
+            value={phoneCode}
+            onChange={setPhoneCode}
+            disabled={viewOnly}
+          />
+          <input
+            {...register('phone')}
+            disabled={viewOnly}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+            placeholder="e.g., 501234567"
+          />
+        </div>
       </div>
 
       {/* WhatsApp Number */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
-        <input
-          {...register('whatsapp')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="e.g., +971-50-1234567"
-        />
+        <div className="flex gap-2">
+          <CountryCodeSelect
+            value={whatsappCode}
+            onChange={setWhatsappCode}
+            disabled={viewOnly}
+          />
+          <input
+            {...register('whatsapp')}
+            disabled={viewOnly}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+            placeholder="e.g., 501234567"
+          />
+        </div>
       </div>
 
       {/* Gender */}
@@ -750,17 +792,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         />
       </div>
 
-      {/* Current address */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
-        <input
-          {...register('current_address')}
-          disabled={viewOnly}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          placeholder="Current residential address"
-        />
-      </div>
-
       {/* Status */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -777,6 +808,20 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </select>
         {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>}
       </div>
+
+      {/* Last Working Date - shown only when status is Inactive */}
+      {(String(statusValue) === 'false') && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Last Working Date</label>
+          <input
+            type="date"
+            value={watch('last_working_date') || ''}
+            onChange={(e) => setValue('last_working_date', e.target.value)}
+            disabled={viewOnly}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          />
+        </div>
+      )}
     </>
   );
 

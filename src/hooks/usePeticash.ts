@@ -30,9 +30,7 @@ export const usePeticash = () => {
       // Build query parameters
       const queryParams = new URLSearchParams();
       if (filters?.search) queryParams.append('search', filters.search);
-      if (filters?.company) queryParams.append('company', filters.company);
       if (filters?.expense_category) queryParams.append('expense_category', filters.expense_category);
-      if (filters?.payment_type) queryParams.append('payment_type', filters.payment_type);
       if (filters?.payable !== undefined) queryParams.append('payable', filters.payable.toString());
       if (filters?.page) queryParams.append('page', filters.page.toString());
       if (filters?.limit) queryParams.append('limit', filters.limit.toString());
@@ -60,19 +58,15 @@ export const usePeticash = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
-
   const addExpense = async (expense: Omit<Peticash, 'id'>) => {
     try {
       // Validate required fields
-      if (!expense.date || !expense.company || !expense.expense_category || !expense.payment_type) {
-        throw new Error('Date, Company, Expense Category, and Payment Type are required');
+      if (!expense.date || !expense.expense_category) {
+        throw new Error('Date and Expense Category are required');
       }
       
-      if (!expense.disbursed_amount || expense.disbursed_amount <= 0) {
-        throw new Error('Disbursed amount must be greater than 0');
+      if (!expense.authorised_amount || expense.authorised_amount <= 0) {
+        throw new Error('Authorised amount must be greater than 0');
       }
 
       const response = await fetch('/api/peticash', {
@@ -98,8 +92,8 @@ export const usePeticash = () => {
   const updateExpense = async (id: number, updates: Partial<Peticash>) => {
     try {
       // Validate required fields if provided
-      if (updates.disbursed_amount !== undefined && updates.disbursed_amount <= 0) {
-        throw new Error('Disbursed amount must be greater than 0');
+      if (updates.authorised_amount !== undefined && updates.authorised_amount <= 0) {
+        throw new Error('Authorised amount must be greater than 0');
       }
 
       const response = await fetch(`/api/peticash/${id}`, {
@@ -153,7 +147,7 @@ export const usePeticash = () => {
     }
   };
 
-  const fetchOptions = async (): Promise<PeticashOptions | null> => {
+  const fetchOptions = useCallback(async (): Promise<PeticashOptions | null> => {
     try {
       const response = await fetch('/api/peticash/options', {
         headers: getAuthHeaders(),
@@ -163,7 +157,7 @@ export const usePeticash = () => {
     } catch {
       return null;
     }
-  };
+  }, []);
 
   const fetchSummary = async (startDate?: string, endDate?: string): Promise<PeticashSummary | null> => {
     try {

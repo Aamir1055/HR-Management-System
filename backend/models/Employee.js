@@ -37,7 +37,8 @@ const EmployeeSchema = {
   emirates_id: { type: 'string', required: false },
   emergency_contact: { type: 'string', required: false },
   emergency_contact_relation: { type: 'string', required: false },
-  shift_timings: { type: 'string', required: false }
+  shift_timings: { type: 'string', required: false },
+  last_working_date: { type: 'date', required: false }
 };
 
 const EmployeeTableName = 'employees';

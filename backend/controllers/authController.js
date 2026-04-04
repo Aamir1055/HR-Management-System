@@ -160,7 +160,22 @@ const [users] = await req.db.query('SELECT * FROM users WHERE LOWER(username) = 
     console.log(`🔄 Cache cleared for user: ${user.username}`);
 
     // Log successful login to audit log
-    const ipAddress = req.ip || req.connection.remoteAddress;
+    const getClientIp = (req) => {
+      // Check X-Forwarded-For header first (for proxied requests)
+      const forwardedFor = req.headers['x-forwarded-for'];
+      if (forwardedFor) {
+        const ips = forwardedFor.split(',').map(ip => ip.trim());
+        if (ips[0]) return ips[0].replace('::ffff:', '');
+      }
+      // Check X-Real-IP header (nginx)
+      const realIp = req.headers['x-real-ip'];
+      if (realIp) return realIp.replace('::ffff:', '');
+      // Fallback to connection remote address
+      const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress;
+      return ip ? ip.replace('::ffff:', '').replace('::1', '127.0.0.1') : null;
+    };
+    
+    const ipAddress = getClientIp(req);
     const userAgent = req.get('user-agent');
     await logAudit({
       userId: user.id,

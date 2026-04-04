@@ -4,6 +4,7 @@
  */
 
 const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const { EmployeeFieldMappings } = require('../models/Employee');
 const { excelDateToYYYYMMDD, dateToExcelSerial, formatDateForTemplate } = require('./dateUtils');
 
@@ -188,119 +189,130 @@ function createEmployeeTemplate(templateData, referenceData = {}) {
 }
 
 /**
- * Create Excel export with advanced formatting
+ * Create Excel export with advanced formatting using ExcelJS
  * @param {Array} exportData - Data to export
  * @param {Object} options - Export options
- * @returns {Object} - Excel workbook with formatting
+ * @returns {Object} - ExcelJS workbook with formatting
  */
 function createEmployeeExport(exportData, options = {}) {
-  const wb = XLSX.utils.book_new();
-  
-  // Convert dates to Excel serial numbers for proper sorting (with +1 day fix)
-  const processedData = exportData.map(emp => ({
-    ...emp,
-    'Date of Birth': emp['Date of Birth'] ? dateToExcelSerial(emp['Date of Birth']) : null,
-    'Date of Joining': emp['Date of Joining'] ? dateToExcelSerial(emp['Date of Joining']) : null,
-    'Passport Expiry': emp['Passport Expiry'] ? dateToExcelSerial(emp['Passport Expiry']) : null,
-    'Visa Expiry': emp['Visa Expiry'] ? dateToExcelSerial(emp['Visa Expiry']) : null
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Employees', {
+    views: [{ state: 'frozen', ySplit: 1 }]
+  });
+
+  if (!exportData.length) return wb;
+
+  // Define columns from the first row's keys
+  const headers = Object.keys(exportData[0]);
+  ws.columns = headers.map(header => ({
+    header,
+    key: header,
+    width: getColumnWidth(header)
   }));
-  
-  const ws = XLSX.utils.json_to_sheet(processedData);
-  
-  // Apply advanced formatting
-  if (options.enableFormatting !== false) {
-    // Set date cell types and formatting for proper sorting
-    const dateColumns = ['D', 'E', 'H', 'J']; // Date of Birth, Date of Joining, Passport Expiry, Visa Expiry
-    for (let row = 2; row <= processedData.length + 1; row++) {
-      for (const col of dateColumns) {
-        const cellRef = `${col}${row}`;
-        if (ws[cellRef] && ws[cellRef].v && typeof ws[cellRef].v === 'number') {
-          // Set as date type with proper formatting for Excel sorting
-          ws[cellRef].t = 'd'; // Date type
-          ws[cellRef].z = 'dd/mm/yyyy'; // DD/MM/YYYY format
-          
-          // Convert Excel serial number back to JavaScript Date object
-          const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30));
-          const MS_PER_DAY = 86400000;
-          const dateValue = new Date(EXCEL_EPOCH.getTime() + (ws[cellRef].v * MS_PER_DAY));
-          
-          // Set the cell value as a Date object for proper Excel recognition
-          ws[cellRef].v = dateValue;
-        }
+
+  // Add data rows
+  exportData.forEach(row => ws.addRow(row));
+
+  // Style the header row
+  const headerRow = ws.getRow(1);
+  headerRow.height = 22;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' } // Blue header
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    };
+  });
+
+  // Style data rows with alternating colours and borders
+  for (let r = 2; r <= exportData.length + 1; r++) {
+    const row = ws.getRow(r);
+    const isEven = r % 2 === 0;
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+        bottom: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+        left: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+        right: { style: 'thin', color: { argb: 'FFD9D9D9' } }
+      };
+      if (isEven) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD6E4F0' } // Light blue alternating row
+        };
       }
-    }
-    
-    // Set column widths for better visibility
-    const columnWidths = [
-      { wch: 12 }, // Employee ID
-      { wch: 15 }, // First Name
-      { wch: 15 }, // Last Name
-      { wch: 14 }, // Date of Birth
-      { wch: 14 }, // Date of Joining
-      { wch: 12 }, // Nationality
-      { wch: 15 }, // Passport Number
-      { wch: 14 }, // Passport Expiry
-      { wch: 12 }, // Visa Type
-      { wch: 14 }, // Visa Expiry
-      { wch: 20 }, // Office
-      { wch: 15 }, // Platform
-      { wch: 18 }, // Position
-      { wch: 15 }, // Monthly Salary
-      { wch: 25 }, // Email
-      { wch: 15 }, // Phone
-      { wch: 15 }, // WhatsApp
-      { wch: 10 }, // Gender
-      { wch: 15 }, // Marital Status
-      { wch: 15 }, // Primary Language
-      { wch: 15 }, // Secondary Language
-      { wch: 15 }, // Hiring Source
-      { wch: 30 }, // Current Address
-      { wch: 20 }, // Emergency Contact Relation
-      { wch: 10 }  // Status
-    ];
-    
-    ws['!cols'] = columnWidths;
-    
-    // Add freeze panes to keep headers visible when scrolling
-    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-    
-    // Apply auto-filter to the entire data range
-    if (processedData.length > 0) {
-      const numCols = Object.keys(processedData[0]).length;
-      const numRows = processedData.length;
-      const filterRange = `A1:${XLSX.utils.encode_col(numCols - 1)}${numRows + 1}`;
-      ws['!autofilter'] = { ref: filterRange };
-      
-      // Style the headers for better filter visibility
-      for (let col = 0; col < numCols; col++) {
-        const headerCell = XLSX.utils.encode_cell({ r: 0, c: col });
-        if (ws[headerCell]) {
-          ws[headerCell].s = {
-            font: { bold: true },
-            alignment: { horizontal: 'center' },
-            fill: { fgColor: { rgb: 'E6E6FA' } } // Light lavender background
-          };
-        }
-      }
-    }
+      cell.alignment = { vertical: 'middle' };
+    });
   }
-  
-  XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-  
+
+  // Auto-filter on all columns
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: exportData.length + 1, column: headers.length }
+  };
+
   return wb;
 }
 
 /**
- * Generate Excel buffer for download
- * @param {Object} workbook - Excel workbook object
- * @param {Object} options - Generation options
- * @returns {Buffer} - Excel file buffer
+ * Get appropriate column width for a header name
  */
-function generateExcelBuffer(workbook, options = {}) {
+function getColumnWidth(header) {
+  const widths = {
+    'Employee ID': 14,
+    'Full Name': 20,
+    'Date of Birth': 15,
+    'Date of Joining': 15,
+    'Nationality': 14,
+    'Passport Number': 17,
+    'Passport Expiry': 15,
+    'Visa Type': 14,
+    'Visa Expiry': 15,
+    'Office': 22,
+    'Platform': 16,
+    'Position': 20,
+    'Monthly Salary': 16,
+    'Shift Time': 26,
+    'Email': 28,
+    'Phone': 18,
+    'WhatsApp': 18,
+    'Gender': 10,
+    'Marital Status': 15,
+    'Primary Language': 16,
+    'Secondary Language': 16,
+    'Hiring Source': 15,
+    'Emergency Contact Relation': 22,
+    'Status': 10,
+    'Comments': 40
+  };
+  return widths[header] || 15;
+}
+
+/**
+ * Generate Excel buffer for download
+ * Supports both ExcelJS and SheetJS workbooks
+ * @param {Object} workbook - Excel workbook object
+ * @returns {Promise<Buffer>|Buffer} - Excel file buffer
+ */
+function generateExcelBuffer(workbook) {
+  // ExcelJS workbook has xlsx property
+  if (workbook.xlsx) {
+    return workbook.xlsx.writeBuffer();
+  }
+  // SheetJS workbook (used by template export)
   return XLSX.write(workbook, {
     type: 'buffer',
     bookType: 'xlsx',
-    compression: options.compression !== false // Enable compression by default
+    compression: true
   });
 }
 

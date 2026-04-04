@@ -3,6 +3,7 @@
  * Manages retrieval and filtering of audit logs
  */
 const db = require('../db');
+const ExcelJS = require('exceljs');
 
 /**
  * Get audit logs with filtering and pagination
@@ -305,10 +306,149 @@ async function getUserActivity(req, res) {
   }
 }
 
+/**
+ * Export audit logs to Excel
+ * @route GET /api/audit-logs/export
+ */
+async function exportAuditLogs(req, res) {
+  try {
+    const {
+      action,
+      entityType,
+      userId,
+      startDate,
+      endDate,
+      search
+    } = req.query;
+
+    // Build WHERE clause
+    const conditions = [];
+    const params = [];
+
+    if (action) {
+      conditions.push('action = ?');
+      params.push(action);
+    }
+
+    if (entityType) {
+      conditions.push('entity_type = ?');
+      params.push(entityType);
+    }
+
+    if (userId) {
+      conditions.push('user_id = ?');
+      params.push(parseInt(userId));
+    }
+
+    if (startDate) {
+      conditions.push('created_at >= ?');
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      conditions.push('created_at <= ?');
+      params.push(endDate);
+    }
+
+    if (search) {
+      conditions.push('(username LIKE ? OR entity_name LIKE ? OR description LIKE ?)');
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Get all audit logs matching the filters
+    const [logs] = await db.execute(
+      `SELECT 
+        id, user_id, username, action, entity_type, entity_id, entity_name,
+        description, ip_address, created_at
+       FROM audit_logs 
+       ${whereClause}
+       ORDER BY created_at DESC`,
+      params
+    );
+
+    // Create Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Audit Logs');
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'Timestamp', key: 'created_at', width: 20 },
+      { header: 'User', key: 'username', width: 20 },
+      { header: 'User ID', key: 'user_id', width: 10 },
+      { header: 'Action', key: 'action', width: 12 },
+      { header: 'Entity', key: 'entity_type', width: 15 },
+      { header: 'Entity Name', key: 'entity_name', width: 25 },
+      { header: 'Description', key: 'description', width: 50 },
+      { header: 'IP Address', key: 'ip_address', width: 15 }
+    ];
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4B5563' }
+    };
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+    // Add data rows
+    logs.forEach(log => {
+      worksheet.addRow({
+        created_at: new Date(log.created_at).toLocaleString('en-GB', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
+        username: log.username || 'N/A',
+        user_id: log.user_id,
+        action: log.action,
+        entity_type: log.entity_type || 'N/A',
+        entity_name: log.entity_name || 'N/A',
+        description: log.description,
+        ip_address: log.ip_address || 'N/A'
+      });
+    });
+
+    // Apply borders to all cells
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    // Set response headers
+    const filename = `audit_logs_${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Write to response
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting audit logs:', error);
+    res.status(500).json({ error: 'Failed to export audit logs' });
+  }
+}
+
 module.exports = {
   getAuditLogs,
   getAuditLogById,
   getAuditStats,
   getEntityHistory,
-  getUserActivity
+  getUserActivity,
+  exportAuditLogs
 };

@@ -8,6 +8,13 @@ const authController = require('../controllers/authController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 // Public routes
+router.get('/login', (req, res) => {
+  res.status(405).json({ 
+    error: 'Method Not Allowed', 
+    message: 'Login endpoint only accepts POST requests',
+    hint: 'Please submit credentials via POST request with username and password'
+  });
+});
 router.post('/login', authController.login);
 router.post('/complete-first-login-2fa', authController.completeFirstLogin2FA);
 

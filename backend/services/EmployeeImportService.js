@@ -53,6 +53,7 @@ class EmployeeImportService {
       // Process Excel rows
       const processedEmployees = [];
       const processingErrors = [];
+      const importComments = []; // Track comments from Excel rows
 
       for (let i = 0; i < excelData.data.length; i++) {
         const row = excelData.data[i];
@@ -65,6 +66,9 @@ class EmployeeImportService {
           if (i < 3 && processedRow.shift_timings) {
             console.log(`[IMPORT DEBUG] Row ${i + 1} - Excel shift_timings: "${processedRow.shift_timings}"`);
           }
+          
+          // Capture comments from Excel row before conversion
+          const rawComments = row['Comments'] || processedRow.comments || '';
           
           // Process date fields
           const withDates = processDateFields(processedRow);
@@ -93,6 +97,14 @@ class EmployeeImportService {
           
           processedEmployees.push(formattedData);
           
+          // Store comments to insert after employee creation
+          if (rawComments && String(rawComments).trim()) {
+            importComments.push({
+              employeeId: employeeData.employeeId,
+              comments: String(rawComments).trim()
+            });
+          }
+          
         } catch (error) {
           console.error(`[IMPORT] Error processing row ${i + 1}:`, error);
           processingErrors.push(`Row ${i + 1}: ${error.message}`);
@@ -113,6 +125,30 @@ class EmployeeImportService {
       // Bulk insert employees
       const insertResult = await this.employeeRepository.bulkInsert(processedEmployees);
       
+      // Import comments for employees
+      if (importComments.length > 0 && context.db) {
+        try {
+          const username = context.user?.username || 'Excel Import';
+          for (const { employeeId, comments } of importComments) {
+            // Comments are stored as "[user]: text | [user]: text" in export
+            // Split by ' | ' to get individual comments
+            const individualComments = comments.split(' | ');
+            for (const commentText of individualComments) {
+              const trimmed = commentText.trim();
+              if (!trimmed) continue;
+              await context.db.query(
+                'INSERT INTO employee_comments (employee_id, comment, created_by) VALUES (?, ?, ?)',
+                [employeeId, trimmed, username]
+              );
+            }
+          }
+          console.log(`[IMPORT] Imported comments for ${importComments.length} employees`);
+        } catch (err) {
+          console.error('[IMPORT] Error importing comments (employees were imported):', err.message);
+          processingErrors.push(`Comments import error: ${err.message}`);
+        }
+      }
+
       // Clean up uploaded file
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -315,6 +351,26 @@ class EmployeeImportService {
       // Get employees data
       const employees = await this.employeeService.getAllEmployees(filter, context);
       
+      // Fetch comments for all employees
+      const commentsMap = {};
+      if (context.db && employees.length > 0) {
+        try {
+          const employeeIds = employees.map(emp => emp.employeeId);
+          const [allComments] = await context.db.query(
+            'SELECT employee_id, comment, created_by, created_at FROM employee_comments WHERE employee_id IN (?) ORDER BY employee_id, created_at DESC',
+            [employeeIds]
+          );
+          for (const c of allComments) {
+            if (!commentsMap[c.employee_id]) {
+              commentsMap[c.employee_id] = [];
+            }
+            commentsMap[c.employee_id].push(`[${c.created_by}]: ${c.comment}`);
+          }
+        } catch (err) {
+          console.error('[EXPORT] Error fetching comments, exporting without them:', err.message);
+        }
+      }
+
       // Format data for export
       const exportData = employees.map(emp => ({
         'Employee ID': emp.employeeId,
@@ -339,9 +395,9 @@ class EmployeeImportService {
         'Primary Language': emp.primary_language || '',
         'Secondary Language': emp.secondary_language || '',
         'Hiring Source': emp.hiring_source || '',
-        'Current Address': emp.current_address || '',
         'Emergency Contact Relation': emp.emergency_contact_relation || '',
-        'Status': emp.status ? 'Active' : 'Inactive'
+        'Status': emp.status ? 'Active' : 'Inactive',
+        'Comments': commentsMap[emp.employeeId] ? commentsMap[emp.employeeId].join(' | ') : ''
       }));
 
       console.log(`[EXPORT] Exporting ${exportData.length} employees`);
@@ -349,7 +405,7 @@ class EmployeeImportService {
       // Create Excel workbook with formatting
       const wb = createEmployeeExport(exportData, { enableFormatting: true });
       
-      return generateExcelBuffer(wb);
+      return await generateExcelBuffer(wb);
 
     } catch (error) {
       console.error('Error exporting employees:', error);
@@ -412,7 +468,6 @@ class EmployeeImportService {
         visa_expiry: row.visa_expiry || null,
         platform: row.platform || null,
         address: row.address || null,
-        current_address: row.current_address || null,
         phone: row.phone || null,
         whatsapp: row.whatsapp || null,
         gender: row.gender || null,

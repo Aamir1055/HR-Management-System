@@ -120,6 +120,10 @@ class EmployeeService {
         return null; // Employee not found
       }
 
+      // Prevent changing the employee ID
+      delete updateData.employeeId;
+      delete updateData.employee_id;
+
       // Process and prepare update data (only fields being updated)
       const processedData = await this.prepareEmployeeData(updateData, context, false);
       
@@ -301,7 +305,7 @@ class EmployeeService {
       });
 
       // Convert date fields to storage format
-      const dateFields = ['joiningDate', 'dob', 'passport_expiry', 'visa_expiry'];
+      const dateFields = ['joiningDate', 'dob', 'passport_expiry', 'visa_expiry', 'last_working_date'];
       dateFields.forEach(field => {
         if (processedData[field]) {
           processedData[field] = formatDateForStorage(processedData[field]);

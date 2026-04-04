@@ -3,8 +3,11 @@
  * Handles CRUD operations for petty cash management
  */
 
-const { Peticash, PaymentTypes, ExpenseCategories } = require('../models/Peticash');
+const { Peticash } = require('../models/Peticash');
 const { logAudit } = require('../middleware/auditMiddleware');
+const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
+const { excelDateToYYYYMMDD } = require('../utils/dateUtils');
 
 /**
  * Handle HTTP errors consistently
@@ -46,14 +49,12 @@ const peticashController = {
    */
   async getAllPeticash(req, res) {
     try {
-      const { page = 1, limit = 50, search, company, expense_category, payment_type, payable } = req.query;
+      const { page = 1, limit = 50, search, expense_category, payable } = req.query;
       
       // Ensure page and limit are valid integers
       const pageNum = Math.max(1, parseInt(page) || 1);
       const limitNum = Math.min(1000, Math.max(1, parseInt(limit) || 50)); // Cap at 1000
       const offset = (pageNum - 1) * limitNum;
-      
-      console.log('Petty cash query params:', { page, limit, pageNum, limitNum, offset });
       
       let query = 'SELECT * FROM peticash WHERE 1=1';
       let countQuery = 'SELECT COUNT(*) as total FROM peticash WHERE 1=1';
@@ -61,16 +62,10 @@ const peticashController = {
       
       // Add search filters
       if (search) {
-        query += ' AND (company LIKE ? OR expense_category LIKE ? OR comments LIKE ?)';
-        countQuery += ' AND (company LIKE ? OR expense_category LIKE ? OR comments LIKE ?)';
+        query += ' AND (expense_category LIKE ? OR narration LIKE ? OR comments LIKE ?)';
+        countQuery += ' AND (expense_category LIKE ? OR narration LIKE ? OR comments LIKE ?)';
         const searchParam = `%${search}%`;
         queryParams.push(searchParam, searchParam, searchParam);
-      }
-      
-      if (company) {
-        query += ' AND company = ?';
-        countQuery += ' AND company = ?';
-        queryParams.push(company);
       }
       
       if (expense_category) {
@@ -79,17 +74,10 @@ const peticashController = {
         queryParams.push(expense_category);
       }
       
-      if (payment_type) {
-        query += ' AND payment_type = ?';
-        countQuery += ' AND payment_type = ?';
-        queryParams.push(payment_type);
-      }
-      
-      if (payable !== undefined) {
-        const payableValue = payable === 'true' ? 1 : 0;
+      if (payable !== undefined && payable !== '') {
         query += ' AND payable = ?';
         countQuery += ' AND payable = ?';
-        queryParams.push(payableValue);
+        queryParams.push(payable);
       }
       
       // Add ordering and pagination
@@ -100,8 +88,6 @@ const peticashController = {
       const finalOffset = Number.isInteger(offset) ? offset : 0;
       
       queryParams.push(finalLimit, finalOffset);
-      
-      console.log('Executing query with params:', { query, queryParams });
       
       // Use query() instead of execute() to avoid prepared statement issues
       const [expenses] = await req.db.query(query, queryParams);
@@ -158,8 +144,6 @@ const peticashController = {
    */
   async createPeticash(req, res) {
     try {
-      console.log('🔍 CREATE PETICASH - Raw request body:', req.body);
-      
       const peticash = new Peticash(req.body);
       const validation = peticash.validate('create');
       
@@ -172,6 +156,8 @@ const peticashController = {
       
       const dbData = peticash.toDbFormat();
       delete dbData.id; // Remove ID for insert
+      delete dbData.created_at; // Let database handle timestamp
+      delete dbData.updated_at; // Let database handle timestamp
       
       const columns = Object.keys(dbData).join(', ');
       const placeholders = Object.keys(dbData).map(() => '?').join(', ');
@@ -201,8 +187,6 @@ const peticashController = {
   async updatePeticash(req, res) {
     try {
       const { id } = req.params;
-      
-      console.log('🔍 UPDATE PETICASH - Raw request body:', req.body);
       
       // Check if record exists
       const [existingRows] = await req.db.execute(
@@ -294,9 +278,7 @@ const peticashController = {
       const [totalResult] = await req.db.execute(
         `SELECT 
           COUNT(*) as total_transactions,
-          SUM(disbursed_amount) as total_amount,
-          SUM(CASE WHEN payable = 1 THEN disbursed_amount ELSE 0 END) as paid_amount,
-          SUM(CASE WHEN payable = 0 THEN disbursed_amount ELSE 0 END) as unpaid_amount
+          SUM(authorised_amount) as total_amount
         FROM peticash WHERE 1=1${dateFilter}`,
         queryParams
       );
@@ -306,21 +288,9 @@ const peticashController = {
         `SELECT 
           expense_category,
           COUNT(*) as count,
-          SUM(disbursed_amount) as total_amount
+          SUM(authorised_amount) as total_amount
         FROM peticash WHERE 1=1${dateFilter}
         GROUP BY expense_category
-        ORDER BY total_amount DESC`,
-        queryParams
-      );
-      
-      // Get expenses by payment type
-      const [paymentResult] = await req.db.execute(
-        `SELECT 
-          payment_type,
-          COUNT(*) as count,
-          SUM(disbursed_amount) as total_amount
-        FROM peticash WHERE 1=1${dateFilter}
-        GROUP BY payment_type
         ORDER BY total_amount DESC`,
         queryParams
       );
@@ -328,12 +298,9 @@ const peticashController = {
       res.json({
         summary: {
           totalTransactions: totalResult[0].total_transactions || 0,
-          totalAmount: parseFloat(totalResult[0].total_amount) || 0,
-          paidAmount: parseFloat(totalResult[0].paid_amount) || 0,
-          unpaidAmount: parseFloat(totalResult[0].unpaid_amount) || 0
+          totalAmount: parseFloat(totalResult[0].total_amount) || 0
         },
-        byCategory: categoryResult,
-        byPaymentType: paymentResult
+        byCategory: categoryResult
       });
     } catch (error) {
       handleError(res, error, 'Failed to fetch petty cash summary');
@@ -345,28 +312,176 @@ const peticashController = {
    */
   async getOptions(req, res) {
     try {
-      // Get unique companies from database
-      const [companies] = await req.db.execute(
-        'SELECT DISTINCT company FROM peticash WHERE company IS NOT NULL AND company != "" ORDER BY company'
-      );
-      
       // Get unique expense categories from database
       const [expenseCategories] = await req.db.execute(
         'SELECT DISTINCT expense_category FROM peticash WHERE expense_category IS NOT NULL AND expense_category != "" ORDER BY expense_category'
       );
       
-      // Get unique payment types from database
-      const [paymentTypes] = await req.db.execute(
-        'SELECT DISTINCT payment_type FROM peticash WHERE payment_type IS NOT NULL AND payment_type != "" ORDER BY payment_type'
-      );
-      
       res.json({
-        paymentTypes: paymentTypes.map(row => ({ value: row.payment_type, label: row.payment_type })),
-        expenseCategories: expenseCategories.map(row => ({ value: row.expense_category, label: row.expense_category })),
-        companies: companies.map(row => ({ value: row.company, label: row.company }))
+        expenseCategories: expenseCategories.map(row => ({ value: row.expense_category, label: row.expense_category }))
       });
     } catch (error) {
       handleError(res, error, 'Failed to fetch options');
+    }
+  },
+
+  /**
+   * Export petty cash expenses to Excel
+   */
+  async exportPeticash(req, res) {
+    try {
+      const [rows] = await req.db.query('SELECT * FROM peticash ORDER BY `date` DESC, created_at DESC');
+
+      const exportData = rows.map(row => {
+        const p = Peticash.fromDbFormat(row);
+        const json = p.toJSON();
+        return {
+          'Date': json.date || '',
+          'Expense Category': json.expense_category || '',
+          'Payable': json.payable || '',
+          'Narration': json.narration || '',
+          'Authorised Amount': json.authorised_amount || 0,
+          'Comments': json.comments || ''
+        };
+      });
+
+      // Build ExcelJS workbook with formatting
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Petty Cash', {
+        views: [{ state: 'frozen', ySplit: 1 }]
+      });
+
+      if (exportData.length === 0) {
+        // Still create headers for empty export
+        ws.columns = [
+          { header: 'Date', key: 'Date', width: 14 },
+          { header: 'Expense Category', key: 'Expense Category', width: 22 },
+          { header: 'Payable', key: 'Payable', width: 10 },
+          { header: 'Narration', key: 'Narration', width: 30 },
+          { header: 'Authorised Amount', key: 'Authorised Amount', width: 20 },
+          { header: 'Comments', key: 'Comments', width: 30 }
+        ];
+      } else {
+        const headers = Object.keys(exportData[0]);
+        const widthMap = { 'Date': 14, 'Expense Category': 22, 'Payable': 10, 'Narration': 30, 'Authorised Amount': 20, 'Comments': 30 };
+        ws.columns = headers.map(h => ({ header: h, key: h, width: widthMap[h] || 18 }));
+        exportData.forEach(row => ws.addRow(row));
+      }
+
+      // Style header row
+      const headerRow = ws.getRow(1);
+      headerRow.height = 22;
+      headerRow.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } }
+        };
+      });
+
+      // Style data rows with alternating colours
+      for (let r = 2; r <= exportData.length + 1; r++) {
+        const row = ws.getRow(r);
+        const isEven = r % 2 === 0;
+        row.eachCell({ includeEmpty: true }, cell => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+            bottom: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+            left: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+            right: { style: 'thin', color: { argb: 'FFD9D9D9' } }
+          };
+          if (isEven) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+          }
+          cell.alignment = { vertical: 'middle' };
+        });
+      }
+
+      // Auto-filter
+      if (exportData.length > 0) {
+        const headers = Object.keys(exportData[0]);
+        ws.autoFilter = {
+          from: { row: 1, column: 1 },
+          to: { row: exportData.length + 1, column: headers.length }
+        };
+      }
+
+      const buffer = await wb.xlsx.writeBuffer();
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `petty_cash_${timestamp}.xlsx`;
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.end(buffer);
+    } catch (error) {
+      handleError(res, error, 'Failed to export petty cash data');
+    }
+  },
+
+  /**
+   * Import petty cash expenses from Excel
+   */
+  async importPeticash(req, res) {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    try {
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!rows.length) {
+        return res.status(400).json({ error: 'Excel file is empty' });
+      }
+
+      let imported = 0;
+      const errors = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNum = i + 2; // Excel row number (1-indexed + header)
+
+        try {
+          const rawDate = row['Date'];
+          const expense_category = String(row['Expense Category'] || '').trim();
+          const payable = String(row['Payable'] || '').trim();
+          const narration = String(row['Narration'] || '').trim();
+          const authorised_amount = parseFloat(row['Authorised Amount']);
+          const comments = String(row['Comments'] || '').trim();
+
+          // Convert date from DD/MM/YYYY, serial number, or other formats to YYYY-MM-DD
+          const date = rawDate ? excelDateToYYYYMMDD(rawDate) : '';
+
+          if (!date || !expense_category || isNaN(authorised_amount)) {
+            errors.push(`Row ${rowNum}: Missing required fields (Date, Expense Category, Authorised Amount)`);
+            continue;
+          }
+
+          await req.db.execute(
+            'INSERT INTO peticash (date, expense_category, payable, narration, authorised_amount, comments) VALUES (?, ?, ?, ?, ?, ?)',
+            [date, expense_category, payable || null, narration || null, authorised_amount, comments || null]
+          );
+          imported++;
+        } catch (err) {
+          errors.push(`Row ${rowNum}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        message: `Import completed. ${imported} of ${rows.length} records imported.`,
+        imported,
+        total: rows.length,
+        errors
+      });
+    } catch (error) {
+      handleError(res, error, 'Failed to import petty cash data');
     }
   }
 };

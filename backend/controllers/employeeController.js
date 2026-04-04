@@ -642,12 +642,23 @@ const employeeController = {
   // === UTILITY OPERATIONS ===
   
   /**
-   * Get next employee ID (disabled)
+   * Get next employee ID
    */
   async getNextEmployeeId(req, res) {
-    res.status(400).json({ 
-      error: 'Auto-generation of employeeId is disabled. Please provide employeeId manually.' 
-    });
+    try {
+      const [rows] = await req.db.query(
+        `SELECT employeeId FROM employees ORDER BY CAST(employeeId AS UNSIGNED) DESC LIMIT 1`
+      );
+      let nextNum = 1;
+      if (rows.length > 0) {
+        const num = parseInt(rows[0].employeeId, 10);
+        if (!isNaN(num)) nextNum = num + 1;
+      }
+      res.json({ nextId: String(nextNum) });
+    } catch (error) {
+      console.error('Error getting next employee ID:', error);
+      res.status(500).json({ error: 'Failed to generate next employee ID' });
+    }
   },
   
   /**

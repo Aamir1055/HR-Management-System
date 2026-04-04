@@ -44,6 +44,7 @@ export interface Employee {
   emergency_contact?: string;
   emergency_contact_relation?: string; // New field for emergency contact relation
   shift_timings?: string; // Shift timings (e.g., "9:00 AM - 6:00 PM")
+  last_working_date?: string; // Last working date (when status is Inactive)
 }
 
 export interface AttendanceRecord {
@@ -228,12 +229,11 @@ export interface RecruitmentReferenceData {
 export interface Peticash {
   id?: number;
   date: string;
-  company: string;
   expense_category: string;
-  payment_type: string;
-  disbursed_amount: number;
+  narration?: string;
+  authorised_amount: number;
   comments?: string;
-  payable: boolean;
+  payable: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -250,17 +250,13 @@ export interface PeticashSummary {
 }
 
 export interface PeticashOptions {
-  paymentTypes: Array<{ value: string; label: string }>;
   expenseCategories: Array<{ value: string; label: string }>;
-  companies: Array<{ value: string; label: string }>;
 }
 
 export interface PeticashFilters {
   search?: string;
-  company?: string;
   expense_category?: string;
-  payment_type?: string;
-  payable?: boolean;
+  payable?: string;
   startDate?: string;
   endDate?: string;
   page?: number;

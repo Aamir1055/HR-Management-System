@@ -67,12 +67,11 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
     defaultValues: {
       id: undefined,
       date: toDisplayDate(new Date().toISOString()),
-      company: '',
       expense_category: '',
-      payment_type: '',
-      disbursed_amount: 0,
+      narration: '',
+      authorised_amount: 0,
       comments: '',
-      payable: false,
+      payable: '',
     },
   });
 
@@ -83,7 +82,7 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
       reset({
         ...expense,
         date: expense.date ? toDisplayDate(typeof expense.date === 'string' ? expense.date : new Date(expense.date).toISOString()) : toDisplayDate(new Date().toISOString()),
-        payable: expense.payable ? 'true' : 'false', // Convert boolean to string for radio buttons
+        payable: expense.payable || '',
       });
     }
   }, [expense, reset]);
@@ -93,11 +92,11 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
     
     setIsSubmitting(true);
     try {
-      // Convert payable string to boolean
+      // Process data for submission
       const processedData = {
         ...data,
         date: toISODate(String((data as any).date)),
-        payable: (data as any).payable === 'true' || (data as any).payable === true
+        payable: String((data as any).payable || '')
       };
       await onSubmit(processedData);
       onClose();
@@ -211,23 +210,6 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
               )}
             </div>
 
-            {/* Company */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Company <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                {...register('company', { required: 'Company is required' })}
-                disabled={viewOnly}
-                placeholder="Enter company name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-              {errors.company && (
-                <p className="mt-1 text-sm text-red-600">{errors.company.message}</p>
-              )}
-            </div>
-
             {/* Expense Category */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -245,33 +227,47 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
               )}
             </div>
 
-            {/* Payment Type */}
+            {/* Payable */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Type <span className="text-red-500">*</span>
+                Payable <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                {...register('payment_type', { required: 'Payment type is required' })}
+                {...register('payable', { required: 'Payable is required' })}
                 disabled={viewOnly}
-                placeholder="Enter payment type"
+                placeholder="Enter payable value"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
               />
-              {errors.payment_type && (
-                <p className="mt-1 text-sm text-red-600">{errors.payment_type.message}</p>
+              {errors.payable && (
+                <p className="mt-1 text-sm text-red-600">{errors.payable.message}</p>
               )}
             </div>
 
-            {/* Disbursed Amount */}
+            {/* Narration */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Disbursed Amount <span className="text-red-500">*</span>
+                Narration
+              </label>
+              <input
+                type="text"
+                {...register('narration')}
+                disabled={viewOnly}
+                placeholder="Enter narration"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              />
+            </div>
+
+            {/* Authorised Amount */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Authorised Amount <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                {...register('disbursed_amount', { 
+                {...register('authorised_amount', { 
                   required: 'Amount is required',
                   min: { value: 0.01, message: 'Amount must be greater than 0' }
                 })}
@@ -279,56 +275,24 @@ const PeticashForm: React.FC<PeticashFormProps> = ({
                 placeholder="0.00"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
               />
-              {errors.disbursed_amount && (
-                <p className="mt-1 text-sm text-red-600">{errors.disbursed_amount.message}</p>
+              {errors.authorised_amount && (
+                <p className="mt-1 text-sm text-red-600">{errors.authorised_amount.message}</p>
               )}
             </div>
 
-            {/* Payment Status */}
+            {/* Comments */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Status <span className="text-red-500">*</span>
+                Comments
               </label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    {...register('payable', { required: 'Payment status is required' })}
-                    value="false"
-                    disabled={viewOnly}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">Unpaid</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    {...register('payable', { required: 'Payment status is required' })}
-                    value="true"
-                    disabled={viewOnly}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">Paid</span>
-                </label>
-              </div>
-              {errors.payable && (
-                <p className="mt-1 text-sm text-red-600">{errors.payable.message}</p>
-              )}
+              <textarea
+                {...register('comments')}
+                disabled={viewOnly}
+                rows={2}
+                placeholder="Enter additional comments or notes"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              />
             </div>
-          </div>
-
-          {/* Comments */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Comments
-            </label>
-            <textarea
-              {...register('comments')}
-              disabled={viewOnly}
-              rows={3}
-              placeholder="Enter additional comments or notes"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-            />
           </div>
 
           {/* Form Actions */}

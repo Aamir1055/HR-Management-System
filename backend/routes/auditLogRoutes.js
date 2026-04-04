@@ -9,7 +9,8 @@ const {
   getAuditLogById,
   getAuditStats,
   getEntityHistory,
-  getUserActivity
+  getUserActivity,
+  exportAuditLogs
 } = require('../controllers/auditLogController');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -18,6 +19,9 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Get all audit logs with filtering (Admin only)
 router.get('/', requireAuth, requireAdmin, getAuditLogs);
+
+// Export audit logs to Excel (Admin only)
+router.get('/export', requireAuth, requireAdmin, exportAuditLogs);
 
 // Get audit log statistics (Admin only)
 router.get('/stats', requireAuth, requireAdmin, getAuditStats);

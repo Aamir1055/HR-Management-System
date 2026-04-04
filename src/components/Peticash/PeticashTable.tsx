@@ -42,40 +42,19 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
     }
   };
 
-  // Format expense category display
-  const formatExpenseCategory = (category: string) => {
-    // Keep original category as entered since it's now a text input
-    return category;
-  };
-
-  // Format payment type display
-  const formatPaymentType = (type: string) => {
-    // Keep original payment type as entered since it's now a text input
-    return type;
-  };
-
-  // Get payable status display
-  const getPayableStatus = (payable: boolean) => {
-    return payable 
-      ? { text: 'Paid', color: 'bg-green-100 text-green-800' }
-      : { text: 'Unpaid', color: 'bg-red-100 text-red-800' };
+  // Get payable display value
+  const getPayableDisplay = (payable: string) => {
+    return payable || '-';
   };
 
   // Parse date for sorting
   const parseDate = (dateValue: any): number => {
     if (!dateValue) return 0;
-    
-    if (typeof dateValue === 'number') {
-      return dateValue;
-    }
-    
+    if (typeof dateValue === 'number') return dateValue;
     if (typeof dateValue === 'string') {
       const parsed = new Date(dateValue);
-      if (!isNaN(parsed.getTime())) {
-        return parsed.getTime();
-      }
+      if (!isNaN(parsed.getTime())) return parsed.getTime();
     }
-    
     return 0;
   };
 
@@ -88,47 +67,29 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
         aValue = parseDate(a.date);
         bValue = parseDate(b.date);
         break;
-      
-      case 'company':
-        aValue = (a.company || '').toLowerCase();
-        bValue = (b.company || '').toLowerCase();
-        break;
-      
       case 'expense_category':
         aValue = (a.expense_category || '').toLowerCase();
         bValue = (b.expense_category || '').toLowerCase();
         break;
-      
-      case 'payment_type':
-        aValue = (a.payment_type || '').toLowerCase();
-        bValue = (b.payment_type || '').toLowerCase();
+      case 'authorised_amount':
+        aValue = a.authorised_amount || 0;
+        bValue = b.authorised_amount || 0;
         break;
-      
-      case 'disbursed_amount':
-        aValue = a.disbursed_amount || 0;
-        bValue = b.disbursed_amount || 0;
-        break;
-      
       case 'payable':
-        aValue = a.payable ? 1 : 0;
-        bValue = b.payable ? 1 : 0;
+        aValue = String(a.payable || '');
+        bValue = String(b.payable || '');
         break;
-      
       default:
         aValue = a[sortField] || '';
         bValue = b[sortField] || '';
     }
 
     let result = 0;
-    
-    if (sortField === 'date' || sortField === 'disbursed_amount') {
+    if (sortField === 'date' || sortField === 'authorised_amount') {
       result = aValue - bValue;
     } else {
-      const aStr = String(aValue || '');
-      const bStr = String(bValue || '');
-      result = aStr.localeCompare(bStr);
+      result = String(aValue || '').localeCompare(String(bValue || ''));
     }
-    
     return sortDirection === 'asc' ? result : -result;
   });
 
@@ -152,7 +113,6 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
   if (expenses.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-6xl mb-4"></div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">No petty cash expenses found</h3>
         <p className="text-gray-500">Start by adding your first expense entry.</p>
       </div>
@@ -164,57 +124,30 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('date')}
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('date')}>
               <div className="flex items-center space-x-1">
                 <span>Date</span>
                 <ArrowUpDown className="w-4 h-4" />
               </div>
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('company')}
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('expense_category')}>
               <div className="flex items-center space-x-1">
-                <span>Company</span>
+                <span>Expense Category</span>
                 <ArrowUpDown className="w-4 h-4" />
               </div>
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('expense_category')}
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('payable')}>
               <div className="flex items-center space-x-1">
-                <span>Category</span>
+                <span>Payable</span>
                 <ArrowUpDown className="w-4 h-4" />
               </div>
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('payment_type')}
-            >
-              <div className="flex items-center space-x-1">
-                <span>Payment Type</span>
-                <ArrowUpDown className="w-4 h-4" />
-              </div>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Narration
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('disbursed_amount')}
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('authorised_amount')}>
               <div className="flex items-center space-x-1">
-                <span>Amount</span>
-                <ArrowUpDown className="w-4 h-4" />
-              </div>
-            </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('payable')}
-            >
-              <div className="flex items-center space-x-1">
-                <span>Status</span>
+                <span>Authorised Amount</span>
                 <ArrowUpDown className="w-4 h-4" />
               </div>
             </th>
@@ -233,21 +166,18 @@ export const PeticashTable: React.FC<PeticashTableProps> = ({
                 {formatDate(expense.date)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {expense.company}
+                {expense.expense_category}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {formatExpenseCategory(expense.expense_category)}
+                {getPayableDisplay(expense.payable)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {formatPaymentType(expense.payment_type)}
+              <td className="px-6 py-4 text-sm text-gray-900">
+                <div className="max-w-xs truncate" title={expense.narration || ''}>
+                  {expense.narration || '-'}
+                </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {formatAmount(expense.disbursed_amount)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPayableStatus(expense.payable).color}`}>
-                  {getPayableStatus(expense.payable).text}
-                </span>
+                {formatAmount(expense.authorised_amount)}
               </td>
               <td className="px-6 py-4 text-sm text-gray-900">
                 <div className="max-w-xs truncate" title={expense.comments || ''}>

@@ -100,10 +100,10 @@ class EmployeeRepository {
         INSERT INTO ${EmployeeTableName} 
         (employeeId, name, first_name, last_name, nationality, email, office_id, position_id, monthlySalary, joiningDate, status,
           dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings)
+          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings, last_working_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       const values = [
@@ -112,7 +112,7 @@ class EmployeeRepository {
         dbData.dob, dbData.passport_number, dbData.passport_expiry, dbData.visa_type, dbData.visa_expiry, 
         dbData.platform, dbData.address, dbData.current_address, dbData.phone, dbData.whatsapp, dbData.gender,
         dbData.primary_language, dbData.secondary_language, dbData.marital_status, dbData.hiring_source, 
-        dbData.salary_currency, dbData.emirates_id, dbData.emergency_contact, dbData.emergency_contact_relation, dbData.shift_timings
+        dbData.salary_currency, dbData.emirates_id, dbData.emergency_contact, dbData.emergency_contact_relation, dbData.shift_timings, dbData.last_working_date
       ];
       
       await this.db.query(sql, values);
@@ -149,7 +149,7 @@ class EmployeeRepository {
         'monthlySalary', 'joiningDate', 'status', 'dob', 'passport_number', 'passport_expiry',
         'visa_type', 'visa_expiry', 'platform', 'address', 'current_address', 'phone', 'whatsapp',
         'gender', 'primary_language', 'secondary_language', 'marital_status', 'hiring_source',
-        'salary_currency', 'emirates_id', 'emergency_contact', 'emergency_contact_relation', 'shift_timings'
+        'salary_currency', 'emirates_id', 'emergency_contact', 'emergency_contact_relation', 'shift_timings', 'last_working_date'
       ];
       
       // Only include fields that are explicitly provided in the update data
@@ -221,14 +221,14 @@ class EmployeeRepository {
       // Ensure required columns exist
       await this.ensureColumnsExist();
 
-      const placeholders = employees.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+      const placeholders = employees.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
       const flatValues = employees.flat();
       
       const sql = `
         INSERT INTO ${EmployeeTableName} 
         (employeeId, name, first_name, last_name, nationality, email, office_id, position_id, monthlySalary, joiningDate, status,
           dob, passport_number, passport_expiry, visa_type, visa_expiry, platform, address, current_address, phone, whatsapp, gender,
-          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings)
+          primary_language, secondary_language, marital_status, hiring_source, salary_currency, emirates_id, emergency_contact, emergency_contact_relation, shift_timings, last_working_date)
         VALUES ${placeholders}
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
@@ -260,7 +260,8 @@ class EmployeeRepository {
           emirates_id = VALUES(emirates_id),
           emergency_contact = VALUES(emergency_contact),
           emergency_contact_relation = VALUES(emergency_contact_relation),
-          shift_timings = VALUES(shift_timings)
+          shift_timings = VALUES(shift_timings),
+          last_working_date = VALUES(last_working_date)
       `;
       
       const [result] = await this.db.query(sql, flatValues);

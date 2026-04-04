@@ -7,12 +7,11 @@ const PeticashSchema = {
   // Primary fields (required)
   id: { type: 'number', required: false, autoIncrement: true },
   date: { type: 'date', required: true },
-  company: { type: 'string', required: true },
   expense_category: { type: 'string', required: true },
-  payment_type: { type: 'string', required: true },
-  disbursed_amount: { type: 'number', required: true },
+  narration: { type: 'string', required: false },
+  authorised_amount: { type: 'number', required: true },
   comments: { type: 'string', required: false },
-  payable: { type: 'boolean', required: true, default: false },
+  payable: { type: 'string', required: true, default: '' },
   
   // Audit fields
   created_at: { type: 'datetime', required: false, default: 'CURRENT_TIMESTAMP' },
@@ -26,8 +25,7 @@ const PeticashFieldMappings = {
   // Database column names to model field names
   dbToModel: {
     'expense_category': 'expenseCategory',
-    'payment_type': 'paymentType',
-    'disbursed_amount': 'disbursedAmount',
+    'authorised_amount': 'authorisedAmount',
     'created_at': 'createdAt',
     'updated_at': 'updatedAt'
   },
@@ -36,19 +34,16 @@ const PeticashFieldMappings = {
   excelToModel: {
     'Date': 'date',
     'date': 'date',
-    'Company': 'company',
-    'company': 'company',
     'Expense Category': 'expense_category',
     'expense_category': 'expense_category',
     'expenseCategory': 'expense_category',
-    'Payment Type': 'payment_type',
-    'payment_type': 'payment_type',
-    'paymentType': 'payment_type',
-    'Disbursed Amount': 'disbursed_amount',
-    'disbursed_amount': 'disbursed_amount',
-    'disbursedAmount': 'disbursed_amount',
-    'Amount': 'disbursed_amount',
-    'amount': 'disbursed_amount',
+    'Narration': 'narration',
+    'narration': 'narration',
+    'Authorised Amount': 'authorised_amount',
+    'authorised_amount': 'authorised_amount',
+    'authorisedAmount': 'authorised_amount',
+    'Amount': 'authorised_amount',
+    'amount': 'authorised_amount',
     'Comments': 'comments',
     'comments': 'comments',
     'Payable': 'payable',
@@ -90,35 +85,18 @@ const ExpenseCategories = {
   ]
 };
 
-// Payable status mappings
+// Payable status mappings (kept for backward compatibility)
 const PayableStatus = {
-  PAID: true,
-  UNPAID: false,
-  
-  fromString: (status) => {
-    if (typeof status === 'boolean') return status;
-    if (typeof status === 'number') return status === 1;
-    if (typeof status === 'string') {
-      const lower = status.toLowerCase();
-      return (lower === 'paid' || lower === 'true' || lower === '1' || lower === 'yes') ? true : false;
-    }
-    return false; // Default to unpaid
-  },
-  
-  toString: (status) => {
-    return (status === true || status === 1) ? 'Paid' : 'Unpaid';
-  },
-  
-  toBoolean: (status) => {
-    return status === true || status === 1 || status === 'paid';
-  }
+  fromString: (status) => String(status || ''),
+  toString: (status) => String(status || ''),
+  toValue: (status) => String(status || '')
 };
 
 // Required fields for different operations
 const RequiredFields = {
-  create: ['date', 'company', 'expense_category', 'payment_type', 'disbursed_amount', 'payable'],
+  create: ['date', 'expense_category', 'authorised_amount', 'payable'],
   update: ['id'], // Only ID required for updates
-  import: ['date', 'company', 'expense_category', 'payment_type', 'disbursed_amount', 'payable']
+  import: ['date', 'expense_category', 'authorised_amount', 'payable']
 };
 
 class Peticash {
@@ -147,18 +125,15 @@ class Peticash {
       errors.push('Invalid date format');
     }
 
-    // Validate disbursed amount
-    if (this.disbursed_amount !== undefined && 
-        (isNaN(this.disbursed_amount) || parseFloat(this.disbursed_amount) < 0)) {
-      errors.push('Disbursed amount must be a positive number');
+    // Validate authorised amount
+    if (this.authorised_amount !== undefined && 
+        (isNaN(this.authorised_amount) || parseFloat(this.authorised_amount) < 0)) {
+      errors.push('Authorised amount must be a positive number');
     }
 
-    // Validate payment type (removed strict validation to allow free text)
-    // Payment type can now be any non-empty string
-
-    // Validate payable status
-    if (this.payable !== undefined && ![0, 1, true, false].includes(this.payable)) {
-      errors.push('Payable must be boolean or 0/1');
+    // Validate payable - can be any string or number
+    if (this.payable !== undefined && this.payable !== null && String(this.payable).trim() === '') {
+      errors.push('Payable is required');
     }
 
     return {
@@ -171,14 +146,14 @@ class Peticash {
   toDbFormat() {
     const dbData = { ...this };
     
-    // Convert payable to number for database
-    if (typeof dbData.payable === 'boolean') {
-      dbData.payable = dbData.payable ? 1 : 0;
+    // Ensure payable is stored as string
+    if (dbData.payable !== undefined && dbData.payable !== null) {
+      dbData.payable = String(dbData.payable);
     }
 
-    // Ensure disbursed_amount is a number
-    if (dbData.disbursed_amount && typeof dbData.disbursed_amount !== 'number') {
-      dbData.disbursed_amount = parseFloat(dbData.disbursed_amount) || 0;
+    // Ensure authorised_amount is a number
+    if (dbData.authorised_amount && typeof dbData.authorised_amount !== 'number') {
+      dbData.authorised_amount = parseFloat(dbData.authorised_amount) || 0;
     }
 
     // Format date for database
@@ -195,8 +170,8 @@ class Peticash {
     
     const peticash = new Peticash(dbData);
     
-    // Convert payable to boolean for frontend
-    peticash.payable = PayableStatus.toBoolean(dbData.payable);
+    // Keep payable as string
+    peticash.payable = String(dbData.payable || '');
     
     return peticash;
   }
@@ -205,8 +180,8 @@ class Peticash {
   toJSON() {
     const json = { ...this };
     
-    // Ensure boolean payable for frontend
-    json.payable = PayableStatus.toBoolean(this.payable);
+    // Keep payable as string
+    json.payable = String(this.payable || '');
     
     // Format date for frontend
     if (json.date && typeof json.date === 'object') {
@@ -222,8 +197,6 @@ module.exports = {
   PeticashSchema,
   PeticashTableName,
   PeticashFieldMappings,
-  PaymentTypes,
-  ExpenseCategories,
   PayableStatus,
   RequiredFields
 };

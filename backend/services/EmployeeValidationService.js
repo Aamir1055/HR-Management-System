@@ -112,6 +112,12 @@ class EmployeeValidationService {
         return { isValid: false, errors, warnings };
       }
 
+      // Reject any attempt to change the employee ID
+      if (updateData.employeeId || updateData.employee_id) {
+        errors.push('Employee ID cannot be changed');
+        return { isValid: false, errors, warnings };
+      }
+
       // Create merged data for validation
       const mergedData = { ...existingEmployee, ...updateData };
       const employee = new Employee(mergedData);

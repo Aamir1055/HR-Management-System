@@ -75,6 +75,51 @@ async function logAudit({
 }
 
 /**
+ * Get client IP address from request
+ * Handles proxied requests and cleans up IPv6-mapped IPv4 addresses
+ */
+function getClientIp(req) {
+  // Check X-Forwarded-For header first (for proxied requests)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    if (ips[0]) {
+      return cleanIpAddress(ips[0]);
+    }
+  }
+
+  // Check X-Real-IP header (nginx)
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) {
+    return cleanIpAddress(realIp);
+  }
+
+  // Fallback to connection remote address
+  const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress;
+  return cleanIpAddress(ip);
+}
+
+/**
+ * Clean up IP address (remove IPv6 prefix, handle localhost)
+ */
+function cleanIpAddress(ip) {
+  if (!ip) return null;
+  
+  // Remove IPv6 prefix for IPv4-mapped addresses
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+  
+  // Clean up IPv6 localhost
+  if (ip === '::1') {
+    ip = '127.0.0.1';
+  }
+  
+  return ip;
+}
+
+/**
  * Express middleware to capture request details for audit logging
  */
 function auditMiddleware(req, res, next) {
@@ -82,7 +127,7 @@ function auditMiddleware(req, res, next) {
   req.audit = {
     log: async (params) => {
       const user = req.user || {};
-      const ipAddress = req.ip || req.connection.remoteAddress;
+      const ipAddress = getClientIp(req);
       const userAgent = req.get('user-agent');
 
       await logAudit({

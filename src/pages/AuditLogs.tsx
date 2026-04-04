@@ -10,7 +10,8 @@ import {
   Eye,
   User,
   Activity,
-  TrendingUp
+  TrendingUp,
+  Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -120,6 +121,46 @@ export const AuditLogs: React.FC = () => {
     setShowDetails(true);
   };
 
+  const handleExportData = async () => {
+    try {
+      const params = new URLSearchParams();
+      
+      if (searchQuery) params.append('search', searchQuery);
+      if (actionFilter) params.append('action', actionFilter);
+      if (entityTypeFilter) params.append('entityType', entityTypeFilter);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      // Make request to export endpoint
+      const response = await fetch(`${api.defaults.baseURL}/audit-logs/export?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  };
+
   const getActionColor = (action: string) => {
     switch (action) {
       case 'CREATE': return 'bg-green-100 text-green-800';
@@ -141,6 +182,13 @@ export const AuditLogs: React.FC = () => {
             <p className="text-gray-600">Track all user activities and system changes</p>
           </div>
           <div className="flex items-center space-x-3">
+            <button
+              onClick={handleExportData}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Data
+            </button>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg border ${

@@ -7,7 +7,9 @@ import PeticashForm from '../components/Peticash/PeticashForm';
 import { usePeticash } from '../hooks/usePeticash';
 import { useToast } from '../components/UI/ToastContainer';
 import { Peticash, PeticashFilters, PeticashOptions } from '../types';
-import { Plus, Search, X, Filter, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { Plus, Search, X, Filter, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 export const PeticashPage: React.FC = () => {
   const {
@@ -30,9 +32,7 @@ export const PeticashPage: React.FC = () => {
   // State for filtering and search
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedPaymentType, setSelectedPaymentType] = useState('');
   const [selectedPayableStatus, setSelectedPayableStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -54,7 +54,8 @@ export const PeticashPage: React.FC = () => {
       }
     };
     loadOptions();
-  }, [fetchOptions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounce search query
   useEffect(() => {
@@ -70,10 +71,8 @@ export const PeticashPage: React.FC = () => {
   useEffect(() => {
     const filters: PeticashFilters = {
       search: debouncedQuery || undefined,
-      company: selectedCompany || undefined,
       expense_category: selectedCategory || undefined,
-      payment_type: selectedPaymentType || undefined,
-      payable: selectedPayableStatus === '' ? undefined : selectedPayableStatus === 'true',
+      payable: selectedPayableStatus || undefined,
       page: currentPage,
       limit: itemsPerPage,
     };
@@ -81,9 +80,7 @@ export const PeticashPage: React.FC = () => {
     fetchExpenses(filters);
   }, [
     debouncedQuery,
-    selectedCompany,
     selectedCategory,
-    selectedPaymentType,
     selectedPayableStatus,
     currentPage,
     itemsPerPage,
@@ -144,11 +141,106 @@ export const PeticashPage: React.FC = () => {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedCompany('');
     setSelectedCategory('');
-    setSelectedPaymentType('');
     setSelectedPayableStatus('');
     setCurrentPage(1);
+  };
+
+  const handleExportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/peticash/export', {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export petty cash data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `petty_cash_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess('Success', 'Petty cash data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      showError('Error', 'Failed to export petty cash data. Please try again.');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/peticash/import', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showSuccess('Success', result.message || 'Petty cash data imported successfully!');
+        if (result.errors && result.errors.length > 0) {
+          console.warn('Import warnings:', result.errors);
+        }
+        // Refresh the list
+        fetchExpenses();
+      } else {
+        showError('Error', result.error || 'Failed to import petty cash data');
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      showError('Error', 'Failed to import petty cash data. Please try again.');
+    }
+
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  const handleDownloadSampleExcel = () => {
+    const sampleData = [
+      {
+        'Date': '01/04/2026',
+        'Expense Category': 'Office Supplies',
+        'Payable': '500',
+        'Narration': 'Purchased stationery items',
+        'Authorised Amount': 150,
+        'Comments': 'Approved by manager'
+      },
+      {
+        'Date': '02/04/2026',
+        'Expense Category': 'Transport',
+        'Payable': '200',
+        'Narration': 'Taxi fare for client meeting',
+        'Authorised Amount': 75.50,
+        'Comments': ''
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SamplePettyCash');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, 'sample_petty_cash_import.xlsx');
   };
 
   const handlePageChange = (newPage: number) => {
@@ -164,7 +256,7 @@ export const PeticashPage: React.FC = () => {
 
   // Calculate summary statistics
   const totalAmount = expenses.reduce((sum, expense) => {
-    const amount = expense.disbursed_amount || 0;
+    const amount = expense.authorised_amount || 0;
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
 
@@ -206,23 +298,50 @@ export const PeticashPage: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">Petty Cash Management</h1>
             <p className="text-gray-600">Manage and track petty cash expenses</p>
           </div>
-          <button
-            onClick={handleAddExpense}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Expense
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleDownloadSampleExcel}
+              className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 shadow-sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Sample Excel
+            </button>
+            <button
+              onClick={handleExportToExcel}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </button>
+            <label
+              htmlFor="importPeticashExcel"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm cursor-pointer"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </label>
+            <input
+              id="importPeticashExcel"
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <button
+              onClick={handleAddExpense}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Expense
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Expenses
@@ -263,7 +382,7 @@ export const PeticashPage: React.FC = () => {
                   <Filter className="w-4 h-4 mr-2" />
                   Filters
                 </button>
-                {(selectedCompany || selectedCategory || selectedPaymentType || selectedPayableStatus) && (
+                {(selectedCategory || selectedPayableStatus) && (
                   <button
                     onClick={clearFilters}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -278,30 +397,11 @@ export const PeticashPage: React.FC = () => {
             {/* Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Company Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company
-                    </label>
-                    <select
-                      value={selectedCompany}
-                      onChange={(e) => setSelectedCompany(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All companies</option>
-                      {options?.companies.map((company) => (
-                        <option key={company.value} value={company.value}>
-                          {company.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Category Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category
+                      Expense Category
                     </label>
                     <select
                       value={selectedCategory}
@@ -317,39 +417,18 @@ export const PeticashPage: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Payment Type Filter */}
+                  {/* Payable Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Type
+                      Payable
                     </label>
-                    <select
-                      value={selectedPaymentType}
-                      onChange={(e) => setSelectedPaymentType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All payment types</option>
-                      {options?.paymentTypes.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Payment Status Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Status
-                    </label>
-                    <select
+                    <input
+                      type="text"
                       value={selectedPayableStatus}
                       onChange={(e) => setSelectedPayableStatus(e.target.value)}
+                      placeholder="Filter by payable"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All statuses</option>
-                      <option value="true">Paid</option>
-                      <option value="false">Unpaid</option>
-                    </select>
+                    />
                   </div>
                 </div>
               </div>
